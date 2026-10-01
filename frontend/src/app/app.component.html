@@ -56,8 +56,9 @@
           </div>
         </div>
         <form class="historical-form" (submit)="$event.preventDefault(); loadHistorical()">
+          <label class="history-field market-field"><span>MARKET</span><select [value]="historyMarket" (change)="setHistoryMarket($any($event.target).value)"><option value="cash">Cash equities</option><option value="commodities">MCX commodities</option></select></label>
           <label class="history-field instrument-field">
-            <span>INSTRUMENT</span>
+            <span>{{ historyMarket === 'cash' ? 'CASH INSTRUMENT' : 'COMMODITY FUTURE' }}</span>
             <input type="search" placeholder="Search NSE symbol or company" autocomplete="off" [value]="historySearchText" [disabled]="!connected" (input)="updateHistorySearch($any($event.target).value)" (focus)="historySearchOpen = connected && historySearchText.length >= 2" />
             <div class="history-search-results" *ngIf="historySearchOpen">
               <div class="search-message" *ngIf="historySearchMessage">{{ historySearchMessage }}</div>
@@ -72,9 +73,77 @@
           <label class="history-field interval-field"><span>INTERVAL</span><select [value]="historicalInterval" (change)="historicalInterval = $any($event.target).value"><option value="minutes:1">1 minute</option><option value="minutes:3">3 minutes</option><option value="minutes:5">5 minutes</option><option value="minutes:15">15 minutes</option><option value="minutes:30">30 minutes</option><option value="hours:1">1 hour</option><option value="hours:4">4 hours</option><option value="days:1">1 day</option><option value="weeks:1">1 week</option><option value="months:1">1 month</option></select></label>
           <button class="load-history" type="submit" [disabled]="!connected || !selectedHistoryInstrument || historicalLoading">{{ historicalLoading ? 'Loading…' : 'Load candles' }}</button>
         </form>
-        <div class="historical-results" *ngIf="historicalCandles.length">
+        <div class="historical-results" [hidden]="!historicalCandles.length">
           <div class="historical-result-heading"><span>{{ selectedHistoryInstrument?.symbol }} <i>·</i> {{ historicalIntervalLabel }} <i>·</i> {{ historicalCandles.length }} candles <b class="sample-label" *ngIf="demoMode">SYNTHETIC / NOT MARKET DATA</b></span></div>
-          <div class="historical-chart-wrap"><canvas #historyChart aria-label="Historical closing prices"></canvas></div>
+          <section class="instrument-snapshot" *ngIf="technicalSnapshot as snapshot" aria-label="Technical snapshot">
+            <header class="snapshot-heading"><span>TECHNICAL SNAPSHOT</span><strong>₹{{ formatPrice(snapshot.lastClose) }}</strong></header>
+            <div class="snapshot-grid">
+              <div><span>PERIOD CHANGE</span><strong [class.positive]="snapshot.changePercent >= 0" [class.negative]="snapshot.changePercent < 0">{{ snapshot.changePercent > 0 ? '+' : '' }}{{ snapshot.changePercent.toFixed(2) }}%</strong></div>
+              <div><span>PRICE STRUCTURE</span><strong>{{ snapshot.priceStructure }}</strong></div>
+              <div><span>ADX 14 / TREND STRENGTH</span><strong>{{ snapshot.adx !== undefined ? snapshot.adx.toFixed(1) + ' · ' + snapshot.trendStrength : snapshot.trendStrength }}</strong></div>
+              <div><span>DIRECTIONAL PRESSURE</span><strong>{{ snapshot.directionalPressure }}<small *ngIf="snapshot.positiveDi !== undefined"> · +DI {{ snapshot.positiveDi.toFixed(1) }} / −DI {{ snapshot.negativeDi?.toFixed(1) }}</small></strong></div>
+              <div><span>ATR 14 / VOLATILITY</span><strong>{{ snapshot.atr !== undefined ? '₹' + formatPrice(snapshot.atr) + ' · ' + snapshot.atrPercent?.toFixed(2) + '%' : 'Needs more candles' }}</strong></div>
+              <div><span>RSI 14</span><strong>{{ snapshot.rsi !== undefined ? snapshot.rsi.toFixed(1) : 'Needs more candles' }}</strong></div>
+              <div><span>MOVING AVERAGES</span><strong>{{ snapshot.sma20 === undefined ? 'SMA 20: needs more bars' : snapshot.lastClose >= snapshot.sma20 ? 'Above SMA 20' : 'Below SMA 20' }}<small *ngIf="snapshot.sma50 !== undefined"> · {{ snapshot.lastClose >= snapshot.sma50 ? 'Above' : 'Below' }} SMA 50</small></strong></div>
+              <div><span>20-BAR RANGE</span><strong>₹{{ formatPrice(snapshot.lowestLow20) }} — ₹{{ formatPrice(snapshot.highestHigh20) }}</strong></div>
+              <div><span>AVERAGE VOLUME · 20 BARS</span><strong>{{ snapshot.averageVolume20?.toLocaleString('en-IN') ?? '—' }}</strong></div>
+            </div>
+            <p class="snapshot-footnote">Swing structure is a simple higher-high/lower-low heuristic, not full Dow Theory confirmation. {{ holdingWindowNote }}</p>
+          </section>
+          <section class="fundamentals-strip" aria-label="Company and market context">
+            <div class="fundamental-fact"><span>SECTOR</span><strong>{{ companyProfile?.sector || (historyMarket === 'commodities' ? 'MCX commodity future' : 'Not available for this instrument') }}</strong></div>
+            <div class="fundamental-fact"><span>DIVIDENDS</span>
+              <strong *ngIf="historyMarket === 'commodities'">Not applicable to futures</strong>
+              <strong *ngIf="historyMarket === 'cash' && !selectedHistoryInstrument?.isin">Not applicable to this instrument</strong>
+              <strong *ngIf="historyMarket === 'cash' && selectedHistoryInstrument?.isin && fundamentalsLoading">Loading corporate actions…</strong>
+              <ng-container *ngIf="historyMarket === 'cash' && selectedHistoryInstrument?.isin && !fundamentalsLoading">
+                <strong *ngIf="dividendActions.length === 0">No dividend events returned</strong>
+                <strong *ngFor="let action of dividendActions.slice(0, 3)">{{ action.expiry_date || 'Date unavailable' }} · {{ action.amount !== null && action.amount !== undefined ? '₹' + action.amount + ' per share' : action.name }}</strong>
+              </ng-container>
+            </div>
+            <p class="macro-context">{{ globalContextNote }}</p>
+          </section>
+          <section class="risk-scenario" *ngIf="technicalSnapshot as snapshot" aria-label="User-defined risk scenario">
+            <header><span>ATR RISK SCENARIO</span><small>USER-DEFINED · NOT A TRADE INSTRUCTION</small></header>
+            <div class="risk-inputs">
+              <label><span>RISK BUDGET · ₹</span><input type="number" min="0" step="100" [value]="riskBudget || ''" placeholder="Enter amount" (input)="setRiskBudget($any($event.target).value)" /></label>
+              <label><span>STOP DISTANCE · ATR ×</span><input type="number" min="0.5" max="5" step="0.5" [value]="stopAtrMultiple" (input)="setStopAtrMultiple($any($event.target).value)" /></label>
+              <label><span>TARGET SCENARIO · R</span><input type="number" min="0.5" max="5" step="0.5" [value]="targetRMultiple" (input)="setTargetRMultiple($any($event.target).value)" /></label>
+              <div class="scenario-direction" role="group" aria-label="Scenario direction">
+                <span>SCENARIO</span>
+                <button type="button" [class.active]="riskDirection === 'long'" (click)="riskDirection = 'long'">Long</button>
+                <button type="button" [class.active]="riskDirection === 'short'" (click)="riskDirection = 'short'">Short</button>
+              </div>
+            </div>
+            <div class="risk-output" *ngIf="riskScenario as scenario; else riskPrompt">
+              <div><span>POSITION SIZE</span><strong>{{ historyMarket === 'commodities' ? scenario.lots + ' lots · ' : '' }}{{ scenario.units.toLocaleString('en-IN') }} units</strong></div>
+              <div><span>ATR STOP SCENARIO</span><strong>₹{{ formatPrice(scenario.stopPrice) }}</strong></div>
+              <div><span>RISK USED · APPROX.</span><strong>₹{{ formatPrice(scenario.riskUsed) }}</strong></div>
+              <div><span>{{ targetRMultiple }}R PRICE SCENARIO</span><strong>₹{{ formatPrice(scenario.targetPrice) }} · gross ₹{{ formatPrice(scenario.riskUsed * targetRMultiple) }}</strong></div>
+            </div>
+            <ng-template #riskPrompt><p class="risk-prompt">Enter a risk budget and choose a scenario direction. ADX describes trend strength; the stop distance here uses your ATR multiple.</p></ng-template>
+            <p class="risk-disclaimer">Illustrative math only; not expected return or advice. Gaps, slippage, fees, taxes, margin, and contract-specific rules can change losses. A stop does not cap gap risk.</p>
+          </section>
+          <div class="analysis-toolbar">
+            <div class="study-toggles" aria-label="Technical studies">
+              <label><input type="checkbox" [checked]="studies.sma20" (change)="setStudy('sma20', $any($event.target).checked)"><span>SMA 20</span></label>
+              <label><input type="checkbox" [checked]="studies.sma50" (change)="setStudy('sma50', $any($event.target).checked)"><span>SMA 50</span></label>
+              <label><input type="checkbox" [checked]="studies.ema20" (change)="setStudy('ema20', $any($event.target).checked)"><span>EMA 20</span></label>
+              <label><input type="checkbox" [checked]="studies.bollinger" (change)="setStudy('bollinger', $any($event.target).checked)"><span>Bollinger</span></label>
+              <label><input type="checkbox" [checked]="studies.rsi" (change)="setStudy('rsi', $any($event.target).checked)"><span>RSI 14</span></label>
+              <label><input type="checkbox" [checked]="studies.macd" (change)="setStudy('macd', $any($event.target).checked)"><span>MACD</span></label>
+              <label><input type="checkbox" [checked]="studies.supportResistance" (change)="setStudy('supportResistance', $any($event.target).checked)"><span>S / R</span></label>
+              <label><input type="checkbox" [checked]="studies.patterns" (change)="setStudy('patterns', $any($event.target).checked)"><span>Patterns</span></label>
+            </div>
+            <div class="drawing-controls">
+              <button type="button" [class.active]="trendlineMode" [disabled]="!historicalCandles.length" (click)="toggleTrendlineMode()" title="Click two chart points to draw a trendline">Trendline</button>
+              <button type="button" [disabled]="!hasTrendlines" (click)="undoTrendline()" title="Undo the last trendline">Undo</button>
+              <button type="button" [disabled]="!hasTrendlines" (click)="clearTrendlines()" title="Remove all trendlines">Clear</button>
+            </div>
+          </div>
+          <p class="chart-instruction" *ngIf="trendlineHint">{{ trendlineHint }}</p>
+          <div class="pattern-summary" *ngIf="studies.patterns && patternSummary.length"><span>CANDIDATE PATTERNS</span><b *ngFor="let pattern of patternSummary">{{ pattern.name }} ×{{ pattern.count }}</b><small>Descriptive only, not a trade signal.</small></div>
+          <div class="historical-chart-wrap" [class.draw-mode]="trendlineMode" [style.height.px]="analysisChartHeight"><div #historyChart aria-label="Historical candlestick analysis chart with synchronized indicator panes"></div></div>
           <div class="candle-table-scroll"><table class="candle-table">
             <thead><tr><th>TIME</th><th>OPEN</th><th>HIGH</th><th>LOW</th><th>CLOSE</th><th>VOLUME</th></tr></thead>
             <tbody><tr *ngFor="let candle of displayedCandles"><td>{{ candle.timestamp.replace('T', ' ').slice(0, 16) }}</td><td>{{ formatPrice(candle.open) }}</td><td>{{ formatPrice(candle.high) }}</td><td>{{ formatPrice(candle.low) }}</td><td>{{ formatPrice(candle.close) }}</td><td>{{ candle.volume.toLocaleString('en-IN') }}</td></tr></tbody>
@@ -88,7 +157,11 @@
         <div class="section-head">
           <div><span class="eyebrow">YOUR INSTRUMENTS</span><h2>Watchlist <span class="count-pill">{{ watchlist.length.toString().padStart(2, '0') }}</span></h2></div>
           <form class="search-form" (submit)="$event.preventDefault(); search(searchText)">
-            <label class="search-field"><span class="search-icon">⌕</span><input type="search" placeholder="Find an instrument" autocomplete="off" minlength="2" [value]="searchText" (input)="updateSearch($any($event.target).value)" (focus)="searchOpen = searchText.length >= 2"/><kbd>ENTER</kbd></label>
+            <div class="market-switch" role="group" aria-label="Watchlist market">
+              <button type="button" [class.active]="watchlistMarket === 'cash'" (click)="watchlistMarket = 'cash'; search(searchText)">Cash</button>
+              <button type="button" [class.active]="watchlistMarket === 'commodities'" (click)="watchlistMarket = 'commodities'; search(searchText)">Commodities</button>
+            </div>
+            <label class="search-field"><span class="search-icon">⌕</span><input type="search" [placeholder]="watchlistMarket === 'cash' ? 'Find NSE/BSE stock' : 'Find MCX future'" autocomplete="off" minlength="2" [value]="searchText" (input)="updateSearch($any($event.target).value)" (focus)="searchOpen = searchText.length >= 2"/><kbd>ENTER</kbd></label>
             <div class="search-results" *ngIf="searchOpen" role="listbox">
               <div class="search-message" *ngIf="searchMessage">{{ searchMessage }}</div>
               <button class="search-result" type="button" role="option" *ngFor="let instrument of searchResults" (click)="addInstrument(instrument)">

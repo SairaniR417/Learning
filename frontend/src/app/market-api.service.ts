@@ -7,6 +7,11 @@ export interface Instrument {
   symbol: string;
   name: string;
   exchange: string;
+  segment?: string;
+  isin?: string;
+  lot_size?: number;
+  tick_size?: number;
+  instrument_type?: string;
 }
 
 export interface LtpQuote {
@@ -30,6 +35,20 @@ export interface HistoricalCandle {
   volume: number;
 }
 
+export interface CorporateAction {
+  name: string;
+  expiry_date?: string;
+  amount?: number | null;
+  ratio?: string | null;
+  event_details?: { name: string; value: string }[];
+}
+
+export interface CompanyProfile {
+  company_profile?: string;
+  sector?: string;
+  sector_market_cap_inr?: { formatted?: string };
+}
+
 @Injectable({ providedIn: 'root' })
 export class MarketApiService {
   private readonly http = inject(HttpClient);
@@ -44,8 +63,8 @@ export class MarketApiService {
     });
   }
 
-  search(query: string): Observable<{ instruments: Instrument[] }> {
-    return this.http.get<{ instruments: Instrument[] }>('/api/instruments', { params: { q: query } });
+  search(query: string, market: 'cash' | 'commodities' = 'cash'): Observable<{ instruments: Instrument[] }> {
+    return this.http.get<{ instruments: Instrument[] }>('/api/instruments', { params: { q: query, market } });
   }
 
   logout(): Observable<{ connected: boolean }> {
@@ -56,5 +75,13 @@ export class MarketApiService {
     return this.http.get<{ candles: HistoricalCandle[] }>('/api/historical', {
       params: { instrument_key: instrumentKey, unit, interval, from, to }
     });
+  }
+
+  corporateActions(isin: string): Observable<{ actions: CorporateAction[] }> {
+    return this.http.get<{ actions: CorporateAction[] }>(`/api/fundamentals/${encodeURIComponent(isin)}/corporate-actions`);
+  }
+
+  companyProfile(isin: string): Observable<CompanyProfile> {
+    return this.http.get<CompanyProfile>(`/api/fundamentals/${encodeURIComponent(isin)}/profile`);
   }
 }

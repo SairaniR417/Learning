@@ -1,52 +1,64 @@
 {
-  "hash": "217877a8",
-  "configHash": "054377be",
-  "lockfileHash": "9cacd9ed",
-  "browserHash": "94d6cdc8",
+  "hash": "921241c9",
+  "configHash": "cc784fbe",
+  "lockfileHash": "0081216e",
+  "browserHash": "f77e614c",
   "optimized": {
     "@angular/common": {
       "src": "../../../../../../node_modules/@angular/common/fesm2022/common.mjs",
       "file": "@angular_common.js",
-      "fileHash": "8b19fa29",
+      "fileHash": "1207caee",
       "needsInterop": false
     },
     "@angular/common/http": {
       "src": "../../../../../../node_modules/@angular/common/fesm2022/http.mjs",
       "file": "@angular_common_http.js",
-      "fileHash": "ecc39167",
+      "fileHash": "9831f2b4",
       "needsInterop": false
     },
     "@angular/core": {
       "src": "../../../../../../node_modules/@angular/core/fesm2022/core.mjs",
       "file": "@angular_core.js",
-      "fileHash": "1c41d9f7",
+      "fileHash": "423720ae",
       "needsInterop": false
     },
     "@angular/platform-browser": {
       "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
       "file": "@angular_platform-browser.js",
-      "fileHash": "8d41a8e2",
+      "fileHash": "6f8bc30b",
       "needsInterop": false
     },
     "rxjs": {
       "src": "../../../../../../node_modules/rxjs/dist/esm5/index.js",
       "file": "rxjs.js",
-      "fileHash": "680efe08",
+      "fileHash": "136ef746",
       "needsInterop": false
     },
     "zone.js": {
       "src": "../../../../../../node_modules/zone.js/fesm2015/zone.js",
       "file": "zone__js.js",
-      "fileHash": "4876fa21",
+      "fileHash": "c4f83c87",
       "needsInterop": true
+    },
+    "lightweight-charts": {
+      "src": "../../../../../../node_modules/lightweight-charts/dist/lightweight-charts.development.mjs",
+      "file": "lightweight-charts.js",
+      "fileHash": "e74eb5e0",
+      "needsInterop": false
+    },
+    "technicalindicators": {
+      "src": "../../../../../../node_modules/technicalindicators/lib/index.js",
+      "file": "technicalindicators.js",
+      "fileHash": "4a65ee27",
+      "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-56S6CQO2": {
-      "file": "chunk-56S6CQO2.js"
-    },
     "chunk-FQV5JMVQ": {
       "file": "chunk-FQV5JMVQ.js"
+    },
+    "chunk-56S6CQO2": {
+      "file": "chunk-56S6CQO2.js"
     },
     "chunk-ZA7ENNAH": {
       "file": "chunk-ZA7ENNAH.js"

@@ -108,26 +108,61 @@ async def oauth_callback(code: str | None = None, state: str | None = None, erro
 
 
 @app.get("/api/instruments")
-async def search_instruments(q: str = Query(default="", max_length=50)):
+async def search_instruments(q: str = Query(default="", max_length=50), market: str = Query(default="cash")):
     token = require_token()
     query = q.strip()
     if len(query) < 2:
         return {"instruments": []}
+    if market == "cash":
+        filters = {"exchanges": "NSE,BSE", "segments": "EQ,INDEX"}
+    elif market == "commodities":
+        filters = {"exchanges": "MCX", "segments": "COMM,FO", "instrument_types": "FUT"}
+    else:
+        raise HTTPException(status_code=400, detail="Market must be cash or commodities.")
     result = await api_json_request(
         "https://api.upstox.com/v2/instruments/search",
         headers={"Authorization": f"Bearer {token}"},
-        params={"query": query, "exchanges": "NSE", "segments": "EQ,INDEX", "page_number": 1, "records": 10},
+        params={"query": query, **filters, "page_number": 1, "records": 10},
     )
     instruments = [
         {
             "key": item.get("instrument_key"),
             "symbol": item.get("trading_symbol") or item.get("short_name") or item.get("name"),
             "name": item.get("name") or item.get("short_name") or item.get("trading_symbol"),
-            "exchange": item.get("segment"),
+            "exchange": item.get("exchange") or item.get("segment"),
+            "segment": item.get("segment"),
+            "isin": item.get("isin"),
+            "lot_size": item.get("lot_size"),
+            "tick_size": item.get("tick_size"),
+            "instrument_type": item.get("instrument_type"),
         }
         for item in result.get("data", [])
     ]
     return {"instruments": instruments}
+
+
+@app.get("/api/fundamentals/{isin}/corporate-actions")
+async def corporate_actions(isin: str):
+    token = require_token()
+    if not re.fullmatch(r"IN[A-Z0-9]{10}", isin):
+        raise HTTPException(status_code=400, detail="Provide a valid equity ISIN.")
+    result = await api_json_request(
+        f"https://api.upstox.com/v2/fundamentals/{isin}/corporate-actions",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    return {"actions": result.get("data", [])}
+
+
+@app.get("/api/fundamentals/{isin}/profile")
+async def company_profile(isin: str):
+    token = require_token()
+    if not re.fullmatch(r"IN[A-Z0-9]{10}", isin):
+        raise HTTPException(status_code=400, detail="Provide a valid equity ISIN.")
+    result = await api_json_request(
+        f"https://api.upstox.com/v2/fundamentals/{isin}/profile",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    return result.get("data", {})
 
 
 @app.get("/api/quotes")

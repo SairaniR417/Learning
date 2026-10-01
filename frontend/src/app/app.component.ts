@@ -1,8 +1,72 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import {
+  CandlestickData,
+  CandlestickSeries,
+  ColorType,
+  CrosshairMode,
+  HistogramSeries,
+  IChartApi,
+  IPriceLine,
+  ISeriesApi,
+  ISeriesMarkersPluginApi,
+  LineData,
+  LineSeries,
+  LineStyle,
+  MouseEventParams,
+  Time,
+  UTCTimestamp,
+  createChart,
+  createSeriesMarkers
+} from 'lightweight-charts';
 import { EMPTY, Subscription, catchError, exhaustMap, tap, timer } from 'rxjs';
-import { HistoricalCandle, Instrument, LtpQuote, MarketApiService } from './market-api.service';
+import { CompanyProfile, CorporateAction, HistoricalCandle, Instrument, LtpQuote, MarketApiService } from './market-api.service';
+import {
+  ADX,
+  ATR,
+  BollingerBands,
+  EMA,
+  MACD,
+  RSI,
+  SMA,
+  bearishengulfingpattern,
+  bullishengulfingpattern,
+  doji,
+  hammerpattern,
+  shootingstar
+} from 'technicalindicators';
+
+type StudyName = 'sma20' | 'sma50' | 'ema20' | 'bollinger' | 'rsi' | 'macd' | 'supportResistance' | 'patterns';
+type PatternInput = { open: number[]; high: number[]; low: number[]; close: number[] };
+type TrendlinePoint = { time: Time; price: number; logical: number };
+type PatternMarker = { time: Time; position: 'aboveBar' | 'belowBar'; color: string; shape: 'arrowDown' | 'arrowUp' | 'circle'; text: string; name: string };
+type TechnicalSnapshot = {
+  lastClose: number;
+  changePercent: number;
+  adx?: number;
+  positiveDi?: number;
+  negativeDi?: number;
+  atr?: number;
+  atrPercent?: number;
+  sma20?: number;
+  sma50?: number;
+  rsi?: number;
+  averageVolume20?: number;
+  highestHigh20: number;
+  lowestLow20: number;
+  priceStructure: string;
+  trendStrength: string;
+  directionalPressure: string;
+};
+type RiskScenario = {
+  lots: number;
+  units: number;
+  riskPerUnit: number;
+  riskUsed: number;
+  stopPrice: number;
+  targetPrice: number;
+};
 
 const DEFAULT_WATCHLIST: Instrument[] = [
   { key: 'NSE_INDEX|Nifty 50', symbol: 'NIFTY 50', name: 'Nifty 50', exchange: 'NSE_INDEX' },
@@ -39,7 +103,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private chartReady = false;
 
   @ViewChild('chart') private chart?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('historyChart') private historyChart?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('historyChart') private historyChart?: ElementRef<HTMLDivElement>;
 
   watchlist = this.loadWatchlist();
   quotes: Record<string, LtpQuote> = {};
@@ -48,6 +112,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   connected = false;
   configured = true;
   searchText = '';
+  watchlistMarket: 'cash' | 'commodities' = 'cash';
   searchMessage = '';
   searchOpen = false;
   toast = '';
@@ -55,6 +120,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   clock = '';
   marketLabel = 'Awaiting connection';
   historySearchText = '';
+  historyMarket: 'cash' | 'commodities' = 'cash';
   historySearchResults: Instrument[] = [];
   historySearchMessage = '';
   historySearchOpen = false;
@@ -66,6 +132,38 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   displayedCandles: HistoricalCandle[] = [];
   historicalLoading = false;
   demoMode = false;
+  technicalSnapshot?: TechnicalSnapshot;
+  companyProfile?: CompanyProfile;
+  corporateActions: CorporateAction[] = [];
+  fundamentalsLoading = false;
+  riskBudget = 0;
+  stopAtrMultiple = 2;
+  targetRMultiple = 2;
+  riskDirection: 'long' | 'short' | '' = '';
+  readonly studies: Record<StudyName, boolean> = {
+    sma20: true,
+    sma50: false,
+    ema20: false,
+    bollinger: false,
+    rsi: false,
+    macd: false,
+    supportResistance: true,
+    patterns: true
+  };
+  trendlineMode = false;
+  trendlineHint = '';
+  detectedPatterns: PatternMarker[] = [];
+  private historyChartApi?: IChartApi;
+  private candleSeries?: ISeriesApi<'Candlestick'>;
+  private rsiSeries?: ISeriesApi<'Line'>;
+  private macdSeries?: ISeriesApi<'Line'>;
+  private macdSignalSeries?: ISeriesApi<'Line'>;
+  private macdHistogramSeries?: ISeriesApi<'Histogram'>;
+  private markerPlugin?: ISeriesMarkersPluginApi<Time>;
+  private overlaySeries: ISeriesApi<'Line'>[] = [];
+  private trendlineSeries: ISeriesApi<'Line'>[] = [];
+  private supportPriceLines: IPriceLine[] = [];
+  private trendlineStart?: TrendlinePoint;
 
   ngOnInit(): void {
     this.updateClock();
@@ -90,16 +188,19 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       this.resizeObserver = new ResizeObserver(() => {
         this.drawChart();
         this.drawHistoryChart();
+        this.historyChartApi?.timeScale().fitContent();
       });
       if (this.chart) this.resizeObserver.observe(this.chart.nativeElement);
-      if (this.historyChart) this.resizeObserver.observe(this.historyChart.nativeElement);
     }
+    this.initializeAnalysisCharts();
+    if (this.historyChart) this.resizeObserver?.observe(this.historyChart.nativeElement);
     this.drawChart();
   }
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
     this.resizeObserver?.disconnect();
+    this.historyChartApi?.remove();
     if (this.clockTimer) clearInterval(this.clockTimer);
     if (this.toastTimer) clearTimeout(this.toastTimer);
     if (this.searchTimer) clearTimeout(this.searchTimer);
@@ -184,12 +285,12 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   search(query: string): void {
     this.searchOpen = true;
-    this.searchMessage = 'Searching NSE instruments…';
+    this.searchMessage = this.watchlistMarket === 'cash' ? 'Searching cash-market stocks…' : 'Searching MCX futures…';
     this.searchResults = [];
-    this.api.search(query).subscribe({
+    this.api.search(query, this.watchlistMarket).subscribe({
       next: (result) => {
         this.searchResults = result.instruments;
-        this.searchMessage = result.instruments.length ? '' : 'No matching NSE instruments.';
+        this.searchMessage = result.instruments.length ? '' : 'No matching instruments in this market.';
       },
       error: (error: HttpErrorResponse) => {
         this.searchMessage = error.error?.detail || 'Instrument search failed.';
@@ -211,12 +312,12 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   searchHistoryInstruments(query: string): void {
     if (!this.connected) return;
     this.historySearchOpen = true;
-    this.historySearchMessage = 'Searching NSE instruments…';
+    this.historySearchMessage = this.historyMarket === 'cash' ? 'Searching cash-market stocks…' : 'Searching MCX futures…';
     this.historySearchResults = [];
-    this.api.search(query).subscribe({
+    this.api.search(query, this.historyMarket).subscribe({
       next: (result) => {
         this.historySearchResults = result.instruments;
-        this.historySearchMessage = result.instruments.length ? '' : 'No matching NSE stocks or indices.';
+        this.historySearchMessage = result.instruments.length ? '' : 'No matching instruments in this market.';
       },
       error: (error: HttpErrorResponse) => {
         this.historySearchMessage = error.error?.detail || 'Upstox instrument search failed.';
@@ -228,10 +329,29 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.demoMode = false;
     this.historicalCandles = [];
     this.displayedCandles = [];
+    this.technicalSnapshot = undefined;
     this.selectedHistoryInstrument = instrument;
     this.historySearchText = `${instrument.symbol} · ${instrument.exchange}`;
     this.historySearchOpen = false;
     this.historySearchResults = [];
+    this.riskDirection = '';
+    this.loadEquityFundamentals(instrument);
+  }
+
+  setHistoryMarket(market: 'cash' | 'commodities'): void {
+    this.historyMarket = market;
+    this.historySearchText = '';
+    this.historySearchResults = [];
+    this.historySearchOpen = false;
+    this.selectedHistoryInstrument = undefined;
+    this.historicalCandles = [];
+    this.displayedCandles = [];
+    this.technicalSnapshot = undefined;
+    this.companyProfile = undefined;
+    this.corporateActions = [];
+    this.riskDirection = '';
+    this.demoMode = false;
+    this.drawHistoryChart();
   }
 
   loadHistorical(): void {
@@ -244,6 +364,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.demoMode = false;
     this.historicalCandles = [];
     this.displayedCandles = [];
+    this.technicalSnapshot = undefined;
     const [unit, intervalValue] = this.historicalInterval.split(':');
     this.api.historical(
       this.selectedHistoryInstrument.key,
@@ -255,6 +376,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       next: (result) => {
         this.historicalCandles = result.candles;
         this.displayedCandles = [...result.candles].reverse().slice(0, 100);
+        this.technicalSnapshot = this.calculateTechnicalSnapshot(result.candles);
         this.historicalLoading = false;
         this.drawHistoryChart();
         if (!result.candles.length) this.showToast('No candles were returned for that instrument and date range.');
@@ -276,11 +398,13 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       exchange: 'DEMO'
     };
     this.historySearchText = 'DEMO · SAMPLE ONLY';
+    this.companyProfile = undefined;
+    this.corporateActions = [];
     this.historicalInterval = 'days:1';
     this.historicalTo = dateInputValue(today);
     const candles: HistoricalCandle[] = [];
     let previousClose = 1240;
-    for (let day = 13; day >= 0; day--) {
+    for (let day = 79; day >= 0; day--) {
       const candleDate = new Date(today);
       candleDate.setDate(today.getDate() - day);
       const movement = Math.sin(day * 0.83) * 12 + (13 - day) * 1.9;
@@ -299,6 +423,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.historicalFrom = candles[0].timestamp.slice(0, 10);
     this.historicalCandles = candles;
     this.displayedCandles = [...candles].reverse();
+    this.technicalSnapshot = this.calculateTechnicalSnapshot(candles);
     this.demoMode = true;
     this.drawHistoryChart();
   }
@@ -329,6 +454,9 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         this.history = [];
         this.historicalCandles = [];
         this.displayedCandles = [];
+        this.technicalSnapshot = undefined;
+        this.companyProfile = undefined;
+        this.corporateActions = [];
         this.demoMode = false;
         this.setConnected(false);
         this.drawChart();
@@ -352,10 +480,201 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       : 'Connect your verified Upstox account to search instruments and request historical candles.';
   }
 
+  get globalContextNote(): string {
+    if (this.historyMarket === 'commodities') {
+      return 'Commodity prices can respond to global benchmarks, USD/INR, inventories, and policy. Cross-market correlations are not calculated in this view.';
+    }
+    const sector = this.companyProfile?.sector;
+    return sector
+      ? `${sector} sector. Macro sensitivity is not inferred from price candles; compare relevant benchmarks and company disclosures.`
+      : 'Global and sector effects are not inferred from price candles alone.';
+  }
+
+  get holdingWindowNote(): string {
+    return `This view uses ${this.historicalIntervalLabel} candles over ${this.historicalFrom} to ${this.historicalTo}. That describes the data interval, not a recommended holding period.`;
+  }
+
   get historicalIntervalLabel(): string {
     const [unit, interval] = this.historicalInterval.split(':');
     const names: Record<string, string> = { minutes: 'minute', hours: 'hour', days: 'day', weeks: 'week', months: 'month' };
     return `${interval} ${names[unit] || unit}${Number(interval) > 1 ? 's' : ''}`;
+  }
+
+  get hasTrendlines(): boolean { return this.trendlineSeries.length > 0; }
+
+  get patternSummary(): { name: string; count: number }[] {
+    const counts = new Map<string, number>();
+    for (const pattern of this.detectedPatterns.slice(-30)) counts.set(pattern.name, (counts.get(pattern.name) || 0) + 1);
+    return Array.from(counts, ([name, count]) => ({ name, count }));
+  }
+
+  get dividendActions(): CorporateAction[] {
+    return this.corporateActions.filter((action) => action.name.toLowerCase().includes('dividend'));
+  }
+
+  get riskScenario(): RiskScenario | undefined {
+    const snapshot = this.technicalSnapshot;
+    if (!snapshot?.atr || !this.selectedHistoryInstrument || !this.riskBudget || !this.riskDirection) return undefined;
+    const lotSize = this.historyMarket === 'commodities' ? Math.max(1, this.selectedHistoryInstrument.lot_size || 1) : 1;
+    const riskPerUnit = snapshot.atr * this.stopAtrMultiple;
+    const riskPerLot = riskPerUnit * lotSize;
+    const lots = Math.floor(this.riskBudget / riskPerLot);
+    const units = lots * lotSize;
+    const direction = this.riskDirection === 'long' ? 1 : -1;
+    return {
+      lots,
+      units,
+      riskPerUnit,
+      riskUsed: units * riskPerUnit,
+      stopPrice: snapshot.lastClose - direction * riskPerUnit,
+      targetPrice: snapshot.lastClose + direction * riskPerUnit * this.targetRMultiple
+    };
+  }
+
+  setRiskBudget(value: string): void {
+    this.riskBudget = Math.max(0, Number(value) || 0);
+  }
+
+  setStopAtrMultiple(value: string): void {
+    this.stopAtrMultiple = Math.min(5, Math.max(0.5, Number(value) || 2));
+  }
+
+  setTargetRMultiple(value: string): void {
+    this.targetRMultiple = Math.min(5, Math.max(0.5, Number(value) || 2));
+  }
+
+  private calculateTechnicalSnapshot(inputCandles: HistoricalCandle[]): TechnicalSnapshot | undefined {
+    const candles = [...inputCandles].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+    if (candles.length < 2) return undefined;
+    const closes = candles.map((candle) => candle.close);
+    const latestClose = closes[closes.length - 1];
+    const adxValues = ADX.calculate({ high: candles.map((candle) => candle.high), low: candles.map((candle) => candle.low), close: closes, period: 14 });
+    const atrValues = ATR.calculate({ high: candles.map((candle) => candle.high), low: candles.map((candle) => candle.low), close: closes, period: 14 });
+    const sma20Values = closes.length >= 20 ? SMA.calculate({ period: 20, values: closes }) : [];
+    const sma50Values = closes.length >= 50 ? SMA.calculate({ period: 50, values: closes }) : [];
+    const rsiValues = closes.length >= 15 ? RSI.calculate({ period: 14, values: closes }) : [];
+    const adx = adxValues.at(-1);
+    const atr = atrValues.at(-1);
+    const recentCandles = candles.slice(-20);
+    const structure = this.describePriceStructure(candles);
+    return {
+      lastClose: latestClose,
+      changePercent: ((latestClose - closes[0]) / closes[0]) * 100,
+      adx: adx?.adx,
+      positiveDi: adx?.pdi,
+      negativeDi: adx?.mdi,
+      atr,
+      atrPercent: atr === undefined ? undefined : atr / latestClose * 100,
+      sma20: sma20Values.at(-1),
+      sma50: sma50Values.at(-1),
+      rsi: rsiValues.at(-1),
+      averageVolume20: recentCandles.length ? recentCandles.reduce((total, candle) => total + candle.volume, 0) / recentCandles.length : undefined,
+      highestHigh20: Math.max(...recentCandles.map((candle) => candle.high)),
+      lowestLow20: Math.min(...recentCandles.map((candle) => candle.low)),
+      priceStructure: structure,
+      trendStrength: adx !== undefined ? adx.adx >= 25 ? 'Trend strength elevated' : adx.adx >= 20 ? 'Trend strength developing' : 'Weak or ranging trend' : 'Needs more candles',
+      directionalPressure: adx !== undefined ? adx.pdi > adx.mdi ? '+DI above -DI' : adx.mdi > adx.pdi ? '-DI above +DI' : 'DI balanced' : 'Needs more candles'
+    };
+  }
+
+  private describePriceStructure(candles: HistoricalCandle[]): string {
+    const highs: number[] = [];
+    const lows: number[] = [];
+    for (let index = 2; index < candles.length - 2; index++) {
+      const neighborhood = candles.slice(index - 2, index + 3);
+      const high = candles[index].high;
+      const low = candles[index].low;
+      if (neighborhood.every((candle, offset) => offset === 2 || high >= candle.high)) highs.push(high);
+      if (neighborhood.every((candle, offset) => offset === 2 || low <= candle.low)) lows.push(low);
+    }
+    if (highs.length < 2 || lows.length < 2) return 'Not enough swing points';
+    const higherHighs = highs.at(-1)! > highs.at(-2)!;
+    const higherLows = lows.at(-1)! > lows.at(-2)!;
+    const lowerHighs = highs.at(-1)! < highs.at(-2)!;
+    const lowerLows = lows.at(-1)! < lows.at(-2)!;
+    if (higherHighs && higherLows) return 'Higher highs and higher lows';
+    if (lowerHighs && lowerLows) return 'Lower highs and lower lows';
+    return 'Mixed swing structure';
+  }
+
+  private loadEquityFundamentals(instrument: Instrument): void {
+    this.companyProfile = undefined;
+    this.corporateActions = [];
+    if (!instrument.isin) return;
+    this.fundamentalsLoading = true;
+    let pending = 2;
+    const done = () => {
+      pending--;
+      if (pending === 0) this.fundamentalsLoading = false;
+    };
+    this.api.companyProfile(instrument.isin).subscribe({
+      next: (profile) => { this.companyProfile = profile; done(); },
+      error: () => done()
+    });
+    this.api.corporateActions(instrument.isin).subscribe({
+      next: (response) => { this.corporateActions = response.actions; done(); },
+      error: () => done()
+    });
+  }
+
+  setStudy(study: StudyName, enabled: boolean): void {
+    this.studies[study] = enabled;
+    this.drawHistoryChart();
+  }
+
+  toggleTrendlineMode(): void {
+    this.trendlineMode = !this.trendlineMode;
+    this.trendlineStart = undefined;
+    this.trendlineHint = this.trendlineMode ? 'Click two points on the chart to draw a trendline.' : '';
+  }
+
+  undoTrendline(): void {
+    const series = this.trendlineSeries.pop();
+    if (series && this.historyChartApi) this.historyChartApi.removeSeries(series);
+    if (!this.trendlineSeries.length) this.trendlineMode = false;
+    this.trendlineHint = '';
+  }
+
+  clearTrendlines(): void {
+    for (const series of this.trendlineSeries) this.historyChartApi?.removeSeries(series);
+    this.trendlineSeries = [];
+    this.trendlineMode = false;
+    this.trendlineStart = undefined;
+    this.trendlineHint = '';
+  }
+
+  private initializeAnalysisCharts(): void {
+    if (this.historyChart) {
+      this.historyChartApi = this.createChart(this.historyChart.nativeElement);
+      this.candleSeries = this.historyChartApi.addSeries(CandlestickSeries, {
+        upColor: '#28744d',
+        downColor: '#c45b4b',
+        borderVisible: false,
+        wickUpColor: '#28744d',
+        wickDownColor: '#c45b4b'
+      });
+      this.historyChartApi.subscribeClick(this.handleTrendlineClick);
+    }
+  }
+
+  get analysisChartHeight(): number {
+    return 390 + (this.studies.rsi ? 130 : 0) + (this.studies.macd ? 150 : 0);
+  }
+
+  private createChart(container: HTMLDivElement): IChartApi {
+    return createChart(container, {
+      autoSize: true,
+      height: this.analysisChartHeight,
+      layout: { background: { type: ColorType.Solid, color: '#fafaf7' }, textColor: '#747a71' },
+      grid: { vertLines: { color: '#e8e9e2' }, horzLines: { color: '#e8e9e2' } },
+      rightPriceScale: { borderColor: '#dedfd8' },
+      timeScale: { borderColor: '#dedfd8', timeVisible: this.isIntraday(), secondsVisible: false },
+      crosshair: { mode: CrosshairMode.Magnet }
+    });
+  }
+
+  private isIntraday(): boolean {
+    return this.historicalInterval.startsWith('minutes:') || this.historicalInterval.startsWith('hours:');
   }
 
   showToast(message: string): void {
@@ -404,31 +723,207 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private drawHistoryChart(): void {
-    if (!this.chartReady || !this.historyChart) return;
-    const canvas = this.historyChart.nativeElement;
-    const context = canvas.getContext('2d');
-    if (!context) return;
-    const bounds = canvas.getBoundingClientRect();
-    const ratio = window.devicePixelRatio || 1;
-    canvas.width = Math.max(1, Math.floor(bounds.width * ratio));
-    canvas.height = Math.max(1, Math.floor(bounds.height * ratio));
-    context.scale(ratio, ratio);
-    context.clearRect(0, 0, bounds.width, bounds.height);
-    if (this.historicalCandles.length < 2) return;
-    const closes = this.historicalCandles.map((candle) => candle.close);
-    const min = Math.min(...closes);
-    const spread = Math.max(...closes) - min || 1;
-    context.beginPath();
-    closes.forEach((value, index) => {
-      const x = (index / (closes.length - 1)) * bounds.width;
-      const y = bounds.height - 8 - ((value - min) / spread) * (bounds.height - 20);
-      if (index === 0) context.moveTo(x, y);
-      else context.lineTo(x, y);
-    });
-    context.strokeStyle = '#5b46d5';
-    context.lineWidth = 1.8;
-    context.stroke();
+    if (!this.chartReady || !this.historyChartApi || !this.candleSeries) return;
+    this.syncStudyPanes();
+    const unit = this.historicalInterval.split(':')[0];
+    const candles = [...this.historicalCandles].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+    const candleData: CandlestickData<Time>[] = candles.map((candle) => ({
+      time: this.chartTime(candle.timestamp, unit),
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close
+    }));
+    this.candleSeries.setData(candleData);
+    this.clearAnalysisOverlays();
+
+    if (candles.length < 2) {
+      this.markerPlugin?.setMarkers([]);
+      this.rsiSeries?.setData([]);
+      this.macdSeries?.setData([]);
+      this.macdSignalSeries?.setData([]);
+      this.macdHistogramSeries?.setData([]);
+      return;
+    }
+
+    const closes = candles.map((candle) => candle.close);
+    const times = candleData.map((candle) => candle.time);
+    if (this.studies.sma20 && closes.length >= 20) {
+      this.addOverlay(SMA.calculate({ period: 20, values: closes }), 19, times, 'SMA 20', '#d18b35');
+    }
+    if (this.studies.sma50 && closes.length >= 50) {
+      this.addOverlay(SMA.calculate({ period: 50, values: closes }), 49, times, 'SMA 50', '#28744d');
+    }
+    if (this.studies.ema20 && closes.length >= 20) {
+      this.addOverlay(EMA.calculate({ period: 20, values: closes }), 19, times, 'EMA 20', '#5b46d5');
+    }
+    if (this.studies.bollinger && closes.length >= 20) {
+      const bands = BollingerBands.calculate({ period: 20, values: closes, stdDev: 2 });
+      const bandOffset = closes.length - bands.length;
+      this.addOverlay(bands.map((band) => band.upper), bandOffset, times, 'BB Upper', '#8c7cbd');
+      this.addOverlay(bands.map((band) => band.middle), bandOffset, times, 'BB Mid', '#a39ab9');
+      this.addOverlay(bands.map((band) => band.lower), bandOffset, times, 'BB Lower', '#8c7cbd');
+    }
+
+    if (this.studies.rsi && this.rsiSeries) {
+      const rsi = RSI.calculate({ period: 14, values: closes });
+      const offset = closes.length - rsi.length;
+      this.rsiSeries.setData(rsi.map((value, index) => ({ time: times[index + offset], value })));
+    }
+
+    if (this.studies.macd && this.macdSeries && this.macdSignalSeries && this.macdHistogramSeries) {
+      const macd = MACD.calculate({ values: closes, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9, SimpleMAOscillator: false, SimpleMASignal: false });
+      const offset = closes.length - macd.length;
+      const macdLine: LineData<Time>[] = [];
+      const signalLine: LineData<Time>[] = [];
+      const histogram = [] as { time: Time; value: number; color: string }[];
+      macd.forEach((point, index) => {
+        const time = times[index + offset];
+        if (point.MACD !== undefined) macdLine.push({ time, value: point.MACD });
+        if (point.signal !== undefined) signalLine.push({ time, value: point.signal });
+        if (point.histogram !== undefined) histogram.push({ time, value: point.histogram, color: point.histogram >= 0 ? '#28744d55' : '#c45b4b55' });
+      });
+      this.macdSeries.setData(macdLine);
+      this.macdSignalSeries.setData(signalLine);
+      this.macdHistogramSeries.setData(histogram);
+    }
+
+    if (this.studies.supportResistance) this.drawSupportResistance(candles);
+    if (this.studies.patterns) {
+      this.detectedPatterns = this.detectPatterns(candles, times);
+      if (this.candleSeries) {
+        this.markerPlugin ??= createSeriesMarkers(this.candleSeries, []);
+        this.markerPlugin.setMarkers(this.detectedPatterns);
+      }
+    } else {
+      this.detectedPatterns = [];
+      this.markerPlugin?.setMarkers([]);
+    }
+    this.historyChartApi.timeScale().fitContent();
   }
+
+  private syncStudyPanes(): void {
+    if (!this.historyChartApi) return;
+    if (this.studies.rsi && !this.rsiSeries) {
+      const pane = this.historyChartApi.addPane(false);
+      pane.moveTo(1);
+      pane.setStretchFactor(1.2);
+      this.rsiSeries = this.historyChartApi.addSeries(LineSeries, { color: '#5b46d5', lineWidth: 2, title: 'RSI 14' }, pane.paneIndex());
+      this.rsiSeries.createPriceLine({ price: 70, color: '#c45b4b80', lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: '70' });
+      this.rsiSeries.createPriceLine({ price: 30, color: '#28744d80', lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: '30' });
+    } else if (!this.studies.rsi && this.rsiSeries) {
+      this.historyChartApi.removeSeries(this.rsiSeries);
+      this.rsiSeries = undefined;
+    }
+
+    if (this.studies.macd && !this.macdSeries) {
+      const pane = this.historyChartApi.addPane(false);
+      pane.moveTo(this.studies.rsi ? 2 : 1);
+      pane.setStretchFactor(1.3);
+      const paneIndex = pane.paneIndex();
+      this.macdHistogramSeries = this.historyChartApi.addSeries(HistogramSeries, { title: 'Histogram', base: 0 }, paneIndex);
+      this.macdSeries = this.historyChartApi.addSeries(LineSeries, { color: '#28744d', lineWidth: 2, title: 'MACD' }, paneIndex);
+      this.macdSignalSeries = this.historyChartApi.addSeries(LineSeries, { color: '#c45b4b', lineWidth: 1, title: 'Signal' }, paneIndex);
+    } else if (!this.studies.macd && this.macdSeries) {
+      this.historyChartApi.removeSeries(this.macdHistogramSeries!);
+      this.historyChartApi.removeSeries(this.macdSeries);
+      this.historyChartApi.removeSeries(this.macdSignalSeries!);
+      this.macdHistogramSeries = undefined;
+      this.macdSeries = undefined;
+      this.macdSignalSeries = undefined;
+    }
+    this.historyChartApi.panes()[0]?.setStretchFactor(5);
+  }
+
+  private chartTime(timestamp: string, unit: string): Time {
+    if (unit === 'minutes' || unit === 'hours') {
+      return Math.floor(new Date(timestamp).getTime() / 1000) as UTCTimestamp;
+    }
+    const [year, month, day] = timestamp.slice(0, 10).split('-').map(Number);
+    return { year, month, day };
+  }
+
+  private addOverlay(values: number[], offset: number, times: Time[], title: string, color: string): void {
+    if (!this.historyChartApi) return;
+    const series = this.historyChartApi.addSeries(LineSeries, { color, lineWidth: 2, title, lastValueVisible: false, priceLineVisible: false });
+    series.setData(values.map((value, index) => ({ time: times[index + offset], value })));
+    this.overlaySeries.push(series);
+  }
+
+  private clearAnalysisOverlays(): void {
+    if (this.historyChartApi) {
+      for (const series of this.overlaySeries) this.historyChartApi.removeSeries(series);
+    }
+    this.overlaySeries = [];
+    if (this.candleSeries) {
+      for (const line of this.supportPriceLines) this.candleSeries.removePriceLine(line);
+    }
+    this.supportPriceLines = [];
+  }
+
+  private drawSupportResistance(candles: HistoricalCandle[]): void {
+    if (!this.candleSeries || candles.length < 7) return;
+    const supports: number[] = [];
+    const resistances: number[] = [];
+    for (let index = 2; index < candles.length - 2; index++) {
+      const candle = candles[index];
+      const neighbors = candles.slice(index - 2, index + 3).filter((_, offset) => offset !== 2);
+      if (neighbors.every((item) => candle.low <= item.low)) supports.push(candle.low);
+      if (neighbors.every((item) => candle.high >= item.high)) resistances.push(candle.high);
+    }
+    const lastClose = candles[candles.length - 1].close;
+    const nearSupport = supports.filter((level) => level < lastClose).sort((a, b) => b - a).slice(0, 2);
+    const nearResistance = resistances.filter((level) => level > lastClose).sort((a, b) => a - b).slice(0, 2);
+    nearSupport.forEach((price, index) => this.supportPriceLines.push(this.candleSeries!.createPriceLine({ price, color: '#28744d99', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: `S${index + 1}` })));
+    nearResistance.forEach((price, index) => this.supportPriceLines.push(this.candleSeries!.createPriceLine({ price, color: '#c45b4b99', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: `R${index + 1}` })));
+  }
+
+  private detectPatterns(candles: HistoricalCandle[], times: Time[]): PatternMarker[] {
+    const detectors = [
+      { name: 'Doji', marker: 'D', shape: 'circle' as const, color: '#8070b5', position: 'aboveBar' as const, detect: doji as unknown as (input: PatternInput) => boolean, lookback: 1 },
+      { name: 'Bullish engulfing', marker: 'BE', shape: 'arrowUp' as const, color: '#28744d', position: 'belowBar' as const, detect: bullishengulfingpattern as unknown as (input: PatternInput) => boolean, lookback: 2 },
+      { name: 'Bearish engulfing', marker: 'SE', shape: 'arrowDown' as const, color: '#c45b4b', position: 'aboveBar' as const, detect: bearishengulfingpattern as unknown as (input: PatternInput) => boolean, lookback: 2 },
+      { name: 'Hammer pattern', marker: 'H', shape: 'arrowUp' as const, color: '#438c6a', position: 'belowBar' as const, detect: hammerpattern as unknown as (input: PatternInput) => boolean, lookback: 5 },
+      { name: 'Shooting star', marker: 'SS', shape: 'arrowDown' as const, color: '#bc7254', position: 'aboveBar' as const, detect: shootingstar as unknown as (input: PatternInput) => boolean, lookback: 5 }
+    ];
+    const markers: PatternMarker[] = [];
+    for (let index = 0; index < candles.length; index++) {
+      for (const detector of detectors) {
+        if (index + 1 < detector.lookback) continue;
+        const sample = candles.slice(index + 1 - detector.lookback, index + 1);
+        const input = {
+          open: sample.map((candle) => candle.open),
+          high: sample.map((candle) => candle.high),
+          low: sample.map((candle) => candle.low),
+          close: sample.map((candle) => candle.close)
+        };
+        try {
+          if (detector.detect(input)) markers.push({ time: times[index], text: detector.marker, name: detector.name, position: detector.position, color: detector.color, shape: detector.shape });
+        } catch {
+          continue;
+        }
+      }
+    }
+    return markers.slice(-60);
+  }
+
+  private handleTrendlineClick = (event: MouseEventParams<Time>): void => {
+    if (!this.trendlineMode || !this.historyChartApi || !this.candleSeries || !event.time || !event.point || event.logical === undefined) return;
+    const price = this.candleSeries.coordinateToPrice(event.point.y);
+    const point: TrendlinePoint = { time: event.time, price: Number(price), logical: Number(event.logical) };
+    if (!this.trendlineStart) {
+      this.trendlineStart = point;
+      this.trendlineHint = 'First point set. Click the second point.';
+      return;
+    }
+    const points = [this.trendlineStart, point].sort((left, right) => left.logical - right.logical);
+    const series = this.historyChartApi.addSeries(LineSeries, { color: '#5b46d5', lineWidth: 2, lineStyle: LineStyle.LargeDashed, title: 'Trendline', lastValueVisible: false, priceLineVisible: false });
+    series.setData(points.map((item) => ({ time: item.time, value: item.price })));
+    this.trendlineSeries.push(series);
+    this.trendlineStart = undefined;
+    this.trendlineMode = false;
+    this.trendlineHint = 'Trendline added.';
+  };
 
   private loadWatchlist(): Instrument[] {
     try {
