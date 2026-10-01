@@ -1,6 +1,7 @@
 import os
 import re
-from datetime import date, datetime, time, timedelta, timezone
+import secrets
+from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode
 from urllib.parse import quote as url_quote
 
@@ -27,6 +28,11 @@ HISTORICAL_INTERVALS = {
     "weeks": {1},
     "months": {1},
 }
+
+
+def upstox_is_configured() -> bool:
+    placeholders = {"", "your_api_key", "your_api_secret"}
+    return client_id not in placeholders and client_secret not in placeholders
 
 
 def next_token_expiry() -> datetime:
@@ -61,12 +67,12 @@ async def api_json_request(url: str, *, method: str = "GET", headers: dict | Non
 @app.get("/api/status")
 async def status():
     connected = bool(access_token and access_token_expires_at and access_token_expires_at > datetime.now(timezone.utc))
-    return {"connected": connected, "configured": bool(client_id and client_secret), "expiresAt": access_token_expires_at.isoformat() if connected else None}
+    return {"connected": connected, "configured": upstox_is_configured(), "expiresAt": access_token_expires_at.isoformat() if connected else None}
 
 
 @app.get("/auth/upstox")
 async def authorize():
-    if not client_id or not client_secret:
+    if not upstox_is_configured():
         return RedirectResponse(f"{frontend_origin}/?setup=1")
     now = datetime.now(timezone.utc)
     expired_states = [state for state, expires_at in pending_states.items() if expires_at <= now]

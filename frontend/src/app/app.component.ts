@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { EMPTY, Subscription, catchError, exhaustMap, tap, timer } from 'rxjs';
-import { HistoricalCandle, Instrument, KiteInstrument, LtpQuote, MarketApiService } from './market-api.service';
+import { HistoricalCandle, Instrument, LtpQuote, MarketApiService } from './market-api.service';
 
 const DEFAULT_WATCHLIST: Instrument[] = [
   { key: 'NSE_INDEX|Nifty 50', symbol: 'NIFTY 50', name: 'Nifty 50', exchange: 'NSE_INDEX' },
@@ -33,7 +33,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private refreshSubscription?: Subscription;
   private toastTimer?: ReturnType<typeof setTimeout>;
   private searchTimer?: ReturnType<typeof setTimeout>;
-  private kiteSearchTimer?: ReturnType<typeof setTimeout>;
+  private historySearchTimer?: ReturnType<typeof setTimeout>;
   private clockTimer?: ReturnType<typeof setInterval>;
   private resizeObserver?: ResizeObserver;
   private chartReady = false;
@@ -54,16 +54,14 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   updatedTime = 'LIVE FEED OFF';
   clock = '';
   marketLabel = 'Awaiting connection';
-  kiteConnected = false;
-  kiteConfigured = false;
-  kiteSearchText = '';
-  kiteSearchResults: KiteInstrument[] = [];
-  kiteSearchMessage = '';
-  kiteSearchOpen = false;
-  selectedKiteInstrument?: KiteInstrument;
+  historySearchText = '';
+  historySearchResults: Instrument[] = [];
+  historySearchMessage = '';
+  historySearchOpen = false;
+  selectedHistoryInstrument?: Instrument;
   historicalFrom = dateInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
   historicalTo = dateInputValue(new Date());
-  historicalInterval = 'day';
+  historicalInterval = 'days:1';
   historicalCandles: HistoricalCandle[] = [];
   displayedCandles: HistoricalCandle[] = [];
   historicalLoading = false;
@@ -79,21 +77,11 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: () => this.showToast('Could not reach the Market Desk API.')
     });
-    this.api.kiteStatus().subscribe({
-      next: (status) => {
-        this.kiteConfigured = status.configured;
-        this.setKiteConnected(status.connected);
-      },
-      error: () => this.showToast('Could not check Kite API status.')
-    });
     const params = new URLSearchParams(window.location.search);
     if (params.get('auth') === 'connected') this.showToast('Upstox connected. Live quotes are loading.');
     if (params.get('auth') === 'failed') this.showToast('Upstox authorization failed. Check app credentials and redirect URI.');
     if (params.get('setup') === '1') this.showToast('Add your Upstox API key and secret in the server .env file first.');
-    if (params.get('kite_auth') === 'connected') this.showToast('Kite connected. Choose an instrument and load historical candles.');
-    if (params.get('kite_auth') === 'failed') this.showToast('Kite authorization failed. Check the API credentials and callback URL.');
-    if (params.get('kite_setup') === '1') this.showToast('Add your Kite API key and secret to the server .env file first.');
-    if (params.has('auth') || params.has('setup') || params.has('kite_auth') || params.has('kite_setup')) window.history.replaceState({}, '', '/');
+    if (params.has('auth') || params.has('setup')) window.history.replaceState({}, '', '/');
   }
 
   ngAfterViewInit(): void {
@@ -115,7 +103,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.clockTimer) clearInterval(this.clockTimer);
     if (this.toastTimer) clearTimeout(this.toastTimer);
     if (this.searchTimer) clearTimeout(this.searchTimer);
-    if (this.kiteSearchTimer) clearTimeout(this.kiteSearchTimer);
+    if (this.historySearchTimer) clearTimeout(this.historySearchTimer);
   }
 
   get nifty(): LtpQuote | undefined { return this.quotes['NSE_INDEX|Nifty 50']; }
@@ -156,10 +144,6 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.updatedTime = 'LIVE FEED OFF';
     }
-  }
-
-  setKiteConnected(connected: boolean): void {
-    this.kiteConnected = connected;
   }
 
   refreshQuotes() {
@@ -213,45 +197,45 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  updateKiteSearch(value: string): void {
-    this.kiteSearchText = value;
-    this.selectedKiteInstrument = undefined;
-    if (this.kiteSearchTimer) clearTimeout(this.kiteSearchTimer);
+  updateHistorySearch(value: string): void {
+    this.historySearchText = value;
+    this.selectedHistoryInstrument = undefined;
+    if (this.historySearchTimer) clearTimeout(this.historySearchTimer);
     if (value.trim().length < 2) {
-      this.kiteSearchOpen = false;
+      this.historySearchOpen = false;
       return;
     }
-    this.kiteSearchTimer = setTimeout(() => this.searchKite(value.trim()), 280);
+    this.historySearchTimer = setTimeout(() => this.searchHistoryInstruments(value.trim()), 280);
   }
 
-  searchKite(query: string): void {
-    if (!this.kiteConnected) return;
-    this.kiteSearchOpen = true;
-    this.kiteSearchMessage = 'Loading NSE instruments…';
-    this.kiteSearchResults = [];
-    this.api.searchKite(query).subscribe({
+  searchHistoryInstruments(query: string): void {
+    if (!this.connected) return;
+    this.historySearchOpen = true;
+    this.historySearchMessage = 'Searching NSE instruments…';
+    this.historySearchResults = [];
+    this.api.search(query).subscribe({
       next: (result) => {
-        this.kiteSearchResults = result.instruments;
-        this.kiteSearchMessage = result.instruments.length ? '' : 'No matching NSE stocks or indices.';
+        this.historySearchResults = result.instruments;
+        this.historySearchMessage = result.instruments.length ? '' : 'No matching NSE stocks or indices.';
       },
       error: (error: HttpErrorResponse) => {
-        this.kiteSearchMessage = error.error?.detail || 'Kite instrument search failed.';
+        this.historySearchMessage = error.error?.detail || 'Upstox instrument search failed.';
       }
     });
   }
 
-  selectKiteInstrument(instrument: KiteInstrument): void {
+  selectHistoryInstrument(instrument: Instrument): void {
     this.demoMode = false;
     this.historicalCandles = [];
     this.displayedCandles = [];
-    this.selectedKiteInstrument = instrument;
-    this.kiteSearchText = `${instrument.symbol} · ${instrument.exchange}`;
-    this.kiteSearchOpen = false;
-    this.kiteSearchResults = [];
+    this.selectedHistoryInstrument = instrument;
+    this.historySearchText = `${instrument.symbol} · ${instrument.exchange}`;
+    this.historySearchOpen = false;
+    this.historySearchResults = [];
   }
 
   loadHistorical(): void {
-    if (!this.kiteConnected || !this.selectedKiteInstrument || !this.historicalFrom || !this.historicalTo) return;
+    if (!this.connected || !this.selectedHistoryInstrument || !this.historicalFrom || !this.historicalTo) return;
     if (this.historicalFrom > this.historicalTo) {
       this.showToast('The start date must be on or before the end date.');
       return;
@@ -260,9 +244,11 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.demoMode = false;
     this.historicalCandles = [];
     this.displayedCandles = [];
+    const [unit, intervalValue] = this.historicalInterval.split(':');
     this.api.historical(
-      this.selectedKiteInstrument.instrument_token,
-      this.historicalInterval,
+      this.selectedHistoryInstrument.key,
+      unit,
+      Number(intervalValue),
       this.historicalFrom,
       this.historicalTo
     ).subscribe({
@@ -275,22 +261,22 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: (error: HttpErrorResponse) => {
         this.historicalLoading = false;
-        this.showToast(error.error?.detail || 'Could not load Kite historical data.');
+        if (error.status === 401) this.setConnected(false);
+        this.showToast(error.error?.detail || 'Could not load Upstox historical data.');
       }
     });
   }
 
   runDemo(): void {
     const today = new Date();
-    this.selectedKiteInstrument = {
+    this.selectedHistoryInstrument = {
       key: 'DEMO:SAMPLE',
-      instrument_token: 0,
       symbol: 'DEMO',
       name: 'Synthetic sample only',
       exchange: 'DEMO'
     };
-    this.kiteSearchText = 'DEMO · SAMPLE ONLY';
-    this.historicalInterval = 'day';
+    this.historySearchText = 'DEMO · SAMPLE ONLY';
+    this.historicalInterval = 'days:1';
     this.historicalTo = dateInputValue(today);
     const candles: HistoricalCandle[] = [];
     let previousClose = 1240;
@@ -317,20 +303,6 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.drawHistoryChart();
   }
 
-  logoutKite(): void {
-    this.api.kiteLogout().subscribe({
-      next: () => {
-        this.setKiteConnected(false);
-        this.demoMode = false;
-        this.historicalCandles = [];
-        this.displayedCandles = [];
-        this.drawHistoryChart();
-        this.showToast('Kite disconnected.');
-      },
-      error: () => this.showToast('Could not disconnect Kite.')
-    });
-  }
-
   addInstrument(instrument: Instrument): void {
     if (this.watchlist.some((item) => item.key === instrument.key)) {
       this.showToast(`${instrument.symbol} is already in your watchlist.`);
@@ -355,8 +327,12 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       next: () => {
         this.quotes = {};
         this.history = [];
+        this.historicalCandles = [];
+        this.displayedCandles = [];
+        this.demoMode = false;
         this.setConnected(false);
         this.drawChart();
+        this.drawHistoryChart();
         this.showToast('Upstox disconnected.');
       },
       error: () => this.showToast('Could not disconnect Upstox.')
@@ -370,10 +346,16 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       : 'Add your Upstox app credentials to the server environment before connecting.';
   }
 
-  get kiteConnectionCopy(): string {
-    return this.kiteConnected
-      ? 'Kite session active. Historical candle requests are made on demand.'
-      : 'Connect Kite to search instruments and request historical candles. Your API secret stays on this server.';
+  get historyConnectionCopy(): string {
+    return this.connected
+      ? 'Upstox session active. Historical candles and live quotes use the same secure connection.'
+      : 'Connect your verified Upstox account to search instruments and request historical candles.';
+  }
+
+  get historicalIntervalLabel(): string {
+    const [unit, interval] = this.historicalInterval.split(':');
+    const names: Record<string, string> = { minutes: 'minute', hours: 'hour', days: 'day', weeks: 'week', months: 'month' };
+    return `${interval} ${names[unit] || unit}${Number(interval) > 1 ? 's' : ''}`;
   }
 
   showToast(message: string): void {
