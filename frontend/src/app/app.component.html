@@ -1,0 +1,142 @@
+<header class="topbar">
+  <a class="brand" href="/" aria-label="Market Desk home"><span class="brand-mark">M</span><span>MARKET<span class="brand-light">DESK</span></span></a>
+  <div class="topbar-right">
+    <span class="session-clock">{{ clock }}</span>
+    <span class="connection-state" [class.connected]="connected"><i></i><span>{{ connected ? 'Connected' : 'Not connected' }}</span></span>
+    <a class="connect-button" href="/auth/upstox" [hidden]="connected"><span class="button-symbol">↗</span> Connect Upstox</a>
+    <button class="disconnect-button" type="button" title="Disconnect Upstox" [hidden]="!connected" (click)="disconnect()">Disconnect</button>
+  </div>
+</header>
+
+<main>
+  <section class="market-strip" aria-label="Market summary">
+    <div class="market-strip-title"><span class="eyebrow">INDIAN MARKETS</span><span class="market-status" [class.connected]="connected"><i></i><span>{{ marketLabel }}</span></span></div>
+    <div class="market-strip-meta"><span>Watchlist <b>{{ watchlist.length.toString().padStart(2, '0') }}</b></span><span class="meta-divider"></span><span>Refresh <b>5 sec</b></span></div>
+  </section>
+
+  <section class="workspace">
+    <div class="primary-column">
+      <section class="lead-panel" aria-label="Nifty 50 overview">
+        <div class="lead-head">
+          <div><span class="eyebrow">BENCHMARK / NSE</span><h1>NIFTY 50</h1></div>
+          <div class="instrument-tag">NSE_INDEX<span>·</span>SPOT</div>
+        </div>
+        <div class="lead-price-row">
+          <div>
+            <div class="lead-price" *ngIf="nifty; else emptyPrice">{{ formatPrice(nifty.last_price).split('.')[0] }}<span>.{{ formatPrice(nifty.last_price).split('.')[1] }}</span></div>
+            <ng-template #emptyPrice><div class="lead-price">--<span>.--</span></div></ng-template>
+            <div class="lead-change" [class.positive]="(niftyDifference ?? 0) >= 0 && niftyDifference !== undefined" [class.negative]="(niftyDifference ?? 0) < 0">
+              <ng-container *ngIf="niftyDifference !== undefined; else waitingNifty">{{ niftyDifference > 0 ? '+' : '' }}{{ formatPrice(niftyDifference) }} &nbsp;({{ formatChange(niftyChange) }}) vs previous close</ng-container>
+              <ng-template #waitingNifty>{{ connected ? 'Waiting for first quote' : 'Connect Upstox to load live market data' }}</ng-template>
+            </div>
+          </div>
+          <div class="lead-updated"><span class="pulse-dot" [class.active]="connected"></span><span>{{ updatedTime }}</span></div>
+        </div>
+        <div class="chart-wrap">
+          <canvas #chart aria-label="Nifty 50 recent price movement"></canvas>
+          <div class="chart-empty" *ngIf="history.length < 2"><span class="empty-cross">+</span><span>Live price history appears here</span></div>
+        </div>
+        <div class="chart-footer"><span>PRICE TRACE</span><span>{{ history.length > 1 ? history.length + ' RECENT UPDATES' : 'AWAITING FIRST TICK' }}</span></div>
+      </section>
+
+      <section class="historical-section" aria-labelledby="historical-title">
+        <div class="historical-heading">
+          <div><span class="eyebrow">KITE CONNECT / HISTORICAL</span><h2 id="historical-title">Backdated candles</h2></div>
+          <div class="historical-status" [class.connected]="kiteConnected" [class.demo-status]="demoMode"><i></i>{{ demoMode ? 'SAMPLE DATA ONLY' : kiteConnected ? 'KITE CONNECTED' : 'KITE DISCONNECTED' }}<button class="history-disconnect-top" type="button" *ngIf="kiteConnected" (click)="logoutKite()">Disconnect</button></div>
+        </div>
+        <div class="historical-connection" *ngIf="!kiteConnected">
+          <p>{{ kiteConnectionCopy }}</p>
+          <div class="history-actions">
+            <a class="history-connect" href="/auth/kite" *ngIf="kiteConfigured">Connect Kite <span>↗</span></a>
+            <button class="history-connect demo-button" type="button" (click)="runDemo()">Preview sample data <span>▶</span></button>
+          </div>
+          <div class="historical-setup" *ngIf="!kiteConfigured">
+            <span>Add <code>KITE_API_KEY</code> and <code>KITE_API_SECRET</code> to <code>.env</code>, then restart the API. Kite Connect subscription is needed for historical candles.</span>
+            <a href="https://developers.kite.trade/signup" target="_blank" rel="noreferrer">Kite Developer Portal ↗</a>
+          </div>
+        </div>
+        <form class="historical-form" (submit)="$event.preventDefault(); loadHistorical()">
+          <label class="history-field instrument-field">
+            <span>INSTRUMENT</span>
+            <input type="search" placeholder="Search NSE symbol or company" autocomplete="off" [value]="kiteSearchText" [disabled]="!kiteConnected" (input)="updateKiteSearch($any($event.target).value)" (focus)="kiteSearchOpen = kiteConnected && kiteSearchText.length >= 2" />
+            <div class="history-search-results" *ngIf="kiteSearchOpen">
+              <div class="search-message" *ngIf="kiteSearchMessage">{{ kiteSearchMessage }}</div>
+              <button class="search-result" type="button" *ngFor="let instrument of kiteSearchResults" (click)="selectKiteInstrument(instrument)">
+                <span><strong>{{ instrument.symbol }}</strong><small>{{ instrument.exchange }} · {{ instrument.name }}</small></span><span class="add-mark">↵</span>
+              </button>
+            </div>
+            <small class="selected-instrument" *ngIf="selectedKiteInstrument">{{ selectedKiteInstrument.key }}</small>
+          </label>
+          <label class="history-field"><span>FROM</span><input type="date" [value]="historicalFrom" (change)="historicalFrom = $any($event.target).value" /></label>
+          <label class="history-field"><span>TO</span><input type="date" [value]="historicalTo" (change)="historicalTo = $any($event.target).value" /></label>
+          <label class="history-field interval-field"><span>INTERVAL</span><select [value]="historicalInterval" (change)="historicalInterval = $any($event.target).value"><option value="minute">1 minute</option><option value="3minute">3 minutes</option><option value="5minute">5 minutes</option><option value="10minute">10 minutes</option><option value="15minute">15 minutes</option><option value="30minute">30 minutes</option><option value="60minute">60 minutes</option><option value="day">1 day</option></select></label>
+          <button class="load-history" type="submit" [disabled]="!kiteConnected || !selectedKiteInstrument || historicalLoading">{{ historicalLoading ? 'Loading…' : 'Load candles' }}</button>
+        </form>
+        <div class="historical-results" *ngIf="historicalCandles.length">
+          <div class="historical-result-heading"><span>{{ selectedKiteInstrument?.symbol }} <i>·</i> {{ historicalInterval }} <i>·</i> {{ historicalCandles.length }} candles <b class="sample-label" *ngIf="demoMode">SYNTHETIC / NOT MARKET DATA</b></span><button type="button" class="history-disconnect" *ngIf="kiteConnected" (click)="logoutKite()">Disconnect Kite</button></div>
+          <div class="historical-chart-wrap"><canvas #historyChart aria-label="Historical closing prices"></canvas></div>
+          <div class="candle-table-scroll"><table class="candle-table">
+            <thead><tr><th>TIME</th><th>OPEN</th><th>HIGH</th><th>LOW</th><th>CLOSE</th><th>VOLUME</th></tr></thead>
+            <tbody><tr *ngFor="let candle of displayedCandles"><td>{{ candle.timestamp.replace('T', ' ').slice(0, 16) }}</td><td>{{ formatPrice(candle.open) }}</td><td>{{ formatPrice(candle.high) }}</td><td>{{ formatPrice(candle.low) }}</td><td>{{ formatPrice(candle.close) }}</td><td>{{ candle.volume.toLocaleString('en-IN') }}</td></tr></tbody>
+          </table></div>
+          <p class="table-caption">{{ demoMode ? 'Synthetic sample for interface preview only. It is not actual or delayed market data.' : 'Showing the latest ' + displayedCandles.length + ' candles from this result.' }}</p>
+        </div>
+        <div class="history-empty" *ngIf="kiteConnected && !historicalCandles.length && !historicalLoading"><span class="empty-cross">↗</span><span>Search an instrument, choose dates and interval, then load its historical candles.</span></div>
+      </section>
+
+      <section class="watchlist-section">
+        <div class="section-head">
+          <div><span class="eyebrow">YOUR INSTRUMENTS</span><h2>Watchlist <span class="count-pill">{{ watchlist.length.toString().padStart(2, '0') }}</span></h2></div>
+          <form class="search-form" (submit)="$event.preventDefault(); search(searchText)">
+            <label class="search-field"><span class="search-icon">⌕</span><input type="search" placeholder="Find an instrument" autocomplete="off" minlength="2" [value]="searchText" (input)="updateSearch($any($event.target).value)" (focus)="searchOpen = searchText.length >= 2"/><kbd>ENTER</kbd></label>
+            <div class="search-results" *ngIf="searchOpen" role="listbox">
+              <div class="search-message" *ngIf="searchMessage">{{ searchMessage }}</div>
+              <button class="search-result" type="button" role="option" *ngFor="let instrument of searchResults" (click)="addInstrument(instrument)">
+                <span><strong>{{ instrument.symbol }}</strong><small>{{ instrument.exchange }} · {{ instrument.name }}</small></span><span class="add-mark">+</span>
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="table-scroll" [hidden]="watchlist.length === 0"><table>
+          <thead><tr><th>INSTRUMENT</th><th>LAST PRICE</th><th>CHANGE</th><th>VOLUME</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngFor="let instrument of watchlist">
+              <td><div class="instrument-name"><span class="instrument-chip">{{ initials(instrument.symbol) }}</span><span><strong>{{ instrument.symbol }}</strong><small>{{ instrument.name }}</small></span></div></td>
+              <td class="quote-value">{{ quoteFor(instrument.key) ? '₹' + formatPrice(quoteFor(instrument.key)?.last_price) : '--' }}</td>
+              <td><span class="change-value" [class.positive]="(changePercent(quoteFor(instrument.key)) ?? 0) > 0" [class.negative]="(changePercent(quoteFor(instrument.key)) ?? 0) < 0">{{ formatChange(changePercent(quoteFor(instrument.key))) }}</span></td>
+              <td class="volume-value">{{ quoteFor(instrument.key)?.volume !== undefined ? quoteFor(instrument.key)?.volume?.toLocaleString('en-IN') : '--' }}</td>
+              <td><button class="remove-button" type="button" [attr.aria-label]="'Remove ' + instrument.symbol" title="Remove from watchlist" (click)="removeInstrument(instrument.key)">×</button></td>
+            </tr>
+          </tbody>
+        </table></div>
+        <div class="empty-watchlist" *ngIf="watchlist.length === 0">Your watchlist is empty. Search for an NSE instrument to add it.</div>
+      </section>
+    </div>
+
+    <aside class="side-column">
+      <section class="side-section market-pulse">
+        <div class="side-heading"><span class="eyebrow">MARKET PULSE</span><span class="section-index">01</span></div>
+        <div class="pulse-item"><span class="pulse-label">NIFTY 50</span><strong>{{ nifty ? formatPrice(nifty.last_price) : '--' }}</strong><span class="pulse-delta" [class.positive]="(niftyChange ?? 0) > 0" [class.negative]="(niftyChange ?? 0) < 0">{{ formatChange(niftyChange) }}</span></div>
+        <div class="pulse-item"><span class="pulse-label">NIFTY BANK</span><strong>{{ bankNifty ? formatPrice(bankNifty.last_price) : '--' }}</strong><span class="pulse-delta" [class.positive]="(changePercent(bankNifty) ?? 0) > 0" [class.negative]="(changePercent(bankNifty) ?? 0) < 0">{{ formatChange(changePercent(bankNifty)) }}</span></div>
+        <div class="pulse-item"><span class="pulse-label">INDIA VIX</span><strong>{{ indiaVix ? formatPrice(indiaVix.last_price) : '--' }}</strong><span class="pulse-delta" [class.positive]="(changePercent(indiaVix) ?? 0) > 0" [class.negative]="(changePercent(indiaVix) ?? 0) < 0">{{ formatChange(changePercent(indiaVix)) }}</span></div>
+      </section>
+
+      <section class="side-section connection-panel">
+        <div class="side-heading"><span class="eyebrow">DATA CONNECTION</span><span class="section-index">02</span></div>
+        <div class="provider-lockup"><span class="provider-mark">U</span><div><strong>Upstox API</strong><span>Market quotes · V3</span></div></div>
+        <p>{{ connectionCopy }}</p>
+        <a href="/auth/upstox" class="side-connect" *ngIf="!connected && configured">Authorize account <span>↗</span></a>
+        <div class="setup-hint" *ngIf="!configured">Add your Upstox API key and secret to <code>.env</code>, then restart the server.</div>
+      </section>
+
+      <section class="side-section note-panel">
+        <div class="side-heading"><span class="eyebrow">SESSION NOTE</span><span class="section-index">03</span></div>
+        <p>Quotes update every five seconds during your session. Upstox access tokens expire daily and are held in server memory only.</p>
+        <span class="note-foot"><span class="note-led"></span>READ-ONLY MARKET DATA</span>
+      </section>
+    </aside>
+  </section>
+  <footer class="page-footer"><span>MARKET DESK <span class="footer-divider">/</span> PERSONAL WORKSPACE</span><span>DATA PROVIDED BY UPSTOX</span></footer>
+</main>
+
+<div class="toast" role="status" aria-live="polite" [class.visible]="!!toast">{{ toast }}</div>
