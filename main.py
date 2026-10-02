@@ -1,7 +1,9 @@
 import os
 import re
 import secrets
+import csv
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import urlencode
 from urllib.parse import quote as url_quote
 
@@ -21,6 +23,10 @@ access_token: str | None = None
 access_token_expires_at: datetime | None = None
 pending_states: dict[str, datetime] = {}
 instrument_key_pattern = re.compile(r"^[A-Z0-9_]+\|[A-Za-z0-9 ._-]+$")
+SAMPLE_HISTORIES = {
+    "RELIANCE": {"file": "reliance_nse_daily.csv", "key": "NSE_EQ|RELIANCE", "name": "Reliance Industries Limited"},
+    "ADANIPORTS": {"file": "adani_ports_nse_bullish.csv", "key": "NSE_EQ|INE742F01042", "name": "Adani Ports and Special Economic Zone Limited"},
+}
 HISTORICAL_INTERVALS = {
     "minutes": {1, 2, 3, 5, 10, 15, 30, 60},
     "hours": {1, 2, 3, 4, 5},
@@ -230,3 +236,35 @@ async def historical_candles(
         for row in result.get("data", {}).get("candles", [])
     ]
     return {"candles": candles, "instrument_key": instrument_key, "unit": unit, "interval": interval}
+
+
+@app.get("/api/sample-history")
+async def sample_history(symbol: str = Query(default="RELIANCE", max_length=20)):
+    """Return a local historical equity sample for offline indicator work."""
+    sample = SAMPLE_HISTORIES.get(symbol.upper())
+    if not sample:
+        raise HTTPException(status_code=404, detail="No local sample is available for that instrument.")
+    sample_path = Path(__file__).with_name(sample["file"])
+    try:
+        with sample_path.open(newline="", encoding="utf-8") as sample_file:
+            candles = [
+                {
+                    "timestamp": f"{row['date']}T00:00:00+0530",
+                    "open": float(row["open"]),
+                    "high": float(row["high"]),
+                    "low": float(row["low"]),
+                    "close": float(row["close"]),
+                    "volume": int(row["volume"]),
+                }
+                for row in csv.DictReader(sample_file)
+            ]
+    except (OSError, KeyError, ValueError) as exc:
+        raise HTTPException(status_code=500, detail="The bundled sample data could not be read.") from exc
+    return {
+        "candles": candles,
+        "instrument_key": sample["key"],
+        "symbol": symbol.upper(),
+        "name": sample["name"],
+        "unit": "days",
+        "interval": 1,
+    }

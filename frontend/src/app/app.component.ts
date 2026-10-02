@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import {
   CandlestickData,
   CandlestickSeries,
@@ -29,16 +29,12 @@ import {
   EMA,
   MACD,
   RSI,
-  SMA,
-  bearishengulfingpattern,
-  bullishengulfingpattern,
-  doji,
-  hammerpattern,
-  shootingstar
+  SMA
 } from 'technicalindicators';
+import { detectCandlestickPatterns } from './candlestick-patterns';
+import { detectTraderGitaPatterns, TraderGitaPatternGroup } from './traders-gita-patterns';
 
-type StudyName = 'sma20' | 'sma50' | 'ema20' | 'bollinger' | 'rsi' | 'macd' | 'supportResistance' | 'patterns';
-type PatternInput = { open: number[]; high: number[]; low: number[]; close: number[] };
+type StudyName = 'sma20' | 'sma50' | 'ema9' | 'ema20' | 'ema50' | 'ema200' | 'bollinger' | 'rsi' | 'macd' | 'supportResistance' | 'patterns' | 'fibonacci' | 'emaSignal';
 type TrendlinePoint = { time: Time; price: number; logical: number };
 type PatternMarker = { time: Time; position: 'aboveBar' | 'belowBar'; color: string; shape: 'arrowDown' | 'arrowUp' | 'circle'; text: string; name: string };
 type TechnicalSnapshot = {
@@ -51,6 +47,20 @@ type TechnicalSnapshot = {
   atrPercent?: number;
   sma20?: number;
   sma50?: number;
+  ema9?: number;
+  ema20?: number;
+  ema50?: number;
+  ema200?: number;
+  emaAlignment: 'Bullish' | 'Bearish' | 'Mixed' | 'Needs 200 candles';
+  bullishSetup: boolean;
+  bullishEntry: boolean;
+  bullishCrossover: boolean;
+  bearishCrossover: boolean;
+  ema20Rising: boolean;
+  ema50Rising: boolean;
+  pullbackNearEma: boolean;
+  bullishRejection: boolean;
+  breaksRejectionHigh: boolean;
   rsi?: number;
   averageVolume20?: number;
   highestHigh20: number;
@@ -66,6 +76,62 @@ type RiskScenario = {
   riskUsed: number;
   stopPrice: number;
   targetPrice: number;
+  entryPrice: number;
+};
+type GhostRiderSnapshot = {
+  bullPct: number; bearPct: number; scoreTotal: number; scoreAvailable: number; bias: string;
+  closeAboveVwap: boolean; rsi: number; rsi5m?: number; macdBullish: boolean; adx: number;
+  emaBullish: boolean; atr: number; volumeHigh: boolean; cross: 'BUY' | 'SELL' | 'WAIT';
+  signal: 'LONG' | 'SHORT' | 'WAIT'; entry?: number; stop?: number; targets: number[]; targetHits: boolean[]; retest: boolean;
+};
+type GhostRiderVisibilityKey = 'ema9' | 'ema21' | 'vwap' | 'signals' | 'dashboard' | 'entry' | 'stop' | 'tp1' | 'tp2' | 'tp3' | 'tp4' | 'tp5';
+type TraderGitaPatternSetting = 'dojiPct' | 'smallBodyPct' | 'longBodyMult' | 'wickBodyMult' | 'tinyWickPct' | 'avgBodyLen' | 'trendLen' | 'tweezerTicks';
+type GhostRiderResult = {
+  snapshot: GhostRiderSnapshot;
+  ema9: (number | undefined)[]; ema21: (number | undefined)[]; vwap: (number | undefined)[];
+  markers: PatternMarker[]; candleColors: (string | undefined)[];
+};
+type KnowledgePattern = { name: string; family: string; bias: string; candles: string; description: string; rule: string };
+type FibonacciSummary = { direction: 'upswing' | 'downswing'; start: string; end: string; low: number; high: number };
+type CandleDrawing = { x: number; high: number; low: number; open: number; close: number; bodyTop: number; bodyHeight: number; color: string };
+
+function candleDiagram(...values: [open: number, close: number, high: number, low: number][]): CandleDrawing[] {
+  const centers = values.length === 1 ? [50] : values.length === 2 ? [36, 64] : values.length === 3 ? [20, 50, 80] : values.map((_, index) => 12 + (76 * index) / (values.length - 1));
+  return values.map(([open, close, high, low], index) => ({
+    x: centers[index], open, close, high, low,
+    bodyTop: Math.min(open, close),
+    bodyHeight: Math.max(Math.abs(close - open), 2),
+    color: Math.abs(close - open) <= 1.5 ? '#8070b5' : close < open ? '#438c6a' : '#c45b4b'
+  }));
+}
+
+const KNOWLEDGE_DIAGRAMS: Record<string, CandleDrawing[]> = {
+  'Doji': candleDiagram([35, 35.8, 12, 58]),
+  'Long-Legged Doji': candleDiagram([35, 35.8, 8, 61]),
+  'Cross Doji': candleDiagram([35, 35.8, 14, 57]),
+  'Hammer': candleDiagram([23, 28, 17, 59]),
+  'Hanging Man': candleDiagram([23, 28, 17, 59]),
+  'Inverted Hammer': candleDiagram([51, 46, 12, 56]),
+  'Shooting Star': candleDiagram([51, 46, 12, 56]),
+  'Bullish Marubozu': candleDiagram([48, 16, 16, 48]),
+  'Bearish Marubozu': candleDiagram([16, 48, 16, 48]),
+  'Opening and Closing Marubozu Variants': candleDiagram([48, 16, 16, 46]),
+  'Spinning Top': candleDiagram([32, 35, 12, 58]),
+  'Bullish Engulfing': candleDiagram([22, 43, 14, 51], [48, 19, 15, 54]),
+  'Bearish Engulfing': candleDiagram([43, 22, 14, 51], [17, 48, 11, 54]),
+  'Piercing Line': candleDiagram([18, 43, 12, 47], [54, 27, 26, 59]),
+  'Piercing Pattern (Piercing Line)': candleDiagram([18, 43, 12, 47], [54, 27, 26, 59]),
+  'Dark Cloud Cover': candleDiagram([43, 18, 12, 47], [26, 53, 9, 59]),
+  'Bullish Harami': candleDiagram([17, 48, 12, 53], [38, 29, 25, 43]),
+  'Bearish Harami': candleDiagram([48, 17, 12, 53], [29, 38, 25, 43]),
+  'Morning Star': candleDiagram([15, 38, 10, 42], [32, 34, 27, 40], [43, 19, 16, 50]),
+  'Evening Star': candleDiagram([42, 19, 10, 48], [29, 27, 25, 34], [17, 43, 10, 50]),
+  'Bullish Abandoned Baby': candleDiagram([15, 38, 10, 42], [32, 33, 28, 38], [43, 19, 16, 50]),
+  'Bearish Abandoned Baby': candleDiagram([42, 19, 10, 48], [29, 28, 25, 35], [17, 43, 10, 50]),
+  'Three White Soldiers': candleDiagram([49, 37, 33, 55], [43, 29, 25, 49], [35, 19, 15, 43]),
+  'Three Black Crows': candleDiagram([20, 34, 13, 43], [27, 42, 19, 49], [35, 51, 27, 57]),
+  'Rising Three Methods': candleDiagram([49, 25, 22, 52], [31, 37, 28, 42], [34, 40, 30, 44], [38, 43, 34, 47], [48, 18, 15, 51]),
+  'Falling Three Methods': candleDiagram([18, 42, 15, 48], [36, 30, 27, 40], [39, 33, 30, 43], [42, 37, 33, 46], [20, 49, 17, 53])
 };
 
 const DEFAULT_WATCHLIST: Instrument[] = [
@@ -101,9 +167,102 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private clockTimer?: ReturnType<typeof setInterval>;
   private resizeObserver?: ResizeObserver;
   private chartReady = false;
+  activeTab: 'dashboard' | 'knowledge' = 'dashboard';
+  readonly knowledgePatterns: KnowledgePattern[] = [
+    { name: 'Doji', family: 'One candle', bias: 'Neutral', candles: '1 candle', description: 'Open and close are nearly equal, leaving a very small real body. It shows indecision for that candle.', rule: 'Body is at most 10% of the full high-to-low range.' },
+    { name: 'Long-Legged Doji', family: 'One candle', bias: 'Neutral / indecision', candles: '1 candle after a strong move', description: 'A tiny body sits between long upper and lower shadows. Price moved widely in both directions, then closed near its open.', rule: 'Body is at most 10% of range; upper and lower shadows are each at least 30% of range. Look for context and a later candle to establish direction.' },
+    { name: 'Cross Doji', family: 'One candle', bias: 'Neutral', candles: '1 candle', description: 'A cross-like Doji has nearly equal open and close with relatively balanced shadows. It marks indecision; nearby levels and the next move add context.', rule: 'Body is at most 10% of range; upper and lower shadow lengths differ by no more than 15% of range.' },
+    { name: 'Hammer', family: 'One candle', bias: 'Bullish candidate', candles: '1 candle after a decline', description: 'A small body sits near the high with a long lower shadow. Sellers pushed price down, but it recovered before the close.', rule: 'Body is at most 35% of range; lower shadow is at least twice the body and 55% of range; upper shadow is at most 25%; prior three-candle move is down.' },
+    { name: 'Hanging Man', family: 'One candle', bias: 'Bearish candidate', candles: '1 candle after a rise', description: 'It has the same shape as a Hammer, but appears after a rise. The long lower shadow signals selling pressure during the candle.', rule: 'Hammer shape with a positive prior three-candle move.' },
+    { name: 'Inverted Hammer', family: 'One candle', bias: 'Bullish candidate', candles: '1 candle after a decline', description: 'A small body sits near the low with a long upper shadow. Buyers pushed price up intrabar; the following price action matters for confirmation.', rule: 'Body is at most 35% of range; upper shadow is at least twice the body and 55% of range; lower shadow is at most 25%; prior three-candle move is down.' },
+    { name: 'Shooting Star', family: 'One candle', bias: 'Bearish candidate', candles: '1 candle after a rise', description: 'It has the same shape as an Inverted Hammer, but appears after a rise. The long upper shadow shows rejection of higher prices.', rule: 'Inverted Hammer shape with a positive prior three-candle move.' },
+    { name: 'Bullish Marubozu', family: 'One candle', bias: 'Bullish momentum', candles: '1 candle', description: 'A strong bullish candle opens near its low and closes near its high, showing directional buying pressure during the candle.', rule: 'Close is above open; upper and lower shadows are each at most 10% of range. Treat as context-dependent momentum, especially after a breakout or during a trend.' },
+    { name: 'Bearish Marubozu', family: 'One candle', bias: 'Bearish momentum', candles: '1 candle', description: 'A strong bearish candle opens near its high and closes near its low, showing directional selling pressure during the candle.', rule: 'Close is below open; upper and lower shadows are each at most 10% of range. Compare with the trend, nearby levels, and recent volume.' },
+    { name: 'Opening and Closing Marubozu Variants', family: 'One candle', bias: 'Directional', candles: '1 candle', description: 'These variants have one very small shadow and one more visible shadow. The small shadow identifies the opening or closing extreme.', rule: 'Bullish opening: tiny lower shadow; bullish closing: tiny upper shadow. Bearish opening: tiny upper shadow; bearish closing: tiny lower shadow. The opposite shadow remains more visible.' },
+    { name: 'Spinning Top', family: 'One candle', bias: 'Indecision', candles: '1 candle', description: 'A small body with visible shadows on both sides shows that buyers and sellers both moved price without a decisive close.', rule: 'Body is at most 30% of range; upper and lower shadows are each longer than the body. After a trend it may mark a pause; inside a range it may be noise.' },
+    { name: 'Bullish Engulfing', family: 'Two candles', bias: 'Bullish candidate', candles: '2 candles after a decline', description: 'A bullish candle’s body covers the previous bearish candle’s body, suggesting buyers overwhelmed the prior session’s move.', rule: 'Previous candle bearish; current candle bullish and its body fully engulfs the previous body; current body is larger; prior move is down.' },
+    { name: 'Bearish Engulfing', family: 'Two candles', bias: 'Bearish candidate', candles: '2 candles after a rise', description: 'A bearish candle’s body covers the previous bullish candle’s body, suggesting sellers overwhelmed the prior session’s move.', rule: 'Previous candle bullish; current candle bearish and its body fully engulfs the previous body; current body is larger; prior move is up.' },
+    { name: 'Piercing Pattern (Piercing Line)', family: 'Two candles', bias: 'Bullish candidate', candles: '2 candles after a decline', description: 'A bearish candle is followed by a bullish candle that opens below the prior low and closes above the prior body’s midpoint, but below its open.', rule: 'Prior candle bearish; current bullish; open below prior low; close above prior midpoint but below prior open; prior move is down.' },
+    { name: 'Dark Cloud Cover', family: 'Two candles', bias: 'Bearish candidate', candles: '2 candles after a rise', description: 'A bullish candle is followed by a bearish candle that opens above the prior high and closes below the prior body’s midpoint, but above its open.', rule: 'Prior candle bullish; current bearish; open above prior high; close below prior midpoint but above prior open; prior move is up.' },
+    { name: 'Bullish Harami', family: 'Two candles', bias: 'Bullish candidate', candles: '2 candles after a decline', description: 'The second candle’s real body fits inside the first candle’s larger bearish body. It can suggest that downward momentum is easing.', rule: 'Prior candle bearish; current real body is inside prior real body; prior move is down.' },
+    { name: 'Bearish Harami', family: 'Two candles', bias: 'Bearish candidate', candles: '2 candles after a rise', description: 'The second candle’s real body fits inside the first candle’s larger bullish body. It can suggest that upward momentum is easing.', rule: 'Prior candle bullish; current real body is inside prior real body; prior move is up.' },
+    { name: 'Morning Star', family: 'Three candles', bias: 'Bullish candidate', candles: '3 candles after a decline', description: 'A bearish candle is followed by a small-bodied pause and then a bullish candle that closes above the first candle’s midpoint.', rule: 'First candle bearish; middle body at most 35% of its range; third candle bullish and closes above the first candle midpoint; prior move is down.' },
+    { name: 'Evening Star', family: 'Three candles', bias: 'Bearish candidate', candles: '3 candles after a rise', description: 'A bullish candle is followed by a small-bodied pause and then a bearish candle that closes below the first candle’s midpoint.', rule: 'First candle bullish; middle body at most 35% of its range; third candle bearish and closes below the first candle midpoint; prior move is up.' },
+    { name: 'Bullish Abandoned Baby', family: 'Three candles', bias: 'Bullish candidate', candles: '3 candles after a decline; gaps required', description: 'A bearish candle is followed by an isolated Doji below it, then a bullish candle that gaps above the Doji. The gaps are central to the classic pattern.', rule: 'First candle bearish; middle Doji range gaps below candle 1; third candle bullish and its range gaps above the Doji. Rare on many intraday markets; confirm the gaps and data.' },
+    { name: 'Bearish Abandoned Baby', family: 'Three candles', bias: 'Bearish candidate', candles: '3 candles after a rise; gaps required', description: 'A bullish candle is followed by an isolated Doji above it, then a bearish candle that gaps below the Doji. The gaps are central to the classic pattern.', rule: 'First candle bullish; middle Doji range gaps above candle 1; third candle bearish and its range gaps below the Doji. Rare on many intraday markets; confirm the gaps and data.' },
+    { name: 'Three White Soldiers', family: 'Three candles', bias: 'Bullish pattern', candles: '3 candles', description: 'Three consecutive bullish candles with substantial bodies and successively higher closes show sustained buying during those candles.', rule: 'All three candles bullish; each body is at least 55% of its range; closes rise consecutively.' },
+    { name: 'Three Black Crows', family: 'Three candles', bias: 'Bearish pattern', candles: '3 candles', description: 'Three consecutive bearish candles with substantial bodies and successively lower closes show sustained selling during those candles.', rule: 'All three candles bearish; each body is at least 55% of its range; closes fall consecutively.' },
+    { name: 'Rising Three Methods', family: 'Continuation', bias: 'Bullish continuation', candles: '5 candles in an uptrend', description: 'A long bullish candle is followed by smaller bearish candles contained within its range, then another bullish candle resumes the move.', rule: 'Candle 1 bullish and long; candles 2–4 smaller and contained in candle 1 range; candle 5 bullish and closes above candle 1 close. A break below candle 1 low weakens the setup.' },
+    { name: 'Falling Three Methods', family: 'Continuation', bias: 'Bearish continuation', candles: '5 candles in a downtrend', description: 'A long bearish candle is followed by smaller bullish candles contained within its range, then another bearish candle resumes the move.', rule: 'Candle 1 bearish and long; candles 2–4 smaller and contained in candle 1 range; candle 5 bearish and closes below candle 1 close. A break above candle 1 high weakens the setup.' }
+  ];
+  readonly knowledgeFamilies = ['One candle', 'Two candles', 'Three candles', 'Continuation'];
+  selectedKnowledgeChapter = 'One candle';
+  readonly fibonacciKnowledgeChapter = 'Fibonacci Retracement';
+  private knowledgeScrollScheduled = false;
+  readonly knowledgePatternsByFamily: Record<string, KnowledgePattern[]> = {
+    'One candle': this.knowledgePatterns.filter((pattern) => pattern.family === 'One candle'),
+    'Two candles': this.knowledgePatterns.filter((pattern) => pattern.family === 'Two candles'),
+    'Three candles': this.knowledgePatterns.filter((pattern) => pattern.family === 'Three candles'),
+    'Continuation': this.knowledgePatterns.filter((pattern) => pattern.family === 'Continuation')
+  };
+  readonly fibonacciLevels = [
+    { ratio: 0, percent: '0%', description: 'End of the selected swing' },
+    { ratio: 0.236, percent: '23.6%', description: 'Shallow retracement reference' },
+    { ratio: 0.382, percent: '38.2%', description: 'Common retracement reference' },
+    { ratio: 0.5, percent: '50%', description: 'Midpoint reference; not a Fibonacci ratio' },
+    { ratio: 0.618, percent: '61.8%', description: 'Golden-ratio retracement reference' },
+    { ratio: 0.786, percent: '78.6%', description: 'Deeper retracement reference' },
+    { ratio: 1, percent: '100%', description: 'Start of the selected swing' }
+  ];
+  fibonacciSummary?: FibonacciSummary;
+
+  patternsFor(family: string): KnowledgePattern[] {
+    return this.knowledgePatternsByFamily[family] ?? [];
+  }
+
+  knowledgeChapterTitle(family: string): string {
+    const titles: Record<string, string> = {
+      'One candle': 'One-Candle Patterns',
+      'Two candles': 'Two-Candle Patterns',
+      'Three candles': 'Three-Candle Patterns',
+      'Continuation': 'Continuation Patterns',
+      'Fibonacci Retracement': 'Fibonacci Retracement'
+    };
+    return titles[family] ?? family;
+  }
+
+  selectKnowledgeChapter(family: string): void {
+    this.selectedKnowledgeChapter = family;
+    requestAnimationFrame(() => document.getElementById(this.knowledgeChapterId(family))?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+
+  @HostListener('window:scroll')
+  syncKnowledgeChapterToScroll(): void {
+    if (this.activeTab !== 'knowledge' || this.knowledgeScrollScheduled) return;
+    this.knowledgeScrollScheduled = true;
+    requestAnimationFrame(() => {
+      this.knowledgeScrollScheduled = false;
+      const chapters = [...this.knowledgeFamilies, this.fibonacciKnowledgeChapter];
+      let activeChapter = chapters[0];
+      for (const chapter of chapters) {
+        const section = document.getElementById(this.knowledgeChapterId(chapter));
+        if (section && section.getBoundingClientRect().top <= 120) activeChapter = chapter;
+      }
+      this.selectedKnowledgeChapter = activeChapter;
+    });
+  }
+
+  knowledgeChapterId(family: string): string {
+    return `knowledge-${family.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  }
+
+  patternDiagram(name: string): CandleDrawing[] {
+    return KNOWLEDGE_DIAGRAMS[name] ?? [];
+  }
 
   @ViewChild('chart') private chart?: ElementRef<HTMLCanvasElement>;
   @ViewChild('historyChart') private historyChart?: ElementRef<HTMLDivElement>;
+  @ViewChild('historyChartWrap') private historyChartWrap?: ElementRef<HTMLDivElement>;
 
   watchlist = this.loadWatchlist();
   quotes: Record<string, LtpQuote> = {};
@@ -125,30 +284,59 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   historySearchMessage = '';
   historySearchOpen = false;
   selectedHistoryInstrument?: Instrument;
-  historicalFrom = dateInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  historicalFrom = dateInputValue(new Date(Date.now() - 400 * 24 * 60 * 60 * 1000));
   historicalTo = dateInputValue(new Date());
   historicalInterval = 'days:1';
+  loadedHistoricalInterval = 'days:1';
   historicalCandles: HistoricalCandle[] = [];
   displayedCandles: HistoricalCandle[] = [];
   historicalLoading = false;
   demoMode = false;
+  chartIsFullscreen = false;
+  private sampleCandles: HistoricalCandle[] = [];
+  sampleSymbol: 'RELIANCE' | 'ADANIPORTS' = 'RELIANCE';
+  fullscreenChart = true;
   technicalSnapshot?: TechnicalSnapshot;
   companyProfile?: CompanyProfile;
   corporateActions: CorporateAction[] = [];
   fundamentalsLoading = false;
   riskBudget = 0;
-  stopAtrMultiple = 2;
+  plannerEntry = 0;
+  plannerManualStop = 0;
+  plannerStopMethod: 'swing' | 'atr' | 'ema20' | 'manual' = 'swing';
   targetRMultiple = 2;
   riskDirection: 'long' | 'short' | '' = '';
+  movingAveragesEnabled = false;
+  movingAverageOpacity = 100;
+  ghostRiderEnabled = false;
+  ghostRiderAtrMultiplier = 1.5;
+  ghostRiderSnapshot?: GhostRiderSnapshot;
+  ghostRiderVisibility: Record<GhostRiderVisibilityKey, boolean> = {
+    ema9: true, ema21: true, vwap: true, signals: true, dashboard: true,
+    entry: true, stop: true, tp1: true, tp2: true, tp3: true, tp4: true, tp5: true
+  };
+  tradersGitaIdentifierEnabled = false;
+  tradersGitaConfirmedOnly = true;
+  tradersGitaShowTrendNames = true;
+  tradersGitaGroups: Record<TraderGitaPatternGroup, boolean> = { single: true, two: true, three: true, continuation: true };
+  tradersGitaSettings: Record<TraderGitaPatternSetting, number> = {
+    dojiPct: 0.10, smallBodyPct: 0.30, longBodyMult: 1.2, wickBodyMult: 2, tinyWickPct: 0.10,
+    avgBodyLen: 14, trendLen: 5, tweezerTicks: 5
+  };
   readonly studies: Record<StudyName, boolean> = {
-    sma20: true,
+    sma20: false,
     sma50: false,
-    ema20: false,
+    ema9: true,
+    ema20: true,
+    ema50: true,
+    ema200: true,
     bollinger: false,
     rsi: false,
     macd: false,
-    supportResistance: true,
-    patterns: true
+    supportResistance: false,
+    patterns: false,
+    fibonacci: false,
+    emaSignal: true
   };
   trendlineMode = false;
   trendlineHint = '';
@@ -162,7 +350,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private markerPlugin?: ISeriesMarkersPluginApi<Time>;
   private overlaySeries: ISeriesApi<'Line'>[] = [];
   private trendlineSeries: ISeriesApi<'Line'>[] = [];
-  private supportPriceLines: IPriceLine[] = [];
+  private analysisPriceLines: IPriceLine[] = [];
+  private ghostRiderPriceLines: IPriceLine[] = [];
   private trendlineStart?: TrendlinePoint;
 
   ngOnInit(): void {
@@ -173,13 +362,14 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         this.configured = status.configured;
         this.setConnected(status.connected);
       },
-      error: () => this.showToast('Could not reach the Market Desk API.')
+      error: () => this.showToast("Could not reach the Trader's Gita data service.")
     });
     const params = new URLSearchParams(window.location.search);
     if (params.get('auth') === 'connected') this.showToast('Upstox connected. Live quotes are loading.');
     if (params.get('auth') === 'failed') this.showToast('Upstox authorization failed. Check app credentials and redirect URI.');
     if (params.get('setup') === '1') this.showToast('Add your Upstox API key and secret in the server .env file first.');
     if (params.has('auth') || params.has('setup')) window.history.replaceState({}, '', '/');
+    this.runDemo();
   }
 
   ngAfterViewInit(): void {
@@ -210,6 +400,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   get nifty(): LtpQuote | undefined { return this.quotes['NSE_INDEX|Nifty 50']; }
   get bankNifty(): LtpQuote | undefined { return this.quotes['NSE_INDEX|Nifty Bank']; }
   get indiaVix(): LtpQuote | undefined { return this.quotes['NSE_INDEX|India VIX']; }
+  get analysisMode(): boolean { return this.fullscreenChart && this.activeTab === 'dashboard'; }
+  get modernInterface(): boolean { return this.fullscreenChart || this.activeTab === 'knowledge'; }
+  get activeMovingAverageCount(): number { return [this.studies.sma20, this.studies.sma50, this.studies.ema9, this.studies.ema20, this.studies.ema50, this.studies.ema200].filter(Boolean).length; }
+  openSelectedChart(): void { this.fullscreenChart = true; this.activeTab = 'dashboard'; }
   get niftyChange(): number | undefined { return this.changePercent(this.nifty); }
   get niftyDifference(): number | undefined {
     return this.nifty?.cp === undefined ? undefined : this.nifty.last_price - this.nifty.cp;
@@ -327,6 +521,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   selectHistoryInstrument(instrument: Instrument): void {
     this.demoMode = false;
+    this.sampleCandles = [];
     this.historicalCandles = [];
     this.displayedCandles = [];
     this.technicalSnapshot = undefined;
@@ -335,7 +530,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.historySearchOpen = false;
     this.historySearchResults = [];
     this.riskDirection = '';
+    this.plannerEntry = 0;
+    this.plannerManualStop = 0;
     this.loadEquityFundamentals(instrument);
+    this.loadHistorical();
   }
 
   setHistoryMarket(market: 'cash' | 'commodities'): void {
@@ -350,22 +548,31 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.companyProfile = undefined;
     this.corporateActions = [];
     this.riskDirection = '';
+    this.plannerEntry = 0;
+    this.plannerManualStop = 0;
     this.demoMode = false;
+    this.sampleCandles = [];
     this.drawHistoryChart();
   }
 
   loadHistorical(): void {
-    if (!this.connected || !this.selectedHistoryInstrument || !this.historicalFrom || !this.historicalTo) return;
+    if (!this.selectedHistoryInstrument || !this.historicalFrom || !this.historicalTo) return;
     if (this.historicalFrom > this.historicalTo) {
       this.showToast('The start date must be on or before the end date.');
       return;
     }
+    if (this.demoMode) {
+      this.loadLocalHistory();
+      return;
+    }
+    if (!this.connected) return;
     this.historicalLoading = true;
     this.demoMode = false;
     this.historicalCandles = [];
     this.displayedCandles = [];
     this.technicalSnapshot = undefined;
-    const [unit, intervalValue] = this.historicalInterval.split(':');
+    const requestedInterval = this.historicalInterval;
+    const [unit, intervalValue] = requestedInterval.split(':');
     this.api.historical(
       this.selectedHistoryInstrument.key,
       unit,
@@ -374,10 +581,12 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       this.historicalTo
     ).subscribe({
       next: (result) => {
+        this.loadedHistoricalInterval = requestedInterval;
         this.historicalCandles = result.candles;
         this.displayedCandles = [...result.candles].reverse().slice(0, 100);
         this.technicalSnapshot = this.calculateTechnicalSnapshot(result.candles);
         this.historicalLoading = false;
+        this.fullscreenChart = true;
         this.drawHistoryChart();
         if (!result.candles.length) this.showToast('No candles were returned for that instrument and date range.');
       },
@@ -389,43 +598,116 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  runDemo(): void {
-    const today = new Date();
-    this.selectedHistoryInstrument = {
-      key: 'DEMO:SAMPLE',
-      symbol: 'DEMO',
-      name: 'Synthetic sample only',
-      exchange: 'DEMO'
-    };
-    this.historySearchText = 'DEMO · SAMPLE ONLY';
+  private loadLocalHistory(): void {
+    const [unit] = this.historicalInterval.split(':');
+    if (unit === 'minutes' || unit === 'hours') {
+      this.showToast('Intraday candles need Upstox data. Local samples contain daily candles only.');
+      return;
+    }
+    const inRange = this.sampleCandles
+      .filter((candle) => {
+        const day = candle.timestamp.slice(0, 10);
+        return day >= this.historicalFrom && day <= this.historicalTo;
+      })
+      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    const candles = unit === 'weeks' || unit === 'months'
+      ? this.aggregateSampleCandles(inRange, unit)
+      : inRange;
+    this.historicalCandles = candles;
+    this.loadedHistoricalInterval = this.historicalInterval;
+    this.displayedCandles = [...candles].reverse().slice(0, 100);
+    this.technicalSnapshot = candles.length ? this.calculateTechnicalSnapshot(candles) : undefined;
+    this.drawHistoryChart();
+    if (!candles.length) this.showToast('No candles fall within the selected date range.');
+  }
+
+  private aggregateSampleCandles(candles: HistoricalCandle[], unit: 'weeks' | 'months'): HistoricalCandle[] {
+    const buckets = new Map<string, HistoricalCandle>();
+    for (const candle of candles) {
+      const day = candle.timestamp.slice(0, 10);
+      let key = day.slice(0, 7);
+      if (unit === 'weeks') {
+        const monday = new Date(`${day}T00:00:00Z`);
+        monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay() + 6) % 7);
+        key = monday.toISOString().slice(0, 10);
+      }
+      const previous = buckets.get(key);
+      if (!previous) buckets.set(key, { ...candle });
+      else {
+        previous.high = Math.max(previous.high, candle.high);
+        previous.low = Math.min(previous.low, candle.low);
+        previous.close = candle.close;
+        previous.volume += candle.volume;
+        previous.timestamp = candle.timestamp;
+      }
+    }
+    return [...buckets.values()];
+  }
+
+  async toggleChartFullscreen(): Promise<void> {
+    const chart = this.historyChartWrap?.nativeElement;
+    if (!chart) return;
+    try {
+      if (document.fullscreenElement === chart) await document.exitFullscreen();
+      else {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        await chart.requestFullscreen();
+      }
+    } catch {
+      this.showToast('Full-screen mode is not available in this browser.');
+    }
+  }
+
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    this.chartIsFullscreen = document.fullscreenElement === this.historyChartWrap?.nativeElement;
+    requestAnimationFrame(() => this.drawHistoryChart());
+  }
+
+  runDemo(symbol: 'RELIANCE' | 'ADANIPORTS' = this.sampleSymbol): void {
+    this.sampleSymbol = symbol;
+    this.plannerEntry = 0;
+    this.plannerManualStop = 0;
+    this.historyMarket = 'cash';
+    this.historicalLoading = true;
+    this.demoMode = false;
+    this.historicalCandles = [];
+    this.displayedCandles = [];
+    this.technicalSnapshot = undefined;
     this.companyProfile = undefined;
     this.corporateActions = [];
-    this.historicalInterval = 'days:1';
-    this.historicalTo = dateInputValue(today);
-    const candles: HistoricalCandle[] = [];
-    let previousClose = 1240;
-    for (let day = 79; day >= 0; day--) {
-      const candleDate = new Date(today);
-      candleDate.setDate(today.getDate() - day);
-      const movement = Math.sin(day * 0.83) * 12 + (13 - day) * 1.9;
-      const open = previousClose + Math.cos(day * 1.17) * 4;
-      const close = 1240 + movement;
-      candles.push({
-        timestamp: `${dateInputValue(candleDate)}T00:00:00+0530`,
-        open: Number(open.toFixed(2)),
-        high: Number((Math.max(open, close) + 5 + (day % 3)).toFixed(2)),
-        low: Number((Math.min(open, close) - 4 - (day % 2)).toFixed(2)),
-        close: Number(close.toFixed(2)),
-        volume: 85000 + ((day * 17391) % 125000)
-      });
-      previousClose = close;
-    }
-    this.historicalFrom = candles[0].timestamp.slice(0, 10);
-    this.historicalCandles = candles;
-    this.displayedCandles = [...candles].reverse();
-    this.technicalSnapshot = this.calculateTechnicalSnapshot(candles);
-    this.demoMode = true;
     this.drawHistoryChart();
+    this.api.sampleHistory(symbol).subscribe({
+      next: (result) => {
+        const candles = result.candles;
+        this.sampleCandles = candles;
+        this.selectedHistoryInstrument = {
+          key: result.instrument_key,
+          symbol: result.symbol,
+          name: result.name,
+          exchange: 'NSE'
+        };
+        this.historySearchText = `${result.symbol} - ${result.symbol === 'ADANIPORTS' ? 'BULLISH' : 'BEARISH'} NSE SAMPLE`;
+        this.companyProfile = undefined;
+        this.corporateActions = [];
+        this.historicalInterval = 'days:1';
+        this.loadedHistoricalInterval = 'days:1';
+        this.historicalFrom = candles[0]?.timestamp.slice(0, 10) ?? '';
+        this.historicalTo = candles[candles.length - 1]?.timestamp.slice(0, 10) ?? '';
+        this.historicalCandles = candles;
+        this.displayedCandles = [...candles].reverse().slice(0, 100);
+        this.technicalSnapshot = this.calculateTechnicalSnapshot(candles);
+        this.demoMode = true;
+        this.fullscreenChart = true;
+        this.historicalLoading = false;
+        this.drawHistoryChart();
+        if (!candles.length) this.showToast(`The ${result.symbol} sample dataset is empty.`);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.historicalLoading = false;
+        this.showToast(error.error?.detail || `Could not load the bundled ${symbol} sample data.`);
+      }
+    });
   }
 
   addInstrument(instrument: Instrument): void {
@@ -491,13 +773,19 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get holdingWindowNote(): string {
-    return `This view uses ${this.historicalIntervalLabel} candles over ${this.historicalFrom} to ${this.historicalTo}. That describes the data interval, not a recommended holding period.`;
+    return `This view uses ${this.loadedHistoricalIntervalLabel} candles over ${this.historicalFrom} to ${this.historicalTo}. That describes the data interval, not a recommended holding period.`;
   }
 
   get historicalIntervalLabel(): string {
     const [unit, interval] = this.historicalInterval.split(':');
     const names: Record<string, string> = { minutes: 'minute', hours: 'hour', days: 'day', weeks: 'week', months: 'month' };
     return `${interval} ${names[unit] || unit}${Number(interval) > 1 ? 's' : ''}`;
+  }
+
+  get loadedHistoricalIntervalLabel(): string {
+    const [unit, interval] = this.loadedHistoricalInterval.split(':');
+    const label = unit === 'minutes' ? 'minute' : unit === 'hours' ? 'hour' : unit === 'weeks' ? 'week' : unit === 'months' ? 'month' : 'day';
+    return `${interval} ${label}${interval === '1' ? '' : 's'}`;
   }
 
   get hasTrendlines(): boolean { return this.trendlineSeries.length > 0; }
@@ -514,33 +802,72 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get riskScenario(): RiskScenario | undefined {
     const snapshot = this.technicalSnapshot;
-    if (!snapshot?.atr || !this.selectedHistoryInstrument || !this.riskBudget || !this.riskDirection) return undefined;
-    const lotSize = this.historyMarket === 'commodities' ? Math.max(1, this.selectedHistoryInstrument.lot_size || 1) : 1;
-    const riskPerUnit = snapshot.atr * this.stopAtrMultiple;
-    const riskPerLot = riskPerUnit * lotSize;
-    const lots = Math.floor(this.riskBudget / riskPerLot);
-    const units = lots * lotSize;
+    if (!snapshot || !this.selectedHistoryInstrument || !this.riskDirection) return undefined;
+    const entryPrice = this.plannerEntry > 0 ? this.plannerEntry : snapshot.lastClose;
     const direction = this.riskDirection === 'long' ? 1 : -1;
+    const buffer = (snapshot.atr || 0) * 0.1;
+    const stopPrice = this.plannerStopMethod === 'manual'
+      ? this.plannerManualStop
+      : this.plannerStopMethod === 'atr'
+        ? entryPrice - direction * (snapshot.atr || 0) * 1.5
+        : this.plannerStopMethod === 'ema20'
+          ? (snapshot.ema20 || entryPrice) - direction * buffer
+          : this.riskDirection === 'long' ? snapshot.lowestLow20 - buffer : snapshot.highestHigh20 + buffer;
+    const riskPerUnit = Math.abs(entryPrice - stopPrice);
+    if (!stopPrice || !riskPerUnit || (this.riskDirection === 'long' ? stopPrice >= entryPrice : stopPrice <= entryPrice)) return undefined;
+    const lotSize = this.historyMarket === 'commodities' ? Math.max(1, this.selectedHistoryInstrument.lot_size || 1) : 1;
+    const riskPerLot = riskPerUnit * lotSize;
+    const lots = this.riskBudget > 0 ? Math.floor(this.riskBudget / riskPerLot) : 0;
+    const units = lots * lotSize;
     return {
       lots,
       units,
       riskPerUnit,
       riskUsed: units * riskPerUnit,
-      stopPrice: snapshot.lastClose - direction * riskPerUnit,
-      targetPrice: snapshot.lastClose + direction * riskPerUnit * this.targetRMultiple
+      entryPrice,
+      stopPrice,
+      targetPrice: entryPrice + direction * riskPerUnit * this.targetRMultiple
     };
+  }
+
+  get emaChecklist(): { label: string; complete: boolean }[] {
+    const s = this.technicalSnapshot;
+    if (!s) return [];
+    return [
+      { label: 'Price above EMA 200', complete: s.ema200 !== undefined && s.lastClose > s.ema200 },
+      { label: 'EMA 9 > EMA 20 > EMA 50', complete: s.ema9 !== undefined && s.ema20 !== undefined && s.ema50 !== undefined && s.ema9 > s.ema20 && s.ema20 > s.ema50 },
+      { label: 'EMA 20 and EMA 50 rising', complete: s.ema20Rising && s.ema50Rising },
+      { label: 'Pullback near EMA 20 or EMA 50', complete: s.pullbackNearEma },
+      { label: 'Bullish rejection closes above prior high', complete: s.breaksRejectionHigh }
+    ];
+  }
+
+  get emaChecklistCount(): number {
+    return this.emaChecklist.filter((item) => item.complete).length;
   }
 
   setRiskBudget(value: string): void {
     this.riskBudget = Math.max(0, Number(value) || 0);
-  }
-
-  setStopAtrMultiple(value: string): void {
-    this.stopAtrMultiple = Math.min(5, Math.max(0.5, Number(value) || 2));
+    this.refreshTradePlan();
   }
 
   setTargetRMultiple(value: string): void {
     this.targetRMultiple = Math.min(5, Math.max(0.5, Number(value) || 2));
+    this.refreshTradePlan();
+  }
+
+  setRiskDirection(direction: 'long' | 'short'): void {
+    this.riskDirection = direction;
+    this.refreshTradePlan();
+  }
+
+  setPlannerStopMethod(method: 'swing' | 'atr' | 'ema20' | 'manual'): void {
+    this.plannerStopMethod = method;
+    this.refreshTradePlan();
+  }
+
+  refreshTradePlan(): void {
+    this.drawHistoryChart();
   }
 
   private calculateTechnicalSnapshot(inputCandles: HistoricalCandle[]): TechnicalSnapshot | undefined {
@@ -552,9 +879,34 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     const atrValues = ATR.calculate({ high: candles.map((candle) => candle.high), low: candles.map((candle) => candle.low), close: closes, period: 14 });
     const sma20Values = closes.length >= 20 ? SMA.calculate({ period: 20, values: closes }) : [];
     const sma50Values = closes.length >= 50 ? SMA.calculate({ period: 50, values: closes }) : [];
+    const ema9Values = closes.length >= 9 ? EMA.calculate({ period: 9, values: closes }) : [];
+    const ema20Values = closes.length >= 20 ? EMA.calculate({ period: 20, values: closes }) : [];
+    const ema50Values = closes.length >= 50 ? EMA.calculate({ period: 50, values: closes }) : [];
+    const ema200Values = closes.length >= 200 ? EMA.calculate({ period: 200, values: closes }) : [];
     const rsiValues = closes.length >= 15 ? RSI.calculate({ period: 14, values: closes }) : [];
     const adx = adxValues.at(-1);
     const atr = atrValues.at(-1);
+    const ema9 = ema9Values.at(-1);
+    const ema20 = ema20Values.at(-1);
+    const ema50 = ema50Values.at(-1);
+    const ema200 = ema200Values.at(-1);
+    const previousEma9 = ema9Values.at(-2);
+    const previousEma20 = ema20Values.at(-2);
+    const previousEma50 = ema50Values.at(-2);
+    const previousEma200 = ema200Values.at(-2);
+    const setup = ema9 !== undefined && ema20 !== undefined && ema50 !== undefined && ema200 !== undefined && latestClose > ema9 && ema9 > ema20 && ema20 > ema50 && ema50 > ema200;
+    const previousSetup = previousEma9 !== undefined && previousEma20 !== undefined && previousEma50 !== undefined && previousEma200 !== undefined && closes.at(-2)! > previousEma9 && previousEma9 > previousEma20 && previousEma20 > previousEma50 && previousEma50 > previousEma200;
+    const emaAlignment = ema200 === undefined ? 'Needs 200 candles' : setup ? 'Bullish' : latestClose < ema9! && ema9! < ema20! && ema20! < ema50! && ema50! < ema200! ? 'Bearish' : 'Mixed';
+    const last = candles.at(-1)!;
+    const prior = candles.at(-2)!;
+    const ema20Rising = ema20 !== undefined && previousEma20 !== undefined && ema20 > previousEma20;
+    const ema50Rising = ema50 !== undefined && previousEma50 !== undefined && ema50 > previousEma50;
+    const pullbackTolerance = (atr || latestClose * 0.005) * 0.5;
+    const pullbackNearEma = ema20 !== undefined && ema50 !== undefined && ((last.low <= ema20 + pullbackTolerance && last.close >= ema20 - pullbackTolerance) || (last.low <= ema50 + pullbackTolerance && last.close >= ema50 - pullbackTolerance));
+    const bullishRejection = pullbackNearEma && last.close > last.open && last.close >= (ema20 || last.close);
+    const breaksRejectionHigh = bullishRejection && last.close > prior.high;
+    const bullishCrossover = ema9 !== undefined && ema20 !== undefined && previousEma9 !== undefined && previousEma20 !== undefined && previousEma9 <= previousEma20 && ema9 > ema20 && latestClose > ema9 && latestClose > ema20 && (ema50Rising || latestClose > (ema50 || latestClose));
+    const bearishCrossover = ema9 !== undefined && ema20 !== undefined && previousEma9 !== undefined && previousEma20 !== undefined && previousEma9 >= previousEma20 && ema9 < ema20 && latestClose < ema9 && latestClose < ema20 && (!ema50Rising || latestClose < (ema50 || latestClose));
     const recentCandles = candles.slice(-20);
     const structure = this.describePriceStructure(candles);
     return {
@@ -567,6 +919,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       atrPercent: atr === undefined ? undefined : atr / latestClose * 100,
       sma20: sma20Values.at(-1),
       sma50: sma50Values.at(-1),
+      ema9, ema20, ema50, ema200, emaAlignment, bullishSetup: setup, bullishEntry: setup && !previousSetup,
+      bullishCrossover, bearishCrossover, ema20Rising, ema50Rising, pullbackNearEma, bullishRejection, breaksRejectionHigh,
       rsi: rsiValues.at(-1),
       averageVolume20: recentCandles.length ? recentCandles.reduce((total, candle) => total + candle.volume, 0) / recentCandles.length : undefined,
       highestHigh20: Math.max(...recentCandles.map((candle) => candle.high)),
@@ -622,6 +976,174 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.drawHistoryChart();
   }
 
+  setMovingAveragesEnabled(enabled: boolean): void {
+    this.movingAveragesEnabled = enabled;
+    this.drawHistoryChart();
+  }
+
+  setMovingAverageOpacity(value: string): void {
+    this.movingAverageOpacity = Math.min(100, Math.max(10, Number(value) || 10));
+    this.drawHistoryChart();
+  }
+
+  private movingAverageColor(hex: string): string {
+    const value = hex.replace('#', '');
+    const red = parseInt(value.slice(0, 2), 16);
+    const green = parseInt(value.slice(2, 4), 16);
+    const blue = parseInt(value.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${this.movingAverageOpacity / 100})`;
+  }
+
+  setGhostRiderEnabled(enabled: boolean): void {
+    this.ghostRiderEnabled = enabled;
+    this.drawHistoryChart();
+  }
+
+  setGhostRiderAtrMultiplier(value: string): void {
+    this.ghostRiderAtrMultiplier = Math.min(5, Math.max(0.1, Number(value) || 1.5));
+    this.drawHistoryChart();
+  }
+
+  setGhostRiderVisibility(key: GhostRiderVisibilityKey, visible: boolean): void {
+    this.ghostRiderVisibility = { ...this.ghostRiderVisibility, [key]: visible };
+    this.drawHistoryChart();
+  }
+
+  setTradersGitaIdentifierEnabled(enabled: boolean): void {
+    this.tradersGitaIdentifierEnabled = enabled;
+    this.drawHistoryChart();
+  }
+
+  setTradersGitaGroup(group: TraderGitaPatternGroup, enabled: boolean): void {
+    this.tradersGitaGroups = { ...this.tradersGitaGroups, [group]: enabled };
+    this.drawHistoryChart();
+  }
+
+  setTradersGitaSetting(key: TraderGitaPatternSetting, value: string): void {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+    const bounds: Record<TraderGitaPatternSetting, [number, number]> = {
+      dojiPct: [0.01, 0.5], smallBodyPct: [0.05, 0.8], longBodyMult: [0.5, 3], wickBodyMult: [1, 5],
+      tinyWickPct: [0.01, 0.4], avgBodyLen: [3, 100], trendLen: [2, 50], tweezerTicks: [0, 100]
+    };
+    const [minimum, maximum] = bounds[key];
+    const bounded = Math.min(maximum, Math.max(minimum, parsed));
+    this.tradersGitaSettings = { ...this.tradersGitaSettings, [key]: key === 'avgBodyLen' || key === 'trendLen' || key === 'tweezerTicks' ? Math.round(bounded) : bounded };
+    this.drawHistoryChart();
+  }
+
+  setTradersGitaConfirmedOnly(confirmedOnly: boolean): void {
+    this.tradersGitaConfirmedOnly = confirmedOnly;
+    this.drawHistoryChart();
+  }
+
+  setTradersGitaShowTrendNames(showTrendNames: boolean): void {
+    this.tradersGitaShowTrendNames = showTrendNames;
+    this.drawHistoryChart();
+  }
+
+  private calculateGhostRider(candles: HistoricalCandle[], times: Time[]): GhostRiderResult | undefined {
+    if (candles.length < 35) return undefined;
+    const closes = candles.map((c) => c.close);
+    const e9Values = EMA.calculate({ period: 9, values: closes });
+    const e21Values = EMA.calculate({ period: 21, values: closes });
+    const rsiValues = RSI.calculate({ period: 14, values: closes });
+    const atrValues = ATR.calculate({ high: candles.map(c => c.high), low: candles.map(c => c.low), close: closes, period: 14 });
+    const adxValues = ADX.calculate({ high: candles.map(c => c.high), low: candles.map(c => c.low), close: closes, period: 14 });
+    const macdValues = MACD.calculate({ values: closes, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9, SimpleMAOscillator: false, SimpleMASignal: false });
+    const volumeAverageValues = SMA.calculate({ period: 20, values: candles.map(c => c.volume) });
+    const align = (values: number[]): (number | undefined)[] => [...Array(Math.max(0, candles.length - values.length)).fill(undefined), ...values];
+    const e9 = align(e9Values);
+    const e21 = align(e21Values);
+    const rsi = align(rsiValues);
+    const atr = align(atrValues);
+    const adx = align(adxValues.map(value => value.adx));
+    const volAvg = align(volumeAverageValues);
+    const macd = [...Array(Math.max(0, candles.length - macdValues.length)).fill(undefined), ...macdValues.map(value => value.MACD)];
+    const macdSignal = [...Array(Math.max(0, candles.length - macdValues.length)).fill(undefined), ...macdValues.map(value => value.signal)];
+
+    let session = '';
+    let sessionPV = 0;
+    let sessionVolume = 0;
+    const vwap: (number | undefined)[] = candles.map(candle => {
+      const day = candle.timestamp.slice(0, 10);
+      if (day !== session) { session = day; sessionPV = 0; sessionVolume = 0; }
+      const typical = (candle.high + candle.low + candle.close) / 3;
+      sessionPV += typical * candle.volume;
+      sessionVolume += candle.volume;
+      return sessionVolume ? sessionPV / sessionVolume : undefined;
+    });
+
+    let rsi5m: number | undefined;
+    if (this.loadedHistoricalInterval === 'minutes:5') {
+      rsi5m = RSI.calculate({ period: 14, values: closes }).at(-1);
+    } else if (this.loadedHistoricalInterval === 'minutes:1') {
+      const groups = new Map<number, number>();
+      candles.forEach(candle => {
+        const epoch = Date.parse(candle.timestamp);
+        if (Number.isFinite(epoch)) groups.set(Math.floor(epoch / 300_000), candle.close);
+      });
+      const fiveMinuteCloses = [...groups.values()];
+      if (fiveMinuteCloses.length >= 15) rsi5m = RSI.calculate({ period: 14, values: fiveMinuteCloses }).at(-1);
+    }
+    const scoreAvailable = rsi5m === undefined ? 6 : 7;
+    let signalState: 'LONG' | 'SHORT' | 'WAIT' = 'WAIT';
+    let entry: number | undefined;
+    let stop: number | undefined;
+    let targets: number[] = [];
+    let targetHits = [false, false, false, false, false];
+    let cross: GhostRiderSnapshot['cross'] = 'WAIT';
+    const markers: PatternMarker[] = [];
+    const candleColors: (string | undefined)[] = Array(candles.length).fill(undefined);
+
+    for (let i = 1; i < candles.length; i++) {
+      const previous9 = e9[i - 1], previous21 = e21[i - 1], current9 = e9[i], current21 = e21[i];
+      const crossUp = previous9 !== undefined && previous21 !== undefined && current9 !== undefined && current21 !== undefined && previous9 <= previous21 && current9 > current21;
+      const crossDown = previous9 !== undefined && previous21 !== undefined && current9 !== undefined && current21 !== undefined && previous9 >= previous21 && current9 < current21;
+      const triggerBuy: boolean = crossUp && signalState !== 'LONG';
+      const triggerSell: boolean = crossDown && signalState !== 'SHORT';
+      if (triggerBuy || triggerSell) {
+        signalState = triggerBuy ? 'LONG' : 'SHORT';
+        cross = i === candles.length - 1 ? triggerBuy ? 'BUY' : 'SELL' : 'WAIT';
+        entry = candles[i].close;
+        const risk = (atr[i] || 0) * this.ghostRiderAtrMultiplier;
+        stop = triggerBuy ? entry - risk : entry + risk;
+        targets = Array.from({ length: 5 }, (_, index) => entry! + (triggerBuy ? 1 : -1) * risk * (index + 1));
+        targetHits = [false, false, false, false, false];
+        markers.push({ time: times[i], position: triggerBuy ? 'belowBar' : 'aboveBar', color: triggerBuy ? '#159447' : '#dc453f', shape: triggerBuy ? 'arrowUp' : 'arrowDown', text: triggerBuy ? 'GR BUY' : 'GR SELL', name: triggerBuy ? 'Ghost Rider buy' : 'Ghost Rider sell' });
+        candleColors[i] = '#16191d';
+      }
+      if (signalState === 'LONG') targets.forEach((target, index) => { if (candles[i].high >= target) targetHits[index] = true; });
+      if (signalState === 'SHORT') targets.forEach((target, index) => { if (candles[i].low <= target) targetHits[index] = true; });
+      const retest = current9 !== undefined && current21 !== undefined && (signalState === 'LONG' && candles[i].low <= current9 && candles[i].low > current21 || signalState === 'SHORT' && candles[i].high >= current9 && candles[i].high < current21);
+      if (retest && !markers.some(marker => marker.time === times[i])) candleColors[i] = '#f59e0b';
+    }
+
+    const lastIndex = candles.length - 1;
+    const last = candles[lastIndex];
+    const bullChecks = [last.close > (vwap[lastIndex] ?? Infinity), (rsi[lastIndex] ?? 0) > 50, (macd[lastIndex] ?? -Infinity) > (macdSignal[lastIndex] ?? Infinity), (e9[lastIndex] ?? -Infinity) > (e21[lastIndex] ?? Infinity), (adx[lastIndex] ?? 0) > 25 && last.close > (e9[lastIndex] ?? Infinity), last.volume > (volAvg[lastIndex] ?? Infinity) && last.close > last.open];
+    const bearChecks = [last.close < (vwap[lastIndex] ?? -Infinity), (rsi[lastIndex] ?? Infinity) < 50, (macd[lastIndex] ?? Infinity) < (macdSignal[lastIndex] ?? -Infinity), (e9[lastIndex] ?? Infinity) < (e21[lastIndex] ?? -Infinity), (adx[lastIndex] ?? 0) > 25 && last.close < (e9[lastIndex] ?? -Infinity), last.volume > (volAvg[lastIndex] ?? Infinity) && last.close < last.open];
+    if (rsi5m !== undefined) { bullChecks.push(rsi5m > 50); bearChecks.push(rsi5m < 50); }
+    const bullScore = bullChecks.filter(Boolean).length;
+    const bearScore = bearChecks.filter(Boolean).length;
+    const bullPct = Math.round(bullScore / scoreAvailable * 100);
+    const bearPct = Math.round(bearScore / scoreAvailable * 100);
+    const diff = bullPct - bearPct;
+    const bias = diff >= 40 ? 'STRONG BULL' : diff <= -40 ? 'STRONG BEAR' : bullPct > bearPct ? 'MILD BULL' : 'MILD BEAR';
+    const isRetest = candleColors[lastIndex] === '#f59e0b';
+    return {
+      snapshot: {
+        bullPct, bearPct, scoreTotal: bullScore, scoreAvailable, bias,
+        closeAboveVwap: last.close > (vwap[lastIndex] ?? last.close), rsi: rsi[lastIndex] || 0, rsi5m,
+        macdBullish: (macd[lastIndex] ?? 0) > (macdSignal[lastIndex] ?? 0), adx: adx[lastIndex] || 0,
+        emaBullish: (e9[lastIndex] ?? 0) > (e21[lastIndex] ?? 0), atr: atr[lastIndex] || 0,
+        volumeHigh: last.volume > (volAvg[lastIndex] ?? Infinity), cross, signal: signalState,
+        entry, stop, targets, targetHits, retest: isRetest
+      },
+      ema9: e9, ema21: e21, vwap, markers, candleColors
+    };
+  }
+
   toggleTrendlineMode(): void {
     this.trendlineMode = !this.trendlineMode;
     this.trendlineStart = undefined;
@@ -647,11 +1169,11 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.historyChart) {
       this.historyChartApi = this.createChart(this.historyChart.nativeElement);
       this.candleSeries = this.historyChartApi.addSeries(CandlestickSeries, {
-        upColor: '#28744d',
-        downColor: '#c45b4b',
+        upColor: '#26a69a',
+        downColor: '#ef5350',
         borderVisible: false,
-        wickUpColor: '#28744d',
-        wickDownColor: '#c45b4b'
+        wickUpColor: '#26a69a',
+        wickDownColor: '#ef5350'
       });
       this.historyChartApi.subscribeClick(this.handleTrendlineClick);
     }
@@ -665,10 +1187,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     return createChart(container, {
       autoSize: true,
       height: this.analysisChartHeight,
-      layout: { background: { type: ColorType.Solid, color: '#fafaf7' }, textColor: '#747a71' },
-      grid: { vertLines: { color: '#e8e9e2' }, horzLines: { color: '#e8e9e2' } },
-      rightPriceScale: { borderColor: '#dedfd8' },
-      timeScale: { borderColor: '#dedfd8', timeVisible: this.isIntraday(), secondsVisible: false },
+      layout: { background: { type: ColorType.Solid, color: '#0b0e11' }, textColor: '#848e9c', fontFamily: 'Manrope, sans-serif', fontSize: 10 },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+      rightPriceScale: { borderColor: '#2b3139' },
+      timeScale: { borderColor: '#2b3139', timeVisible: this.isIntraday(), secondsVisible: false },
       crosshair: { mode: CrosshairMode.Magnet }
     });
   }
@@ -725,14 +1247,21 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private drawHistoryChart(): void {
     if (!this.chartReady || !this.historyChartApi || !this.candleSeries) return;
     this.syncStudyPanes();
-    const unit = this.historicalInterval.split(':')[0];
+    const unit = this.loadedHistoricalInterval.split(':')[0];
     const candles = [...this.historicalCandles].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
-    const candleData: CandlestickData<Time>[] = candles.map((candle) => ({
-      time: this.chartTime(candle.timestamp, unit),
+    const times = candles.map((candle) => this.chartTime(candle.timestamp, unit));
+    const ghostRider = this.ghostRiderEnabled ? this.calculateGhostRider(candles, times) : undefined;
+    this.ghostRiderSnapshot = ghostRider?.snapshot;
+    const tradersGitaMarkers = this.tradersGitaIdentifierEnabled ? this.detectTradersGitaMarkers(candles, times) : [];
+    const candleData: CandlestickData<Time>[] = candles.map((candle, index) => ({
+      time: times[index],
       open: candle.open,
       high: candle.high,
       low: candle.low,
-      close: candle.close
+      close: candle.close,
+      color: ghostRider && this.ghostRiderVisibility.signals ? ghostRider.candleColors[index] : undefined,
+      borderColor: ghostRider && this.ghostRiderVisibility.signals ? ghostRider.candleColors[index] : undefined,
+      wickColor: ghostRider && this.ghostRiderVisibility.signals ? ghostRider.candleColors[index] : undefined
     }));
     this.candleSeries.setData(candleData);
     this.clearAnalysisOverlays();
@@ -747,16 +1276,21 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     const closes = candles.map((candle) => candle.close);
-    const times = candleData.map((candle) => candle.time);
-    if (this.studies.sma20 && closes.length >= 20) {
-      this.addOverlay(SMA.calculate({ period: 20, values: closes }), 19, times, 'SMA 20', '#d18b35');
+    if (ghostRider) {
+      if (this.ghostRiderVisibility.ema9) this.addAlignedOverlay(ghostRider.ema9, times, 'Ghost Rider EMA 9', '#21a05a');
+      if (this.ghostRiderVisibility.ema21) this.addAlignedOverlay(ghostRider.ema21, times, 'Ghost Rider EMA 21', '#df4e55');
+      if (this.ghostRiderVisibility.vwap) this.addAlignedOverlay(ghostRider.vwap, times, 'Ghost Rider VWAP', '#7186ff');
     }
-    if (this.studies.sma50 && closes.length >= 50) {
-      this.addOverlay(SMA.calculate({ period: 50, values: closes }), 49, times, 'SMA 50', '#28744d');
+    if (this.movingAveragesEnabled && this.studies.sma20 && closes.length >= 20) {
+      this.addOverlay(SMA.calculate({ period: 20, values: closes }), 19, times, 'SMA 20', this.movingAverageColor('#d18b35'));
     }
-    if (this.studies.ema20 && closes.length >= 20) {
-      this.addOverlay(EMA.calculate({ period: 20, values: closes }), 19, times, 'EMA 20', '#5b46d5');
+    if (this.movingAveragesEnabled && this.studies.sma50 && closes.length >= 50) {
+      this.addOverlay(SMA.calculate({ period: 50, values: closes }), 49, times, 'SMA 50', this.movingAverageColor('#28744d'));
     }
+    if (this.movingAveragesEnabled && this.studies.ema9 && closes.length >= 9) this.addOverlay(EMA.calculate({ period: 9, values: closes }), 8, times, 'EMA 9', this.movingAverageColor('#f0b90b'));
+    if (this.movingAveragesEnabled && this.studies.ema20 && closes.length >= 20) this.addOverlay(EMA.calculate({ period: 20, values: closes }), 19, times, 'EMA 20', this.movingAverageColor('#2962ff'));
+    if (this.movingAveragesEnabled && this.studies.ema50 && closes.length >= 50) this.addOverlay(EMA.calculate({ period: 50, values: closes }), 49, times, 'EMA 50', this.movingAverageColor('#26a69a'));
+    if (this.movingAveragesEnabled && this.studies.ema200 && closes.length >= 200) this.addOverlay(EMA.calculate({ period: 200, values: closes }), 199, times, 'EMA 200', this.movingAverageColor('#e91e63'));
     if (this.studies.bollinger && closes.length >= 20) {
       const bands = BollingerBands.calculate({ period: 20, values: closes, stdDev: 2 });
       const bandOffset = closes.length - bands.length;
@@ -789,15 +1323,44 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     if (this.studies.supportResistance) this.drawSupportResistance(candles);
-    if (this.studies.patterns) {
-      this.detectedPatterns = this.detectPatterns(candles, times);
-      if (this.candleSeries) {
-        this.markerPlugin ??= createSeriesMarkers(this.candleSeries, []);
-        this.markerPlugin.setMarkers(this.detectedPatterns);
+    if (this.studies.fibonacci) this.drawFibonacci(candles);
+    if (this.studies.patterns) this.detectedPatterns = this.detectPatterns(candles, times);
+    else this.detectedPatterns = [];
+    const bullishEntryMarkers: PatternMarker[] = [];
+    if (this.movingAveragesEnabled && this.studies.emaSignal && closes.length >= 200) {
+      const e9 = EMA.calculate({ period: 9, values: closes });
+      const e20 = EMA.calculate({ period: 20, values: closes });
+      const e50 = EMA.calculate({ period: 50, values: closes });
+      const e200 = EMA.calculate({ period: 200, values: closes });
+      const offset = closes.length - e200.length;
+      for (let index = 1; index < e200.length; index++) {
+        const candleIndex = index + offset;
+        const currentSetup = closes[candleIndex] > e9[candleIndex - 8] && e9[candleIndex - 8] > e20[candleIndex - 19] && e20[candleIndex - 19] > e50[candleIndex - 49] && e50[candleIndex - 49] > e200[index];
+        const previousSetup = closes[candleIndex - 1] > e9[candleIndex - 9] && e9[candleIndex - 9] > e20[candleIndex - 20] && e20[candleIndex - 20] > e50[candleIndex - 50] && e50[candleIndex - 50] > e200[index - 1];
+        if (currentSetup && !previousSetup) bullishEntryMarkers.push({ time: times[candleIndex], position: 'belowBar', color: '#16834a', shape: 'arrowUp', text: 'EMA BUY', name: 'EMA bullish entry' });
       }
-    } else {
-      this.detectedPatterns = [];
-      this.markerPlugin?.setMarkers([]);
+    }
+    if (this.candleSeries) {
+      this.markerPlugin ??= createSeriesMarkers(this.candleSeries, []);
+      this.markerPlugin.setMarkers([...this.detectedPatterns, ...bullishEntryMarkers, ...tradersGitaMarkers, ...(ghostRider && this.ghostRiderVisibility.signals ? ghostRider.markers : [])]);
+    }
+    const plan = this.riskScenario;
+    if (plan && this.candleSeries) {
+      this.analysisPriceLines.push(this.candleSeries.createPriceLine({ price: plan.entryPrice, color: '#9aa4b2', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'ENTRY' }));
+      this.analysisPriceLines.push(this.candleSeries.createPriceLine({ price: plan.stopPrice, color: '#ff7168', lineWidth: 2, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'STOP' }));
+      this.analysisPriceLines.push(this.candleSeries.createPriceLine({ price: plan.targetPrice, color: '#36c99a', lineWidth: 2, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: `${this.targetRMultiple}R` }));
+    }
+    if (ghostRider && this.candleSeries) {
+      const state = ghostRider.snapshot;
+      if (state.entry !== undefined && state.stop !== undefined) {
+        if (this.ghostRiderVisibility.entry) this.ghostRiderPriceLines.push(this.candleSeries.createPriceLine({ price: state.entry, color: '#3687e8', lineWidth: 2, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: 'GR ENTRY' }));
+        if (this.ghostRiderVisibility.stop) this.ghostRiderPriceLines.push(this.candleSeries.createPriceLine({ price: state.stop, color: '#e24848', lineWidth: 2, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: 'GR SL' }));
+        const targetColors = ['#38bdf8', '#a78bfa', '#fbbf24', '#fb7185', '#22c55e'];
+        state.targets.forEach((target, index) => {
+          const key = `tp${index + 1}` as GhostRiderVisibilityKey;
+          if (this.ghostRiderVisibility[key]) this.ghostRiderPriceLines.push(this.candleSeries!.createPriceLine({ price: target, color: targetColors[index], lineWidth: 1, lineStyle: state.targetHits[index] ? LineStyle.Solid : LineStyle.Dashed, axisLabelVisible: true, title: `GR TP${index + 1}${state.targetHits[index] ? ' ✓' : ''}` }));
+        });
+      }
     }
     this.historyChartApi.timeScale().fitContent();
   }
@@ -850,15 +1413,25 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.overlaySeries.push(series);
   }
 
+  private addAlignedOverlay(values: (number | undefined)[], times: Time[], title: string, color: string): void {
+    if (!this.historyChartApi) return;
+    const series = this.historyChartApi.addSeries(LineSeries, { color, lineWidth: 2, title, lastValueVisible: false, priceLineVisible: false });
+    series.setData(values.flatMap((value, index) => value === undefined || !Number.isFinite(value) ? [] : [{ time: times[index], value }]));
+    this.overlaySeries.push(series);
+  }
+
   private clearAnalysisOverlays(): void {
     if (this.historyChartApi) {
       for (const series of this.overlaySeries) this.historyChartApi.removeSeries(series);
     }
     this.overlaySeries = [];
     if (this.candleSeries) {
-      for (const line of this.supportPriceLines) this.candleSeries.removePriceLine(line);
+      for (const line of this.analysisPriceLines) this.candleSeries.removePriceLine(line);
+      for (const line of this.ghostRiderPriceLines) this.candleSeries.removePriceLine(line);
     }
-    this.supportPriceLines = [];
+    this.analysisPriceLines = [];
+    this.ghostRiderPriceLines = [];
+    this.fibonacciSummary = undefined;
   }
 
   private drawSupportResistance(candles: HistoricalCandle[]): void {
@@ -874,37 +1447,80 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     const lastClose = candles[candles.length - 1].close;
     const nearSupport = supports.filter((level) => level < lastClose).sort((a, b) => b - a).slice(0, 2);
     const nearResistance = resistances.filter((level) => level > lastClose).sort((a, b) => a - b).slice(0, 2);
-    nearSupport.forEach((price, index) => this.supportPriceLines.push(this.candleSeries!.createPriceLine({ price, color: '#28744d99', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: `S${index + 1}` })));
-    nearResistance.forEach((price, index) => this.supportPriceLines.push(this.candleSeries!.createPriceLine({ price, color: '#c45b4b99', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: `R${index + 1}` })));
+    nearSupport.forEach((price, index) => this.analysisPriceLines.push(this.candleSeries!.createPriceLine({ price, color: '#28744d99', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: `S${index + 1}` })));
+    nearResistance.forEach((price, index) => this.analysisPriceLines.push(this.candleSeries!.createPriceLine({ price, color: '#c45b4b99', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: `R${index + 1}` })));
+  }
+
+  private drawFibonacci(candles: HistoricalCandle[]): void {
+    if (!this.candleSeries || candles.length < 2) return;
+    let lowIndex = 0;
+    let highIndex = 0;
+    for (let index = 1; index < candles.length; index++) {
+      if (candles[index].low < candles[lowIndex].low) lowIndex = index;
+      if (candles[index].high > candles[highIndex].high) highIndex = index;
+    }
+    const low = candles[lowIndex].low;
+    const high = candles[highIndex].high;
+    const span = high - low;
+    if (!(span > 0)) return;
+    const upswing = lowIndex < highIndex;
+    this.fibonacciSummary = {
+      direction: upswing ? 'upswing' : 'downswing',
+      start: candles[upswing ? lowIndex : highIndex].timestamp.slice(0, 16).replace('T', ' '),
+      end: candles[upswing ? highIndex : lowIndex].timestamp.slice(0, 16).replace('T', ' '),
+      low,
+      high
+    };
+    const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+    fibLevels.forEach((ratio, index) => {
+      const price = upswing ? high - span * ratio : low + span * ratio;
+      const color = ratio === 0.618 ? '#8065bd' : ratio === 0.5 ? '#a08cce' : '#a08cce88';
+      this.analysisPriceLines.push(this.candleSeries!.createPriceLine({
+        price,
+        color,
+        lineWidth: ratio === 0.618 ? 2 : 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: `Fib ${Math.round(ratio * 1000) / 10}%`
+      }));
+    });
   }
 
   private detectPatterns(candles: HistoricalCandle[], times: Time[]): PatternMarker[] {
-    const detectors = [
-      { name: 'Doji', marker: 'D', shape: 'circle' as const, color: '#8070b5', position: 'aboveBar' as const, detect: doji as unknown as (input: PatternInput) => boolean, lookback: 1 },
-      { name: 'Bullish engulfing', marker: 'BE', shape: 'arrowUp' as const, color: '#28744d', position: 'belowBar' as const, detect: bullishengulfingpattern as unknown as (input: PatternInput) => boolean, lookback: 2 },
-      { name: 'Bearish engulfing', marker: 'SE', shape: 'arrowDown' as const, color: '#c45b4b', position: 'aboveBar' as const, detect: bearishengulfingpattern as unknown as (input: PatternInput) => boolean, lookback: 2 },
-      { name: 'Hammer pattern', marker: 'H', shape: 'arrowUp' as const, color: '#438c6a', position: 'belowBar' as const, detect: hammerpattern as unknown as (input: PatternInput) => boolean, lookback: 5 },
-      { name: 'Shooting star', marker: 'SS', shape: 'arrowDown' as const, color: '#bc7254', position: 'aboveBar' as const, detect: shootingstar as unknown as (input: PatternInput) => boolean, lookback: 5 }
-    ];
-    const markers: PatternMarker[] = [];
-    for (let index = 0; index < candles.length; index++) {
-      for (const detector of detectors) {
-        if (index + 1 < detector.lookback) continue;
-        const sample = candles.slice(index + 1 - detector.lookback, index + 1);
-        const input = {
-          open: sample.map((candle) => candle.open),
-          high: sample.map((candle) => candle.high),
-          low: sample.map((candle) => candle.low),
-          close: sample.map((candle) => candle.close)
-        };
-        try {
-          if (detector.detect(input)) markers.push({ time: times[index], text: detector.marker, name: detector.name, position: detector.position, color: detector.color, shape: detector.shape });
-        } catch {
-          continue;
-        }
-      }
-    }
-    return markers.slice(-60);
+    return detectCandlestickPatterns(candles).map((match): PatternMarker => {
+      const bullish = match.direction === 'bullish';
+      const bearish = match.direction === 'bearish';
+      return {
+        time: times[match.index],
+        text: match.marker,
+        name: match.name,
+        position: bullish ? 'belowBar' : 'aboveBar',
+        color: bullish ? '#28744d' : bearish ? '#c45b4b' : '#8070b5',
+        shape: bullish ? 'arrowUp' : bearish ? 'arrowDown' : 'circle'
+      };
+    }).slice(-60);
+  }
+
+  private detectTradersGitaMarkers(candles: HistoricalCandle[], times: Time[]): PatternMarker[] {
+    const tickSize = this.selectedHistoryInstrument?.tick_size || 0.05;
+    return detectTraderGitaPatterns(candles, {
+      ...this.tradersGitaSettings,
+      tickSize,
+      showTrendNames: this.tradersGitaShowTrendNames,
+      confirmedOnly: this.tradersGitaConfirmedOnly,
+      groups: this.tradersGitaGroups
+    }).map((match): PatternMarker => {
+      const bullish = match.direction === 'bullish';
+      const bearish = match.direction === 'bearish';
+      return {
+        time: times[match.index],
+        position: bullish ? 'belowBar' : 'aboveBar',
+        color: bullish ? '#25a878' : bearish ? '#e05258' : '#9b83e8',
+        shape: bullish ? 'arrowUp' : bearish ? 'arrowDown' : 'circle',
+        text: match.shortName,
+        name: `Candlestick: ${match.name}`
+      };
+    }).slice(-500);
   }
 
   private handleTrendlineClick = (event: MouseEventParams<Time>): void => {

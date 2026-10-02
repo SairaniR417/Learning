@@ -1,6 +1,7 @@
-<header class="topbar">
-  <a class="brand" href="/" aria-label="Market Desk home"><span class="brand-mark">M</span><span>MARKET<span class="brand-light">DESK</span></span></a>
+<header class="topbar" [class.analysis-topbar]="modernInterface">
+  <a class="brand" href="/" aria-label="Trader's Gita home"><span class="brand-mark">T</span><span>TRADER'S <span class="brand-light">GITA</span></span></a>
   <div class="topbar-right">
+    <strong class="analysis-symbol" *ngIf="analysisMode">{{ selectedHistoryInstrument?.symbol }} <span>{{ loadedHistoricalIntervalLabel }}</span></strong>
     <span class="session-clock">{{ clock }}</span>
     <span class="connection-state" [class.connected]="connected"><i></i><span>{{ connected ? 'Connected' : 'Not connected' }}</span></span>
     <a class="connect-button" href="/auth/upstox" [hidden]="connected"><span class="button-symbol">↗</span> Connect Upstox</a>
@@ -8,12 +9,13 @@
   </div>
 </header>
 
-<main>
-  <section class="market-strip" aria-label="Market summary">
-    <div class="market-strip-title"><span class="eyebrow">INDIAN MARKETS</span><span class="market-status" [class.connected]="connected"><i></i><span>{{ marketLabel }}</span></span></div>
-    <div class="market-strip-meta"><span>Watchlist <b>{{ watchlist.length.toString().padStart(2, '0') }}</b></span><span class="meta-divider"></span><span>Refresh <b>5 sec</b></span></div>
-  </section>
+<main [class.analysis-mode]="analysisMode" [class.modern-interface]="modernInterface">
+  <nav class="view-tabs" role="tablist" aria-label="Trader's Gita sections">
+    <button id="dashboard-tab" type="button" role="tab" [attr.aria-selected]="activeTab === 'dashboard'" aria-controls="dashboard-panel" [class.active]="activeTab === 'dashboard'" (click)="openSelectedChart()">Chart</button>
+    <button id="knowledge-tab" type="button" role="tab" [attr.aria-selected]="activeTab === 'knowledge'" aria-controls="knowledge-panel" [class.active]="activeTab === 'knowledge'" (click)="activeTab = 'knowledge'">Knowledge</button>
+  </nav>
 
+  <div id="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab" [hidden]="activeTab !== 'dashboard'">
   <section class="workspace">
     <div class="primary-column">
       <section class="lead-panel" aria-label="Nifty 50 overview">
@@ -41,14 +43,14 @@
 
       <section class="historical-section" aria-labelledby="historical-title">
         <div class="historical-heading">
-          <div><span class="eyebrow">UPSTOX API / HISTORICAL</span><h2 id="historical-title">Backdated candles</h2></div>
-          <div class="historical-status" [class.connected]="connected" [class.demo-status]="demoMode"><i></i>{{ demoMode ? 'SAMPLE DATA ONLY' : connected ? 'UPSTOX CONNECTED' : 'UPSTOX DISCONNECTED' }}</div>
+          <div><span class="eyebrow">MARKET WORKSPACE / {{ historyMarket === 'cash' ? 'EQUITY' : 'COMMODITY' }}</span><h2 id="historical-title">{{ analysisMode ? selectedHistoryInstrument?.name : 'Instrument analysis' }}</h2></div>
+          <div class="historical-status" [class.connected]="connected" [class.demo-status]="demoMode"><i></i>{{ demoMode ? 'YAHOO FINANCE SAMPLE' : connected ? 'UPSTOX DATA' : 'OFFLINE' }}</div>
         </div>
-        <div class="historical-connection" *ngIf="!connected">
+        <div class="historical-connection" *ngIf="!connected" [hidden]="historicalLoading || historicalCandles.length > 0">
           <p>{{ historyConnectionCopy }}</p>
           <div class="history-actions">
             <a class="history-connect" href="/auth/upstox" *ngIf="configured">Connect Upstox <span>↗</span></a>
-            <button class="history-connect demo-button" type="button" (click)="runDemo()">Preview sample data <span>▶</span></button>
+            <button class="history-connect demo-button" type="button" (click)="runDemo()">Preview Reliance data <span>▶</span></button>
           </div>
           <div class="historical-setup" *ngIf="!configured">
             <span>Add <code>UPSTOX_CLIENT_ID</code> and <code>UPSTOX_CLIENT_SECRET</code> to <code>.env</code>, then restart the API. Register the OAuth callback URL in your Upstox app.</span>
@@ -59,7 +61,12 @@
           <label class="history-field market-field"><span>MARKET</span><select [value]="historyMarket" (change)="setHistoryMarket($any($event.target).value)"><option value="cash">Cash equities</option><option value="commodities">MCX commodities</option></select></label>
           <label class="history-field instrument-field">
             <span>{{ historyMarket === 'cash' ? 'CASH INSTRUMENT' : 'COMMODITY FUTURE' }}</span>
-            <input type="search" placeholder="Search NSE symbol or company" autocomplete="off" [value]="historySearchText" [disabled]="!connected" (input)="updateHistorySearch($any($event.target).value)" (focus)="historySearchOpen = connected && historySearchText.length >= 2" />
+            <select *ngIf="!connected && historyMarket === 'cash'" aria-label="Choose a local stock sample" [value]="sampleSymbol" (change)="runDemo($any($event.target).value)">
+              <option value="RELIANCE">Reliance ? bearish sample</option>
+              <option value="ADANIPORTS">Adani Ports ? bullish EMA entry</option>
+            </select>
+            <input *ngIf="connected" type="search" [placeholder]="historyMarket === 'cash' ? 'Search NSE symbol or company' : 'Search MCX commodity future'" autocomplete="off" [value]="historySearchText" (input)="updateHistorySearch($any($event.target).value)" (focus)="historySearchOpen = historySearchText.length >= 2" />
+            <small *ngIf="!connected && historyMarket === 'commodities'">Connect Upstox to search MCX futures.</small>
             <div class="history-search-results" *ngIf="historySearchOpen">
               <div class="search-message" *ngIf="historySearchMessage">{{ historySearchMessage }}</div>
               <button class="search-result" type="button" *ngFor="let instrument of historySearchResults" (click)="selectHistoryInstrument(instrument)">
@@ -71,10 +78,24 @@
           <label class="history-field"><span>FROM</span><input type="date" [value]="historicalFrom" (change)="historicalFrom = $any($event.target).value" /></label>
           <label class="history-field"><span>TO</span><input type="date" [value]="historicalTo" (change)="historicalTo = $any($event.target).value" /></label>
           <label class="history-field interval-field"><span>INTERVAL</span><select [value]="historicalInterval" (change)="historicalInterval = $any($event.target).value"><option value="minutes:1">1 minute</option><option value="minutes:3">3 minutes</option><option value="minutes:5">5 minutes</option><option value="minutes:15">15 minutes</option><option value="minutes:30">30 minutes</option><option value="hours:1">1 hour</option><option value="hours:4">4 hours</option><option value="days:1">1 day</option><option value="weeks:1">1 week</option><option value="months:1">1 month</option></select></label>
-          <button class="load-history" type="submit" [disabled]="!connected || !selectedHistoryInstrument || historicalLoading">{{ historicalLoading ? 'Loading…' : 'Load candles' }}</button>
+          <button class="load-history" type="submit" [disabled]="(!connected && !demoMode) || !selectedHistoryInstrument || historicalLoading">{{ historicalLoading ? 'Loading…' : (demoMode ? 'Update chart' : 'Load candles') }}</button>
         </form>
         <div class="historical-results" [hidden]="!historicalCandles.length">
-          <div class="historical-result-heading"><span>{{ selectedHistoryInstrument?.symbol }} <i>·</i> {{ historicalIntervalLabel }} <i>·</i> {{ historicalCandles.length }} candles <b class="sample-label" *ngIf="demoMode">SYNTHETIC / NOT MARKET DATA</b></span></div>
+          <div class="historical-result-heading"><span>{{ selectedHistoryInstrument?.symbol }} <i>·</i> {{ loadedHistoricalIntervalLabel }} <i>·</i> {{ historicalCandles.length }} candles <b class="sample-label" *ngIf="demoMode">YAHOO FINANCE | HISTORICAL DATA</b></span></div>
+          <section class="ema-alignment-card" *ngIf="technicalSnapshot as snapshot" [class.ema-bullish]="snapshot.emaAlignment === 'Bullish'" [class.ema-bearish]="snapshot.emaAlignment === 'Bearish'" aria-label="EMA alignment status">
+            <div class="ema-status-copy"><span>EMA ALIGNMENT</span><strong>{{ snapshot.emaAlignment }}</strong><small>Based on last completed candle: {{ historicalCandles[historicalCandles.length - 1]?.timestamp?.slice(0, 10) }}</small><small *ngIf="snapshot.bullishEntry">Bullish entry crossover on {{ historicalCandles[historicalCandles.length - 1]?.timestamp?.slice(0, 10) }}</small><small *ngIf="snapshot.emaAlignment === 'Bullish' && !snapshot.bullishEntry">Price &gt; EMA 9 &gt; EMA 20 &gt; EMA 50 &gt; EMA 200</small><small *ngIf="snapshot.emaAlignment === 'Bearish'">Price &lt; EMA 9 &lt; EMA 20 &lt; EMA 50 &lt; EMA 200</small><small *ngIf="snapshot.emaAlignment === 'Mixed'">The EMA stack is not fully aligned</small><small *ngIf="snapshot.emaAlignment === 'Needs 200 candles'">Load at least 200 candles to calculate this setup</small></div>
+            <div class="ema-values"><div><span>LAST CLOSE</span><strong>{{ formatPrice(snapshot.lastClose) }}</strong></div><div><span>EMA 9</span><strong>{{ formatPrice(snapshot.ema9) }}</strong></div><div><span>EMA 20</span><strong>{{ formatPrice(snapshot.ema20) }}</strong></div><div><span>EMA 50</span><strong>{{ formatPrice(snapshot.ema50) }}</strong></div><div><span>EMA 200</span><strong>{{ formatPrice(snapshot.ema200) }}</strong></div></div>
+          </section>
+          <section class="ema-playbook" *ngIf="technicalSnapshot as snapshot" aria-label="EMA setup monitor">
+            <header><span>EMA SETUP MONITOR</span><strong>{{ emaChecklistCount }} / {{ emaChecklist.length }} conditions</strong></header>
+            <div class="ema-checklist"><div *ngFor="let item of emaChecklist" [class.complete]="item.complete"><i>{{ item.complete ? '✓' : '·' }}</i><span>{{ item.label }}</span></div></div>
+            <div class="ema-strategy-status">
+              <div><span>9 / 20 CROSSOVER</span><strong [class.positive]="snapshot.bullishCrossover" [class.negative]="snapshot.bearishCrossover">{{ snapshot.bullishCrossover ? 'Bullish crossover' : snapshot.bearishCrossover ? 'Bearish crossover' : 'No fresh crossover' }}</strong></div>
+              <div><span>EMA PULLBACK</span><strong>{{ snapshot.breaksRejectionHigh ? 'Confirmed: close broke prior high' : snapshot.bullishRejection ? 'Bullish rejection; awaiting high break' : snapshot.pullbackNearEma ? 'Price near EMA 20 / 50' : 'No current pullback setup' }}</strong></div>
+              <div><span>EMA 9 TRAILING REFERENCE</span><strong>{{ formatPrice(snapshot.ema9) }} <small>{{ snapshot.lastClose < (snapshot.ema9 || snapshot.lastClose) ? 'Close below EMA 9; review trend structure' : 'Close above EMA 9 · watch higher lows' }}</small></strong></div>
+            </div>
+            <small class="ema-checklist-note">Checklist standardizes the study; it is not a probability score or trade signal. EMAs lag price.</small>
+          </section>
           <section class="instrument-snapshot" *ngIf="technicalSnapshot as snapshot" aria-label="Technical snapshot">
             <header class="snapshot-heading"><span>TECHNICAL SNAPSHOT</span><strong>₹{{ formatPrice(snapshot.lastClose) }}</strong></header>
             <div class="snapshot-grid">
@@ -84,7 +105,7 @@
               <div><span>DIRECTIONAL PRESSURE</span><strong>{{ snapshot.directionalPressure }}<small *ngIf="snapshot.positiveDi !== undefined"> · +DI {{ snapshot.positiveDi.toFixed(1) }} / −DI {{ snapshot.negativeDi?.toFixed(1) }}</small></strong></div>
               <div><span>ATR 14 / VOLATILITY</span><strong>{{ snapshot.atr !== undefined ? '₹' + formatPrice(snapshot.atr) + ' · ' + snapshot.atrPercent?.toFixed(2) + '%' : 'Needs more candles' }}</strong></div>
               <div><span>RSI 14</span><strong>{{ snapshot.rsi !== undefined ? snapshot.rsi.toFixed(1) : 'Needs more candles' }}</strong></div>
-              <div><span>MOVING AVERAGES</span><strong>{{ snapshot.sma20 === undefined ? 'SMA 20: needs more bars' : snapshot.lastClose >= snapshot.sma20 ? 'Above SMA 20' : 'Below SMA 20' }}<small *ngIf="snapshot.sma50 !== undefined"> · {{ snapshot.lastClose >= snapshot.sma50 ? 'Above' : 'Below' }} SMA 50</small></strong></div>
+              <div><span>EMA ALIGNMENT</span><strong [class.positive]="snapshot.emaAlignment === 'Bullish'" [class.negative]="snapshot.emaAlignment === 'Bearish'">{{ snapshot.emaAlignment }}<small>Price vs 9 / 20 / 50 / 200 EMA</small></strong></div>
               <div><span>20-BAR RANGE</span><strong>₹{{ formatPrice(snapshot.lowestLow20) }} — ₹{{ formatPrice(snapshot.highestHigh20) }}</strong></div>
               <div><span>AVERAGE VOLUME · 20 BARS</span><strong>{{ snapshot.averageVolume20?.toLocaleString('en-IN') ?? '—' }}</strong></div>
             </div>
@@ -103,54 +124,135 @@
             </div>
             <p class="macro-context">{{ globalContextNote }}</p>
           </section>
-          <section class="risk-scenario" *ngIf="technicalSnapshot as snapshot" aria-label="User-defined risk scenario">
-            <header><span>ATR RISK SCENARIO</span><small>USER-DEFINED · NOT A TRADE INSTRUCTION</small></header>
-            <div class="risk-inputs">
-              <label><span>RISK BUDGET · ₹</span><input type="number" min="0" step="100" [value]="riskBudget || ''" placeholder="Enter amount" (input)="setRiskBudget($any($event.target).value)" /></label>
-              <label><span>STOP DISTANCE · ATR ×</span><input type="number" min="0.5" max="5" step="0.5" [value]="stopAtrMultiple" (input)="setStopAtrMultiple($any($event.target).value)" /></label>
-              <label><span>TARGET SCENARIO · R</span><input type="number" min="0.5" max="5" step="0.5" [value]="targetRMultiple" (input)="setTargetRMultiple($any($event.target).value)" /></label>
-              <div class="scenario-direction" role="group" aria-label="Scenario direction">
-                <span>SCENARIO</span>
-                <button type="button" [class.active]="riskDirection === 'long'" (click)="riskDirection = 'long'">Long</button>
-                <button type="button" [class.active]="riskDirection === 'short'" (click)="riskDirection = 'short'">Short</button>
-              </div>
-            </div>
-            <div class="risk-output" *ngIf="riskScenario as scenario; else riskPrompt">
-              <div><span>POSITION SIZE</span><strong>{{ historyMarket === 'commodities' ? scenario.lots + ' lots · ' : '' }}{{ scenario.units.toLocaleString('en-IN') }} units</strong></div>
-              <div><span>ATR STOP SCENARIO</span><strong>₹{{ formatPrice(scenario.stopPrice) }}</strong></div>
-              <div><span>RISK USED · APPROX.</span><strong>₹{{ formatPrice(scenario.riskUsed) }}</strong></div>
-              <div><span>{{ targetRMultiple }}R PRICE SCENARIO</span><strong>₹{{ formatPrice(scenario.targetPrice) }} · gross ₹{{ formatPrice(scenario.riskUsed * targetRMultiple) }}</strong></div>
-            </div>
-            <ng-template #riskPrompt><p class="risk-prompt">Enter a risk budget and choose a scenario direction. ADX describes trend strength; the stop distance here uses your ATR multiple.</p></ng-template>
-            <p class="risk-disclaimer">Illustrative math only; not expected return or advice. Gaps, slippage, fees, taxes, margin, and contract-specific rules can change losses. A stop does not cap gap risk.</p>
-          </section>
           <div class="analysis-toolbar">
             <div class="study-toggles" aria-label="Technical studies">
-              <label><input type="checkbox" [checked]="studies.sma20" (change)="setStudy('sma20', $any($event.target).checked)"><span>SMA 20</span></label>
-              <label><input type="checkbox" [checked]="studies.sma50" (change)="setStudy('sma50', $any($event.target).checked)"><span>SMA 50</span></label>
-              <label><input type="checkbox" [checked]="studies.ema20" (change)="setStudy('ema20', $any($event.target).checked)"><span>EMA 20</span></label>
-              <label><input type="checkbox" [checked]="studies.bollinger" (change)="setStudy('bollinger', $any($event.target).checked)"><span>Bollinger</span></label>
-              <label><input type="checkbox" [checked]="studies.rsi" (change)="setStudy('rsi', $any($event.target).checked)"><span>RSI 14</span></label>
-              <label><input type="checkbox" [checked]="studies.macd" (change)="setStudy('macd', $any($event.target).checked)"><span>MACD</span></label>
-              <label><input type="checkbox" [checked]="studies.supportResistance" (change)="setStudy('supportResistance', $any($event.target).checked)"><span>S / R</span></label>
-              <label><input type="checkbox" [checked]="studies.patterns" (change)="setStudy('patterns', $any($event.target).checked)"><span>Patterns</span></label>
-            </div>
-            <div class="drawing-controls">
-              <button type="button" [class.active]="trendlineMode" [disabled]="!historicalCandles.length" (click)="toggleTrendlineMode()" title="Click two chart points to draw a trendline">Trendline</button>
-              <button type="button" [disabled]="!hasTrendlines" (click)="undoTrendline()" title="Undo the last trendline">Undo</button>
-              <button type="button" [disabled]="!hasTrendlines" (click)="clearTrendlines()" title="Remove all trendlines">Clear</button>
+              <details class="moving-average-menu">
+                <summary><span>Moving averages</span><b>{{ movingAveragesEnabled ? 'ON' : 'OFF' }}</b><i aria-hidden="true"></i></summary>
+                <div class="moving-average-panel">
+                  <div class="moving-average-panel-heading"><strong>Moving averages</strong><span>{{ activeMovingAverageCount }} SELECTED</span></div>
+                  <label class="moving-average-enable"><input type="checkbox" [checked]="movingAveragesEnabled" (change)="setMovingAveragesEnabled($any($event.target).checked)"><span>Show moving averages on chart</span></label>
+                  <div class="moving-average-options">
+                    <label><input type="checkbox" [checked]="studies.sma20" (change)="setStudy('sma20', $any($event.target).checked)"><span>SMA 20</span></label>
+                    <label><input type="checkbox" [checked]="studies.sma50" (change)="setStudy('sma50', $any($event.target).checked)"><span>SMA 50</span></label>
+                    <label><input type="checkbox" [checked]="studies.ema9" (change)="setStudy('ema9', $any($event.target).checked)"><span>EMA 9</span></label>
+                    <label><input type="checkbox" [checked]="studies.ema20" (change)="setStudy('ema20', $any($event.target).checked)"><span>EMA 20</span></label>
+                    <label><input type="checkbox" [checked]="studies.ema50" (change)="setStudy('ema50', $any($event.target).checked)"><span>EMA 50</span></label>
+                    <label><input type="checkbox" [checked]="studies.ema200" (change)="setStudy('ema200', $any($event.target).checked)"><span>EMA 200</span></label>
+                  </div>
+                  <label class="moving-average-intensity"><span>LINE INTENSITY <b>{{ movingAverageOpacity }}%</b></span><input type="range" min="10" max="100" step="5" [value]="movingAverageOpacity" (input)="setMovingAverageOpacity($any($event.target).value)" aria-label="Moving average line intensity"></label>
+                  <div class="moving-average-rule"><span>BULLISH ENTRY RULE</span><strong>Close &gt; EMA 9 &gt; EMA 20 &gt; EMA 50 &gt; EMA 200</strong>
+                    <label><input type="checkbox" [checked]="studies.emaSignal" (change)="setStudy('emaSignal', $any($event.target).checked)"><span>Mark new bullish entries</span></label>
+                  </div>
+                </div>
+              </details>
+              <details class="moving-average-menu ghost-rider-menu">
+                <summary><span>Ghost Rider</span><b>{{ ghostRiderEnabled ? 'ON' : 'OFF' }}</b><i aria-hidden="true"></i></summary>
+                <div class="moving-average-panel">
+                  <div class="moving-average-panel-heading"><strong>Ghost Rider v.2</strong><span>INDEPENDENT STUDY</span></div>
+                  <label class="ghost-rider-enable"><input type="checkbox" [checked]="ghostRiderEnabled" (change)="setGhostRiderEnabled($any($event.target).checked)"><span>Show Ghost Rider on chart</span></label>
+                  <label class="ghost-rider-risk"><span>STOP-LOSS · ATR ×</span><input type="number" min="0.1" max="5" step="0.1" [value]="ghostRiderAtrMultiplier" (input)="setGhostRiderAtrMultiplier($any($event.target).value)"></label>
+                  <div class="ghost-rider-display-heading">CHART VALUES</div>
+                  <div class="ghost-rider-display-grid">
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.ema9" (change)="setGhostRiderVisibility('ema9', $any($event.target).checked)"><span>EMA 9</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.ema21" (change)="setGhostRiderVisibility('ema21', $any($event.target).checked)"><span>EMA 21</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.vwap" (change)="setGhostRiderVisibility('vwap', $any($event.target).checked)"><span>VWAP</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.signals" (change)="setGhostRiderVisibility('signals', $any($event.target).checked)"><span>Buy / sell markers</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.dashboard" (change)="setGhostRiderVisibility('dashboard', $any($event.target).checked)"><span>Dashboard values</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.entry" (change)="setGhostRiderVisibility('entry', $any($event.target).checked)"><span>Entry line</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.stop" (change)="setGhostRiderVisibility('stop', $any($event.target).checked)"><span>Stop-loss line</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.tp1" (change)="setGhostRiderVisibility('tp1', $any($event.target).checked)"><span>Target 1 line</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.tp2" (change)="setGhostRiderVisibility('tp2', $any($event.target).checked)"><span>Target 2 line</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.tp3" (change)="setGhostRiderVisibility('tp3', $any($event.target).checked)"><span>Target 3 line</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.tp4" (change)="setGhostRiderVisibility('tp4', $any($event.target).checked)"><span>Target 4 line</span></label>
+                    <label><input type="checkbox" [checked]="ghostRiderVisibility.tp5" (change)="setGhostRiderVisibility('tp5', $any($event.target).checked)"><span>Target 5 line</span></label>
+                  </div>
+                  <small class="ghost-rider-note">Uses its own EMA 9/21 crossover, VWAP, RSI, MACD, ADX, volume and 5-minute RSI score. EMA moving-average settings are unchanged.</small>
+                </div>
+              </details>
+              <details class="moving-average-menu traders-gita-menu">
+                <summary><span>Candlestick</span><b>{{ tradersGitaIdentifierEnabled ? 'ON' : 'OFF' }}</b><i aria-hidden="true"></i></summary>
+                <div class="moving-average-panel traders-gita-panel">
+                  <div class="moving-average-panel-heading"><strong>Candlestick Pattern Identifier</strong><span>INDEPENDENT STUDY</span></div>
+                  <label class="traders-gita-enable"><input type="checkbox" [checked]="tradersGitaIdentifierEnabled" (change)="setTradersGitaIdentifierEnabled($any($event.target).checked)"><span>Show candlestick patterns on chart</span></label>
+                  <div class="ghost-rider-display-heading">PATTERN GROUPS</div>
+                  <div class="traders-gita-groups">
+                    <label><input type="checkbox" [checked]="tradersGitaGroups.single" (change)="setTradersGitaGroup('single', $any($event.target).checked)"><span>Single candle</span></label>
+                    <label><input type="checkbox" [checked]="tradersGitaGroups.two" (change)="setTradersGitaGroup('two', $any($event.target).checked)"><span>Two candle</span></label>
+                    <label><input type="checkbox" [checked]="tradersGitaGroups.three" (change)="setTradersGitaGroup('three', $any($event.target).checked)"><span>Three candle</span></label>
+                    <label><input type="checkbox" [checked]="tradersGitaGroups.continuation" (change)="setTradersGitaGroup('continuation', $any($event.target).checked)"><span>Continuation</span></label>
+                  </div>
+                  <label class="traders-gita-option"><input type="checkbox" [checked]="tradersGitaConfirmedOnly" (change)="setTradersGitaConfirmedOnly($any($event.target).checked)"><span>Closed candles only</span></label>
+                  <label class="traders-gita-option"><input type="checkbox" [checked]="tradersGitaShowTrendNames" (change)="setTradersGitaShowTrendNames($any($event.target).checked)"><span>Use trend context for Hammer / Hanging Man</span></label>
+                  <details class="traders-gita-thresholds"><summary>Pattern thresholds</summary>
+                    <div class="traders-gita-settings">
+                      <label><span>Doji body / range</span><input type="number" min="0.01" max="0.5" step="0.01" [value]="tradersGitaSettings.dojiPct" (input)="setTradersGitaSetting('dojiPct', $any($event.target).value)"></label>
+                      <label><span>Small body / range</span><input type="number" min="0.05" max="0.8" step="0.05" [value]="tradersGitaSettings.smallBodyPct" (input)="setTradersGitaSetting('smallBodyPct', $any($event.target).value)"></label>
+                      <label><span>Long body / average</span><input type="number" min="0.5" max="3" step="0.1" [value]="tradersGitaSettings.longBodyMult" (input)="setTradersGitaSetting('longBodyMult', $any($event.target).value)"></label>
+                      <label><span>Long wick / body</span><input type="number" min="1" max="5" step="0.25" [value]="tradersGitaSettings.wickBodyMult" (input)="setTradersGitaSetting('wickBodyMult', $any($event.target).value)"></label>
+                      <label><span>Tiny wick / range</span><input type="number" min="0.01" max="0.4" step="0.01" [value]="tradersGitaSettings.tinyWickPct" (input)="setTradersGitaSetting('tinyWickPct', $any($event.target).value)"></label>
+                      <label><span>Average body bars</span><input type="number" min="3" max="100" step="1" [value]="tradersGitaSettings.avgBodyLen" (input)="setTradersGitaSetting('avgBodyLen', $any($event.target).value)"></label>
+                      <label><span>Trend lookback bars</span><input type="number" min="2" max="50" step="1" [value]="tradersGitaSettings.trendLen" (input)="setTradersGitaSetting('trendLen', $any($event.target).value)"></label>
+                      <label><span>Tweezer tolerance ticks</span><input type="number" min="0" max="100" step="1" [value]="tradersGitaSettings.tweezerTicks" (input)="setTradersGitaSetting('tweezerTicks', $any($event.target).value)"></label>
+                    </div>
+                  </details>
+                  <small class="traders-gita-note">Markers are independent from Ghost Rider and moving averages. Closed-candle mode skips the most recent candle because this view cannot confirm whether it has closed.</small>
+                </div>
+              </details>
             </div>
           </div>
-          <p class="chart-instruction" *ngIf="trendlineHint">{{ trendlineHint }}</p>
-          <div class="pattern-summary" *ngIf="studies.patterns && patternSummary.length"><span>CANDIDATE PATTERNS</span><b *ngFor="let pattern of patternSummary">{{ pattern.name }} ×{{ pattern.count }}</b><small>Descriptive only, not a trade signal.</small></div>
-          <div class="historical-chart-wrap" [class.draw-mode]="trendlineMode" [style.height.px]="analysisChartHeight"><div #historyChart aria-label="Historical candlestick analysis chart with synchronized indicator panes"></div></div>
-          <div class="candle-table-scroll"><table class="candle-table">
-            <thead><tr><th>TIME</th><th>OPEN</th><th>HIGH</th><th>LOW</th><th>CLOSE</th><th>VOLUME</th></tr></thead>
-            <tbody><tr *ngFor="let candle of displayedCandles"><td>{{ candle.timestamp.replace('T', ' ').slice(0, 16) }}</td><td>{{ formatPrice(candle.open) }}</td><td>{{ formatPrice(candle.high) }}</td><td>{{ formatPrice(candle.low) }}</td><td>{{ formatPrice(candle.close) }}</td><td>{{ candle.volume.toLocaleString('en-IN') }}</td></tr></tbody>
-          </table></div>
-          <p class="table-caption">{{ demoMode ? 'Synthetic sample for interface preview only. It is not actual or delayed market data.' : 'Showing the latest ' + displayedCandles.length + ' candles from this result.' }}</p>
+          <div #historyChartWrap class="historical-chart-wrap" [class.draw-mode]="trendlineMode" [style.height.px]="analysisChartHeight"><div #historyChart aria-label="Historical candlestick analysis chart with synchronized indicator panes"></div><button class="chart-fullscreen-toggle" type="button" (click)="toggleChartFullscreen()" [attr.aria-label]="chartIsFullscreen ? 'Exit full screen chart' : 'Show chart full screen'" [title]="chartIsFullscreen ? 'Exit full screen' : 'View chart full screen'"><svg *ngIf="!chartIsFullscreen" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M3 3l6 6m7-6h5v5m0-5-6 6M3 16v5h5m-5 0 6-6m10 1v5h-5m5 0-6-6" /></svg><svg *ngIf="chartIsFullscreen" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3m-5 5 6-6m7 1v5h5m-5-5 5 5M8 21v-5H3m5 5-5-5m18 0h-5v5m5-5-6 6" /></svg><span class="visually-hidden">{{ chartIsFullscreen ? 'Exit full screen' : 'View chart full screen' }}</span></button></div>
+          <section class="ghost-rider-dashboard" *ngIf="ghostRiderEnabled && ghostRiderVisibility.dashboard" aria-label="Ghost Rider dashboard">
+            <ng-container *ngIf="ghostRiderSnapshot as ghost; else ghostRiderWaiting">
+            <header><span>GHOST RIDER v.2</span><strong [class.positive]="ghost.bias.includes('BULL')" [class.negative]="ghost.bias.includes('BEAR')">{{ ghost.bias }}</strong></header>
+            <div class="ghost-rider-scores"><div class="bull"><span>PULLERS</span><strong>{{ ghost.bullPct }}%</strong></div><div class="bear"><span>DRAGGERS</span><strong>{{ ghost.bearPct }}%</strong></div></div>
+            <div class="ghost-rider-readings">
+              <div><span>PRICE / VWAP</span><strong>{{ ghost.closeAboveVwap ? 'ABOVE' : 'BELOW' }}</strong></div>
+              <div><span>RSI 14</span><strong>{{ ghost.rsi | number:'1.1-1' }}</strong></div>
+              <div><span>RSI 5M</span><strong>{{ ghost.rsi5m !== undefined ? (ghost.rsi5m | number:'1.1-1') : 'Unavailable' }}</strong></div>
+              <div><span>MACD</span><strong>{{ ghost.macdBullish ? 'BULL' : 'BEAR' }}</strong></div>
+              <div><span>ADX 14</span><strong>{{ ghost.adx | number:'1.1-1' }}</strong></div>
+              <div><span>EMA 9 / 21</span><strong>{{ ghost.emaBullish ? 'BULL' : 'BEAR' }}</strong></div>
+              <div><span>ATR 14</span><strong>{{ formatPrice(ghost.atr) }}</strong></div>
+              <div><span>VOLUME</span><strong>{{ ghost.volumeHigh ? 'HIGH' : 'LOW' }}</strong></div>
+            </div>
+            <small class="ghost-rider-score-note">{{ ghost.scoreAvailable }} score inputs available{{ ghost.rsi5m === undefined ? ' · 5-minute RSI unavailable for this interval' : '' }}</small>
+            <div class="ghost-rider-active-plan">
+              <div><span>LAST CROSS</span><strong>{{ ghost.cross }}</strong></div>
+              <div><span>ACTIVE STATE</span><strong>{{ ghost.signal }}</strong></div>
+              <ng-container *ngIf="ghost.entry !== undefined"><div><span>ENTRY</span><strong>₹{{ formatPrice(ghost.entry) }}</strong></div><div><span>STOP</span><strong>₹{{ formatPrice(ghost.stop) }}</strong></div>
+                <div class="ghost-targets" *ngFor="let target of ghost.targets; let i = index" [class.hit]="ghost.targetHits[i]"><span>TP{{ i + 1 }}</span><strong>₹{{ formatPrice(target) }} {{ ghost.targetHits[i] ? '✓' : '' }}</strong></div>
+              </ng-container>
+            </div>
+            <small class="ghost-rider-score-note">Buy/sell triggers use EMA 9/21 crosses. Stop and five targets use the ATR multiplier shown in Ghost Rider settings. Target hits are historical high/low touches.</small>
+            </ng-container>
+            <ng-template #ghostRiderWaiting><header><span>GHOST RIDER v.2</span></header><small class="ghost-rider-score-note">Load at least 35 candles to calculate Ghost Rider readings.</small></ng-template>
+          </section>
+          <section class="risk-scenario" *ngIf="technicalSnapshot as snapshot" aria-label="EMA trade planner">
+            <header><span>EMA TRADE PLANNER</span><small>HYPOTHETICAL PLAN</small></header>
+            <div class="risk-inputs">
+              <div class="scenario-direction" role="group" aria-label="Trade direction"><span>DIRECTION</span>
+                <button type="button" [class.active]="riskDirection === 'long'" (click)="setRiskDirection('long')">Long</button>
+                <button type="button" [class.active]="riskDirection === 'short'" (click)="setRiskDirection('short')">Short</button>
+              </div>
+              <label><span>ENTRY PRICE · ₹</span><input type="number" min="0" step="0.05" [value]="plannerEntry || snapshot.lastClose" (input)="plannerEntry = +$any($event.target).value; refreshTradePlan()" /></label>
+              <label><span>STOP METHOD</span><select [value]="plannerStopMethod" (change)="setPlannerStopMethod($any($event.target).value)"><option value="swing">20-bar low / high</option><option value="atr">ATR 14 × 1.5</option><option value="ema20">EMA 20 reference</option><option value="manual">Enter stop price</option></select></label>
+              <label *ngIf="plannerStopMethod === 'manual'"><span>STOP PRICE · ₹</span><input type="number" min="0" step="0.05" [value]="plannerManualStop || ''" (input)="plannerManualStop = +$any($event.target).value; refreshTradePlan()" /></label>
+              <label><span>RISK BUDGET · ₹</span><input type="number" min="0" step="100" [value]="riskBudget || ''" placeholder="Optional" (input)="setRiskBudget($any($event.target).value)" /></label>
+              <label><span>REWARD MULTIPLE · R</span><select [value]="targetRMultiple" (change)="setTargetRMultiple($any($event.target).value)"><option value="1">1R</option><option value="2">2R</option><option value="3">3R</option></select></label>
+            </div>
+            <div class="risk-output" *ngIf="riskScenario as scenario; else riskPrompt">
+              <div><span>ENTRY</span><strong>₹{{ formatPrice(scenario.entryPrice) }}</strong></div>
+              <div><span>STOP-LOSS</span><strong>₹{{ formatPrice(scenario.stopPrice) }} · ₹{{ formatPrice(scenario.riskPerUnit) }} risk / unit</strong></div>
+              <div><span>{{ targetRMultiple }}R TARGET</span><strong>₹{{ formatPrice(scenario.targetPrice) }}</strong></div>
+              <div><span>20-BAR {{ riskDirection === 'long' ? 'RESISTANCE' : 'SUPPORT' }} REFERENCE</span><strong>₹{{ formatPrice(riskDirection === 'long' ? snapshot.highestHigh20 : snapshot.lowestLow20) }}</strong></div>
+              <div><span>POSITION SIZE · OPTIONAL BUDGET</span><strong>{{ riskBudget > 0 ? (historyMarket === 'commodities' ? scenario.lots + ' lots · ' : '') + scenario.units.toLocaleString('en-IN') + ' units · ₹' + formatPrice(scenario.riskUsed) + ' risk' : 'Enter a risk budget to calculate' }}</strong></div>
+            </div>
+            <ng-template #riskPrompt><p class="risk-prompt">Choose long or short and confirm that the selected stop is on the correct side of entry. Structure stops use the recent 20-bar swing range; EMA 20 is a reference, not a guaranteed stop.</p></ng-template>
+            <p class="risk-disclaimer">Targets use entry ± (risk per unit × R). They are scenarios, not predictions. Review nearby resistance/support, costs, slippage and gap risk.</p>
+          </section>
         </div>
-        <div class="history-empty" *ngIf="connected && !historicalCandles.length && !historicalLoading"><span class="empty-cross">↗</span><span>Search an instrument, choose dates and interval, then load its historical candles.</span></div>
+        <div class="history-empty" *ngIf="historicalLoading"><span class="loading-indicator"></span><span>Loading Reliance historical candles...</span></div>
+        <div class="history-empty" *ngIf="!historicalLoading && !historicalCandles.length"><span class="empty-cross">+</span><span>Preview sample data or connect Upstox to search for a stock or commodity.</span></div>
       </section>
 
       <section class="watchlist-section">
@@ -209,7 +311,54 @@
       </section>
     </aside>
   </section>
-  <footer class="page-footer"><span>MARKET DESK <span class="footer-divider">/</span> PERSONAL WORKSPACE</span><span>DATA PROVIDED BY UPSTOX</span></footer>
+  </div>
+
+  <section class="knowledge-page" id="knowledge-panel" role="tabpanel" aria-labelledby="knowledge-tab" [hidden]="activeTab !== 'knowledge'">
+    <header class="knowledge-heading">
+      <div><span class="eyebrow">TRADER'S GITA LIBRARY · BOOK 01</span><h1>Knowledge</h1></div>
+      <p>A practical field guide to chart patterns and tools. Choose a chapter to begin.</p>
+    </header>
+    <div class="knowledge-book-layout">
+      <aside class="knowledge-toc" aria-label="Book chapters">
+        <span class="knowledge-toc-label">CONTENTS</span>
+        <span class="knowledge-toc-book">01 <b>Candlestick Patterns</b></span>
+        <button type="button" *ngFor="let family of knowledgeFamilies; let i = index" [class.active]="selectedKnowledgeChapter === family" [attr.aria-current]="selectedKnowledgeChapter === family ? 'page' : null" (click)="selectKnowledgeChapter(family)">
+          <span class="chapter-number">{{ (i + 1).toString().padStart(2, '0') }}</span><span class="chapter-link-copy"><b>{{ knowledgeChapterTitle(family) }}</b><small>{{ patternsFor(family).length }} patterns</small></span>
+        </button>
+        <span class="knowledge-toc-book separate-book">02 <b>Chart Tools</b></span>
+        <button type="button" [class.active]="selectedKnowledgeChapter === fibonacciKnowledgeChapter" [attr.aria-current]="selectedKnowledgeChapter === fibonacciKnowledgeChapter ? 'page' : null" (click)="selectKnowledgeChapter(fibonacciKnowledgeChapter)">
+          <span class="chapter-number">01</span><span class="chapter-link-copy"><b>Fibonacci Retracement</b><small>Price levels</small></span>
+        </button>
+      </aside>
+
+      <div class="knowledge-reading">
+      <section class="knowledge-chapter" *ngFor="let family of knowledgeFamilies; let i = index" [id]="knowledgeChapterId(family)">
+        <header class="chapter-heading"><span class="eyebrow">BOOK 01 · CANDLESTICK PATTERNS · CHAPTER {{ (i + 1).toString().padStart(2, '0') }}</span><h2>{{ knowledgeChapterTitle(family) }}</h2><p>Study the pattern shape, its practical detector rule, and the market context where it may matter.</p></header>
+        <div class="knowledge-note"><strong>Reading note</strong><span>Bullish and bearish describe conventional bias, not a prediction. Treat each pattern as a candidate and look for confirmation, trend, support or resistance, timeframe, and volume context.</span></div>
+        <div class="knowledge-grid">
+          <article class="knowledge-card" *ngFor="let pattern of patternsFor(family)">
+            <div class="knowledge-card-top"><span class="knowledge-family">{{ pattern.candles }}</span><span class="knowledge-bias" [class.bullish-bias]="pattern.bias.startsWith('Bullish')" [class.bearish-bias]="pattern.bias.startsWith('Bearish')" [class.neutral-bias]="pattern.bias === 'Neutral'">{{ pattern.bias }}</span></div>
+            <h3>{{ pattern.name }}</h3>
+            <div class="knowledge-diagram" aria-hidden="true"><svg viewBox="0 0 100 66" preserveAspectRatio="xMidYMid meet"><line class="diagram-baseline" x1="8" y1="61" x2="92" y2="61" /><g *ngFor="let candle of patternDiagram(pattern.name)"><line class="diagram-wick" [attr.x1]="candle.x" [attr.x2]="candle.x" [attr.y1]="candle.high" [attr.y2]="candle.low" [attr.stroke]="candle.color" /><rect [attr.x]="candle.x - 5" [attr.y]="candle.bodyTop" width="10" [attr.height]="candle.bodyHeight" [attr.fill]="candle.color" /></g></svg></div>
+            <p>{{ pattern.description }}</p><div class="knowledge-rule"><strong>Detector rule</strong><span>{{ pattern.rule }}</span></div>
+          </article>
+        </div>
+      </section>
+      <section class="fib-knowledge" [id]="knowledgeChapterId(fibonacciKnowledgeChapter)" aria-labelledby="fib-knowledge-title">
+      <header><div><span class="eyebrow">BOOK 02 · CHART TOOLS · CHAPTER 01</span><h2 id="fib-knowledge-title">Fibonacci Retracement</h2></div><span class="knowledge-bias">Price levels</span></header>
+      <p>Retracement levels divide a selected price swing using ratios associated with the Fibonacci sequence. Traders watch these as possible support or resistance areas during a pullback; price can pass through them without reacting.</p>
+      <p class="fib-method"><strong>How this dashboard draws it:</strong> it finds the lowest low and highest high in the loaded candles. If the low came first, it treats the range as an upswing and measures back down from the high. If the high came first, it treats it as a downswing and measures up from the low. This automatic full-range anchoring is convenient, but may not match the swing a trader would choose manually.</p>
+      <div class="fib-level-grid">
+        <div class="fib-level" *ngFor="let level of fibonacciLevels"><strong>{{ level.percent }}</strong><span>{{ level.description }}</span></div>
+      </div>
+      <p class="knowledge-footnote">Example: for a rise from 100 to 200, the 61.8% retracement is 138.20 (200 − 100 × 0.618). The 50% level is widely used but is not a Fibonacci sequence ratio. Levels are reference areas, not guaranteed turning points or trade instructions.</p>
+      </section>
+      <p class="knowledge-footnote">These are educational descriptions of rule-based patterns and chart tools. They do not account for news, liquidity, or broader market conditions.</p>
+      </div>
+    </div>
+  </section>
+  <footer class="page-footer"><span>TRADER'S GITA <span class="footer-divider">/</span> PERSONAL WORKSPACE</span><span>DATA PROVIDED BY UPSTOX</span></footer>
 </main>
 
 <div class="toast" role="status" aria-live="polite" [class.visible]="!!toast">{{ toast }}</div>
+

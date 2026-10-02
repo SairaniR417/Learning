@@ -1,56 +1,56 @@
 {
-  "hash": "921241c9",
-  "configHash": "cc784fbe",
-  "lockfileHash": "0081216e",
-  "browserHash": "f77e614c",
+  "hash": "686eec44",
+  "configHash": "f73bf219",
+  "lockfileHash": "8a68cb5a",
+  "browserHash": "38f40ad9",
   "optimized": {
     "@angular/common": {
       "src": "../../../../../../node_modules/@angular/common/fesm2022/common.mjs",
       "file": "@angular_common.js",
-      "fileHash": "1207caee",
+      "fileHash": "be340845",
       "needsInterop": false
     },
     "@angular/common/http": {
       "src": "../../../../../../node_modules/@angular/common/fesm2022/http.mjs",
       "file": "@angular_common_http.js",
-      "fileHash": "9831f2b4",
+      "fileHash": "c522fa8e",
       "needsInterop": false
     },
     "@angular/core": {
       "src": "../../../../../../node_modules/@angular/core/fesm2022/core.mjs",
       "file": "@angular_core.js",
-      "fileHash": "423720ae",
+      "fileHash": "6ff65023",
       "needsInterop": false
     },
     "@angular/platform-browser": {
       "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
       "file": "@angular_platform-browser.js",
-      "fileHash": "6f8bc30b",
+      "fileHash": "cd4fae74",
+      "needsInterop": false
+    },
+    "lightweight-charts": {
+      "src": "../../../../../../node_modules/lightweight-charts/dist/lightweight-charts.development.mjs",
+      "file": "lightweight-charts.js",
+      "fileHash": "2d48da6a",
       "needsInterop": false
     },
     "rxjs": {
       "src": "../../../../../../node_modules/rxjs/dist/esm5/index.js",
       "file": "rxjs.js",
-      "fileHash": "136ef746",
-      "needsInterop": false
-    },
-    "zone.js": {
-      "src": "../../../../../../node_modules/zone.js/fesm2015/zone.js",
-      "file": "zone__js.js",
-      "fileHash": "c4f83c87",
-      "needsInterop": true
-    },
-    "lightweight-charts": {
-      "src": "../../../../../../node_modules/lightweight-charts/dist/lightweight-charts.development.mjs",
-      "file": "lightweight-charts.js",
-      "fileHash": "e74eb5e0",
+      "fileHash": "449f0653",
       "needsInterop": false
     },
     "technicalindicators": {
       "src": "../../../../../../node_modules/technicalindicators/lib/index.js",
       "file": "technicalindicators.js",
-      "fileHash": "4a65ee27",
+      "fileHash": "0c4e80f7",
       "needsInterop": false
+    },
+    "zone.js": {
+      "src": "../../../../../../node_modules/zone.js/fesm2015/zone.js",
+      "file": "zone__js.js",
+      "fileHash": "cc565235",
+      "needsInterop": true
     }
   },
   "chunks": {
