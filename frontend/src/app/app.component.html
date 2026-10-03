@@ -12,7 +12,8 @@
 <main [class.analysis-mode]="analysisMode" [class.modern-interface]="modernInterface">
   <nav class="view-tabs" role="tablist" aria-label="Trader's Gita sections">
     <button id="dashboard-tab" type="button" role="tab" [attr.aria-selected]="activeTab === 'dashboard'" aria-controls="dashboard-panel" [class.active]="activeTab === 'dashboard'" (click)="openSelectedChart()">Chart</button>
-    <button id="knowledge-tab" type="button" role="tab" [attr.aria-selected]="activeTab === 'knowledge'" aria-controls="knowledge-panel" [class.active]="activeTab === 'knowledge'" (click)="activeTab = 'knowledge'">Knowledge</button>
+    <button id="knowledge-tab" type="button" role="tab" [attr.aria-selected]="activeTab === 'knowledge'" aria-controls="knowledge-panel" [class.active]="activeTab === 'knowledge'" (click)="openKnowledge()">Knowledge</button>
+    <button id="drishti-tab" type="button" role="tab" [attr.aria-selected]="activeTab === 'drishti'" aria-controls="drishti-panel" [class.active]="activeTab === 'drishti'" (click)="openDrishti()">DRISHTI</button>
   </nav>
 
   <div id="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab" [hidden]="activeTab !== 'dashboard'">
@@ -125,8 +126,8 @@
             <p class="macro-context">{{ globalContextNote }}</p>
           </section>
           <div class="analysis-toolbar">
-            <div class="study-toggles" aria-label="Technical studies">
-              <details class="moving-average-menu">
+            <div #studyPanelGroup class="study-toggles" aria-label="Technical studies">
+              <details class="moving-average-menu" name="chart-study-panels">
                 <summary><span>Moving averages</span><b>{{ movingAveragesEnabled ? 'ON' : 'OFF' }}</b><i aria-hidden="true"></i></summary>
                 <div class="moving-average-panel">
                   <div class="moving-average-panel-heading"><strong>Moving averages</strong><span>{{ activeMovingAverageCount }} SELECTED</span></div>
@@ -145,7 +146,7 @@
                   </div>
                 </div>
               </details>
-              <details class="moving-average-menu ghost-rider-menu">
+              <details class="moving-average-menu ghost-rider-menu" name="chart-study-panels">
                 <summary><span>Ghost Rider</span><b>{{ ghostRiderEnabled ? 'ON' : 'OFF' }}</b><i aria-hidden="true"></i></summary>
                 <div class="moving-average-panel">
                   <div class="moving-average-panel-heading"><strong>Ghost Rider v.2</strong><span>INDEPENDENT STUDY</span></div>
@@ -169,7 +170,7 @@
                   <small class="ghost-rider-note">Uses its own EMA 9/21 crossover, VWAP, RSI, MACD, ADX, volume and 5-minute RSI score. EMA moving-average settings are unchanged.</small>
                 </div>
               </details>
-              <details class="moving-average-menu traders-gita-menu">
+              <details class="moving-average-menu traders-gita-menu" name="chart-study-panels">
                 <summary><span>Candlestick</span><b>{{ tradersGitaIdentifierEnabled ? 'ON' : 'OFF' }}</b><i aria-hidden="true"></i></summary>
                 <div class="moving-average-panel traders-gita-panel">
                   <div class="moving-average-panel-heading"><strong>Candlestick Pattern Identifier</strong><span>INDEPENDENT STUDY</span></div>
@@ -239,16 +240,21 @@
               <label *ngIf="plannerStopMethod === 'manual'"><span>STOP PRICE · ₹</span><input type="number" min="0" step="0.05" [value]="plannerManualStop || ''" (input)="plannerManualStop = +$any($event.target).value; refreshTradePlan()" /></label>
               <label><span>RISK BUDGET · ₹</span><input type="number" min="0" step="100" [value]="riskBudget || ''" placeholder="Optional" (input)="setRiskBudget($any($event.target).value)" /></label>
               <label><span>REWARD MULTIPLE · R</span><select [value]="targetRMultiple" (change)="setTargetRMultiple($any($event.target).value)"><option value="1">1R</option><option value="2">2R</option><option value="3">3R</option></select></label>
+              <label><span>INSTRUMENT</span><select [value]="plannerInstrumentType" (change)="plannerInstrumentType = $any($event.target).value; refreshTradePlan()"><option value="underlying">Underlying</option><option value="option">Options</option></select></label>
+              <label><span>LOT SIZE · UNITS</span><input type="number" min="1" step="1" [value]="plannerLotSize || selectedHistoryInstrument?.lot_size || 1" (input)="plannerLotSize = +$any($event.target).value; refreshTradePlan()" /></label>
+              <label *ngIf="plannerInstrumentType === 'option'"><span>OPTION TYPE</span><select [value]="plannerOptionType" (change)="plannerOptionType = $any($event.target).value"><option value="call">Call (CE)</option><option value="put">Put (PE)</option></select></label>
+              <label *ngIf="plannerInstrumentType === 'option'"><span>EXPIRY MONTH</span><input type="month" [value]="plannerExpiryMonth" (input)="plannerExpiryMonth = $any($event.target).value" /></label>
             </div>
             <div class="risk-output" *ngIf="riskScenario as scenario; else riskPrompt">
               <div><span>ENTRY</span><strong>₹{{ formatPrice(scenario.entryPrice) }}</strong></div>
               <div><span>STOP-LOSS</span><strong>₹{{ formatPrice(scenario.stopPrice) }} · ₹{{ formatPrice(scenario.riskPerUnit) }} risk / unit</strong></div>
               <div><span>{{ targetRMultiple }}R TARGET</span><strong>₹{{ formatPrice(scenario.targetPrice) }}</strong></div>
               <div><span>20-BAR {{ riskDirection === 'long' ? 'RESISTANCE' : 'SUPPORT' }} REFERENCE</span><strong>₹{{ formatPrice(riskDirection === 'long' ? snapshot.highestHigh20 : snapshot.lowestLow20) }}</strong></div>
-              <div><span>POSITION SIZE · OPTIONAL BUDGET</span><strong>{{ riskBudget > 0 ? (historyMarket === 'commodities' ? scenario.lots + ' lots · ' : '') + scenario.units.toLocaleString('en-IN') + ' units · ₹' + formatPrice(scenario.riskUsed) + ' risk' : 'Enter a risk budget to calculate' }}</strong></div>
+              <div><span>POSITION SIZE · OPTIONAL BUDGET</span><strong>{{ riskBudget > 0 ? ((plannerInstrumentType === 'option' || historyMarket === 'commodities') ? scenario.lots + ' lots · ' : '') + scenario.units.toLocaleString('en-IN') + ' units · ₹' + formatPrice(scenario.riskUsed) + ' risk' : 'Enter a risk budget to calculate' }}</strong></div>
+              <div *ngIf="plannerInstrumentType === 'option'"><span>OPTION CONTRACT</span><strong>{{ plannerOptionType === 'call' ? 'Call (CE)' : 'Put (PE)' }} · {{ plannerExpiryMonth || 'Choose expiry month' }} · {{ plannerLotSize || selectedHistoryInstrument?.lot_size || 1 }} units / lot</strong></div>
             </div>
             <ng-template #riskPrompt><p class="risk-prompt">Choose long or short and confirm that the selected stop is on the correct side of entry. Structure stops use the recent 20-bar swing range; EMA 20 is a reference, not a guaranteed stop.</p></ng-template>
-            <p class="risk-disclaimer">Targets use entry ± (risk per unit × R). They are scenarios, not predictions. Review nearby resistance/support, costs, slippage and gap risk.</p>
+            <p class="risk-disclaimer">Targets use entry ± (risk per unit × R). For options, this is an underlying-price scenario and lot-size estimate; option premium, strike, expiry pricing, Greeks and actual contract risk are not calculated. Review costs, slippage and gap risk.</p>
           </section>
         </div>
         <div class="history-empty" *ngIf="historicalLoading"><span class="loading-indicator"></span><span>Loading Reliance historical candles...</span></div>
@@ -312,6 +318,8 @@
     </aside>
   </section>
   </div>
+
+  <div id="drishti-panel" role="tabpanel" aria-labelledby="drishti-tab" [hidden]="activeTab !== 'drishti'"><app-drishti-dashboard></app-drishti-dashboard></div>
 
   <section class="knowledge-page" id="knowledge-panel" role="tabpanel" aria-labelledby="knowledge-tab" [hidden]="activeTab !== 'knowledge'">
     <header class="knowledge-heading">

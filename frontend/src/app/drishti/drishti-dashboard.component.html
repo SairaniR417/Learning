@@ -1,0 +1,40 @@
+<section class="drishti-shell">
+  <header class="drishti-heading">
+    <div class="brand-lockup"><span class="brand-mark">D</span><div><h1>DRISHTI</h1><p>Market intelligence, explained through conversation</p></div></div>
+    <span class="engine-badge">DETERMINISTIC EMA ANALYSIS</span>
+  </header>
+
+  <section class="chat-workspace" aria-label="DRISHTI conversation">
+    <div class="context-bar">
+      <div class="context-title"><span class="online-dot"></span><div><strong>Analysis context</strong><small>{{ selectedInstrument?.symbol || 'Choose an instrument' }} · {{ selectedInstrument?.exchange || 'No exchange' }}</small></div></div>
+      <div class="context-controls">
+        <label><span>INSTRUMENT</span><select [value]="selectedSample" (change)="selectSample($any($event.target).value)" aria-label="Choose a local sample"><option value="" disabled>Choose local sample</option><option value="RELIANCE">Reliance Industries · sample</option><option value="ADANIPORTS">Adani Ports · sample</option></select></label>
+        <label><span>TIMEFRAME</span><select [value]="timeframe" (change)="timeframe = $any($event.target).value"><option *ngFor="let item of timeframes" [value]="item.unit + ':' + item.interval" [disabled]="selectedInstrument?.sample && (item.unit !== 'days' || item.interval !== 1)">{{ item.label }}</option></select></label>
+        <details class="more-options"><summary>Dates</summary><label><span>FROM</span><input type="date" [value]="from" (change)="from = $any($event.target).value"></label><label><span>TO</span><input type="date" [value]="to" (change)="to = $any($event.target).value"></label></details>
+      </div>
+    </div>
+
+    <label class="instrument-search"><span class="sr-only">Search Upstox instruments</span><input type="search" [value]="searchText" placeholder="Search an Upstox instrument (connect first)" (input)="searchText = $any($event.target).value; search()" autocomplete="off"><small *ngFor="let item of results"><button type="button" (click)="chooseInstrument(item)">{{ item.symbol }} · {{ item.exchange }} — {{ item.name }}</button></small></label>
+
+    <div class="conversation" #conversation aria-live="polite">
+      <article class="message" *ngFor="let message of messages" [class.user-message]="message.role === 'user'" [class.assistant-message]="message.role === 'assistant'">
+        <div class="avatar">{{ message.role === 'assistant' ? 'D' : 'YOU' }}</div>
+        <div class="message-content"><span class="speaker">{{ message.role === 'assistant' ? 'DRISHTI' : 'YOU' }}</span><p>{{ message.text }}</p>
+          <section class="inline-analysis" *ngIf="message.result as data">
+            <header><strong>{{ data.status.replace('_', ' ') }}</strong><span>{{ data.symbol }} · {{ data.timeframe }}</span></header>
+            <div class="chat-values"><div><small>PRICE</small><b>{{ formatPrice(data.close) }}</b></div><div><small>EMA 9</small><b>{{ formatPrice(data.ema.ema9) }}</b></div><div><small>EMA 20</small><b>{{ formatPrice(data.ema.ema20) }}</b></div><div><small>EMA 50</small><b>{{ formatPrice(data.ema.ema50) }}</b></div><div><small>EMA 200</small><b>{{ formatPrice(data.ema.ema200) }}</b></div></div>
+            <div class="chat-conditions"><span *ngFor="let item of conditions" [class.passed]="data.conditions[item.key]">{{ data.conditions[item.key] ? '✓' : '○' }} {{ item.label }}</span></div>
+            <small class="as-of">As of {{ formatTimestamp(data.asOf) }} · {{ data.candlesAnalyzed }} candles</small>
+            <small class="transition" *ngIf="data.status === 'NEWLY_ALIGNED'">New bullish EMA alignment detected at {{ formatTimestamp(data.transitionTimestamp) }}.</small>
+            <small class="transition" *ngIf="data.status === 'ALIGNED' && data.alignedSince">First confirmed alignment in this history: {{ formatTimestamp(data.alignedSince) }}.</small>
+          </section>
+        </div>
+      </article>
+      <div class="typing-indicator" *ngIf="loading"><span></span><span></span><span></span><small>DRISHTI is analyzing the selected candles</small></div>
+    </div>
+
+    <div class="prompt-chips"><button type="button" *ngFor="let prompt of quickPrompts" [disabled]="loading" (click)="sendMessage(prompt)">{{ prompt }}</button></div>
+    <form class="composer" (submit)="$event.preventDefault(); sendMessage()"><input type="text" [value]="composer" (input)="composer = $any($event.target).value" placeholder="Ask DRISHTI to analyze or explain the EMA rule…" aria-label="Message DRISHTI"><button type="submit" [disabled]="loading || !composer.trim()" aria-label="Send message">{{ loading ? '…' : '↑' }}</button></form>
+    <p class="disclaimer">DRISHTI Phase 1 answers from deterministic EMA rules and candle data. It does not provide buy, sell, or hold recommendations.</p>
+  </section>
+</section>

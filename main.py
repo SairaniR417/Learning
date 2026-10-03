@@ -11,6 +11,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
+from drishti.ema_alignment import EmaAlignmentResponse, analyze_ema_alignment
 
 load_dotenv()
 
@@ -268,3 +269,54 @@ async def sample_history(symbol: str = Query(default="RELIANCE", max_length=20))
         "unit": "days",
         "interval": 1,
     }
+
+
+@app.get("/api/drishti/ema-alignment", response_model=EmaAlignmentResponse)
+async def drishti_ema_alignment(
+    symbol: str = Query(min_length=1, max_length=50),
+    instrument_key: str | None = Query(default=None, min_length=1, max_length=100),
+    exchange: str | None = Query(default=None, max_length=30),
+    unit: str = Query(default="days"),
+    interval: int = Query(default=1, gt=0),
+    from_date: date = Query(alias="from"),
+    to_date: date = Query(alias="to"),
+):
+    """Analyze one instrument using local demo candles or authenticated Upstox history."""
+    normalized_symbol = symbol.strip().upper()
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9 .&_-]*", normalized_symbol):
+        raise HTTPException(status_code=400, detail="Provide a valid instrument symbol.")
+
+    timeframe = f"{unit}:{interval}"
+    try:
+        if not instrument_key and normalized_symbol in SAMPLE_HISTORIES:
+            if unit != "days" or interval != 1:
+                raise HTTPException(status_code=400, detail="Bundled sample instruments support the 1 day timeframe only.")
+            history = await sample_history(normalized_symbol)
+            candles = history["candles"]
+            instrument_key = history["instrument_key"]
+            exchange = exchange or instrument_key.split("|", 1)[0]
+        else:
+            if not instrument_key:
+                raise HTTPException(status_code=400, detail="Select a valid instrument key or a bundled sample symbol.")
+            if not instrument_key_pattern.fullmatch(instrument_key):
+                raise HTTPException(status_code=400, detail="Provide a valid Upstox instrument key.")
+            history = await historical_candles(
+                instrument_key=instrument_key,
+                unit=unit,
+                interval=interval,
+                from_date=from_date,
+                to_date=to_date,
+            )
+            candles = history["candles"]
+            exchange = exchange or instrument_key.split("|", 1)[0]
+    except HTTPException:
+        raise
+    except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail="Historical data contained malformed candle rows.") from exc
+
+    try:
+        return analyze_ema_alignment(
+            candles, symbol=normalized_symbol, exchange=exchange or "", timeframe=timeframe
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail="Historical data contained malformed candle values.") from exc

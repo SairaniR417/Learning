@@ -168,7 +168,7 @@ canvas { width: 100%; height: 100%; display: block; }
 .fib-level span { color: #858a81; font-size: 9px; line-height: 1.5; }
 .historical-chart-wrap { position: relative; height: 390px; margin: 0 0 14px; background: #fafaf7; }
 .historical-chart-wrap > div { width: 100%; height: 100%; }
-.chart-fullscreen-toggle { position: absolute; top: 10px; right: 10px; z-index: 5; display: grid; width: 32px; height: 32px; place-items: center; padding: 0; border: 1px solid #343a42; border-radius: 5px; background: #171b20ef; color: #d6dce4; cursor: pointer; }
+.chart-fullscreen-toggle { position: absolute; right: 10px; bottom: 10px; z-index: 5; display: grid; width: 32px; height: 32px; place-items: center; padding: 0; border: 1px solid #343a42; border-radius: 5px; background: #171b20ef; color: #d6dce4; cursor: pointer; }
 .chart-fullscreen-toggle svg { display: block; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
 .chart-fullscreen-toggle:hover { border-color: #f0b90b; color: #f0b90b; }
@@ -357,7 +357,7 @@ main.analysis-mode { width: 100%; max-width: none; min-height: calc(100vh - 56px
 .analysis-mode .risk-scenario { grid-area: risk; padding: 8px 0; }
 .analysis-mode .risk-inputs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .risk-inputs select { width: 100%; height: 33px; padding: 0 8px; border: 1px solid #30363e; border-radius: 5px; background: #15191e; color: #e7ebf0; font: 9px "Manrope", "Segoe UI", sans-serif; }
-.analysis-mode .risk-output { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.analysis-mode .risk-output { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .analysis-mode .analysis-toolbar { position: sticky; top: 0; z-index: 4; grid-area: toolbar; padding: 8px 0; background: #0b0e11; }
 .analysis-mode .chart-instruction { grid-area: instruction; }
 .analysis-mode .fib-summary { grid-area: fib; }

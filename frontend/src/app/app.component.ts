@@ -33,6 +33,7 @@ import {
 } from 'technicalindicators';
 import { detectCandlestickPatterns } from './candlestick-patterns';
 import { detectTraderGitaPatterns, TraderGitaPatternGroup } from './traders-gita-patterns';
+import { DrishtiDashboardComponent } from './drishti/drishti-dashboard.component';
 
 type StudyName = 'sma20' | 'sma50' | 'ema9' | 'ema20' | 'ema50' | 'ema200' | 'bollinger' | 'rsi' | 'macd' | 'supportResistance' | 'patterns' | 'fibonacci' | 'emaSignal';
 type TrendlinePoint = { time: Time; price: number; logical: number };
@@ -154,7 +155,7 @@ function dateInputValue(value: Date): string {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DrishtiDashboardComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -167,7 +168,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private clockTimer?: ReturnType<typeof setInterval>;
   private resizeObserver?: ResizeObserver;
   private chartReady = false;
-  activeTab: 'dashboard' | 'knowledge' = 'dashboard';
+  activeTab: 'dashboard' | 'knowledge' | 'drishti' = 'dashboard';
   readonly knowledgePatterns: KnowledgePattern[] = [
     { name: 'Doji', family: 'One candle', bias: 'Neutral', candles: '1 candle', description: 'Open and close are nearly equal, leaving a very small real body. It shows indecision for that candle.', rule: 'Body is at most 10% of the full high-to-low range.' },
     { name: 'Long-Legged Doji', family: 'One candle', bias: 'Neutral / indecision', candles: '1 candle after a strong move', description: 'A tiny body sits between long upper and lower shadows. Price moved widely in both directions, then closed near its open.', rule: 'Body is at most 10% of range; upper and lower shadows are each at least 30% of range. Look for context and a later candle to establish direction.' },
@@ -263,6 +264,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('chart') private chart?: ElementRef<HTMLCanvasElement>;
   @ViewChild('historyChart') private historyChart?: ElementRef<HTMLDivElement>;
   @ViewChild('historyChartWrap') private historyChartWrap?: ElementRef<HTMLDivElement>;
+  @ViewChild('studyPanelGroup') private studyPanelGroup?: ElementRef<HTMLDivElement>;
 
   watchlist = this.loadWatchlist();
   quotes: Record<string, LtpQuote> = {};
@@ -301,6 +303,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   corporateActions: CorporateAction[] = [];
   fundamentalsLoading = false;
   riskBudget = 0;
+  plannerInstrumentType: 'underlying' | 'option' = 'underlying';
+  plannerOptionType: 'call' | 'put' = 'call';
+  plannerExpiryMonth = '';
+  plannerLotSize = 1;
   plannerEntry = 0;
   plannerManualStop = 0;
   plannerStopMethod: 'swing' | 'atr' | 'ema20' | 'manual' = 'swing';
@@ -401,9 +407,27 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   get bankNifty(): LtpQuote | undefined { return this.quotes['NSE_INDEX|Nifty Bank']; }
   get indiaVix(): LtpQuote | undefined { return this.quotes['NSE_INDEX|India VIX']; }
   get analysisMode(): boolean { return this.fullscreenChart && this.activeTab === 'dashboard'; }
-  get modernInterface(): boolean { return this.fullscreenChart || this.activeTab === 'knowledge'; }
+  get modernInterface(): boolean { return this.fullscreenChart || this.activeTab === 'knowledge' || this.activeTab === 'drishti'; }
   get activeMovingAverageCount(): number { return [this.studies.sma20, this.studies.sma50, this.studies.ema9, this.studies.ema20, this.studies.ema50, this.studies.ema200].filter(Boolean).length; }
-  openSelectedChart(): void { this.fullscreenChart = true; this.activeTab = 'dashboard'; }
+  openSelectedChart(): void {
+    this.closeStudyPanels();
+    this.fullscreenChart = true;
+    this.activeTab = 'dashboard';
+  }
+
+  openKnowledge(): void {
+    this.closeStudyPanels();
+    this.activeTab = 'knowledge';
+  }
+
+  openDrishti(): void {
+    this.closeStudyPanels();
+    this.activeTab = 'drishti';
+  }
+
+  private closeStudyPanels(): void {
+    this.studyPanelGroup?.nativeElement.querySelectorAll<HTMLDetailsElement>(':scope > details.moving-average-menu').forEach((panel) => { panel.open = false; });
+  }
   get niftyChange(): number | undefined { return this.changePercent(this.nifty); }
   get niftyDifference(): number | undefined {
     return this.nifty?.cp === undefined ? undefined : this.nifty.last_price - this.nifty.cp;
@@ -815,7 +839,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
           : this.riskDirection === 'long' ? snapshot.lowestLow20 - buffer : snapshot.highestHigh20 + buffer;
     const riskPerUnit = Math.abs(entryPrice - stopPrice);
     if (!stopPrice || !riskPerUnit || (this.riskDirection === 'long' ? stopPrice >= entryPrice : stopPrice <= entryPrice)) return undefined;
-    const lotSize = this.historyMarket === 'commodities' ? Math.max(1, this.selectedHistoryInstrument.lot_size || 1) : 1;
+    const defaultLotSize = this.historyMarket === 'commodities' ? Math.max(1, this.selectedHistoryInstrument.lot_size || 1) : 1;
+    const lotSize = Math.max(1, Math.floor(this.plannerLotSize || defaultLotSize));
     const riskPerLot = riskPerUnit * lotSize;
     const lots = this.riskBudget > 0 ? Math.floor(this.riskBudget / riskPerLot) : 0;
     const units = lots * lotSize;

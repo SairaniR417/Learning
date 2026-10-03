@@ -35,6 +35,16 @@ export interface HistoricalCandle {
   volume: number;
 }
 
+export type DrishtiAlignmentStatus = 'ALIGNED' | 'NEWLY_ALIGNED' | 'NOT_ALIGNED' | 'INSUFFICIENT_HISTORY';
+
+export interface DrishtiEmaAlignment {
+  symbol: string; exchange: string; timeframe: string; asOf: string | null; close: number | null;
+  ema: { ema9: number | null; ema20: number | null; ema50: number | null; ema200: number | null };
+  conditions: { priceAboveEma9: boolean; priceAboveEma20: boolean; priceAboveEma50: boolean; priceAboveEma200: boolean; ema9AboveEma20: boolean; ema20AboveEma50: boolean; ema50AboveEma200: boolean };
+  bullishAlignment: boolean; status: DrishtiAlignmentStatus; alignedSince: string | null;
+  transitionIndex: number | null; transitionTimestamp: string | null; candlesAnalyzed: number;
+}
+
 export interface CorporateAction {
   name: string;
   expiry_date?: string;
@@ -79,6 +89,13 @@ export class MarketApiService {
     return this.http.get<{ candles: HistoricalCandle[] }>('/api/historical', {
       params: { instrument_key: instrumentKey, unit, interval, from, to }
     });
+  }
+
+  drishtiEmaAlignment(params: { symbol: string; instrumentKey?: string; exchange?: string; unit: string; interval: number; from: string; to: string }): Observable<DrishtiEmaAlignment> {
+    const query: Record<string, string | number> = { symbol: params.symbol, unit: params.unit, interval: params.interval, from: params.from, to: params.to };
+    if (params.instrumentKey) query['instrument_key'] = params.instrumentKey;
+    if (params.exchange) query['exchange'] = params.exchange;
+    return this.http.get<DrishtiEmaAlignment>('/api/drishti/ema-alignment', { params: query });
   }
 
   corporateActions(isin: string): Observable<{ actions: CorporateAction[] }> {
