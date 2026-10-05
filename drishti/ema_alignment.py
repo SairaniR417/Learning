@@ -4,11 +4,19 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from enum import StrEnum
 import math
+import os
 from typing import Any
 
 from pydantic import BaseModel
 
 from .ema import calculate_ema
+from .market_data import normalize_candles
+
+MINIMUM_HISTORY = 200
+try:
+    RECOMMENDED_HISTORY = max(MINIMUM_HISTORY, int(os.getenv("DRISHTI_RECOMMENDED_HISTORY", "400")))
+except ValueError:
+    RECOMMENDED_HISTORY = 400
 
 
 class AlignmentStatus(StrEnum):
@@ -49,6 +57,9 @@ class EmaAlignmentResponse(BaseModel):
     transitionIndex: int | None = None
     transitionTimestamp: str | None = None
     candlesAnalyzed: int
+    minimumHistory: int
+    recommendedHistory: int
+    historyStatus: str
 
 
 def _timestamp(candle: Mapping[str, Any]) -> str | None:
@@ -63,7 +74,8 @@ def _timestamp(candle: Mapping[str, Any]) -> str | None:
 def analyze_ema_alignment(
     candles: Sequence[Mapping[str, Any]], *, symbol: str = "", exchange: str = "", timeframe: str = "days:1"
 ) -> EmaAlignmentResponse:
-    """Analyze ordered OHLC candles. ``transitionIndex`` is zero-based."""
+    """Analyze candles in chronological order. ``transitionIndex`` is zero-based."""
+    candles = normalize_candles(candles)
     closes: list[float] = []
     for candle in candles:
         try:
@@ -85,13 +97,16 @@ def analyze_ema_alignment(
         aligned.append(bool(close > e9 and close > e20 and close > e50 and close > e200
                             and e9 > e20 and e20 > e50 and e50 > e200))
 
-    transition_index = next(
-        (index for index in range(1, len(aligned)) if aligned[index] is True and aligned[index - 1] is False),
-        None,
-    )
+    latest_aligned = aligned[-1] if aligned else None
+    transition_index = None
+    if latest_aligned is True:
+        transition_index = next(
+            (index for index in range(len(aligned) - 1, 0, -1)
+             if aligned[index] is True and aligned[index - 1] is False),
+            None,
+        )
     latest_index = len(closes) - 1
     enough_history = latest_index >= 199
-    latest_aligned = aligned[-1] if aligned else None
     previous_valid = aligned[-2] if len(aligned) >= 2 else None
 
     if not enough_history:
@@ -131,4 +146,8 @@ def analyze_ema_alignment(
         transitionIndex=transition_index,
         transitionTimestamp=transition_timestamp,
         candlesAnalyzed=len(candles),
+        minimumHistory=MINIMUM_HISTORY,
+        recommendedHistory=RECOMMENDED_HISTORY,
+        historyStatus=("INSUFFICIENT" if len(candles) < MINIMUM_HISTORY else
+                       "MINIMUM_ONLY" if len(candles) < RECOMMENDED_HISTORY else "SUFFICIENT"),
     )

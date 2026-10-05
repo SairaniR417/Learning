@@ -199,6 +199,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly knowledgeFamilies = ['One candle', 'Two candles', 'Three candles', 'Continuation'];
   selectedKnowledgeChapter = 'One candle';
   readonly fibonacciKnowledgeChapter = 'Fibonacci Retracement';
+  readonly cprKnowledgeChapter = 'Central Pivot Range (CPR)';
   private knowledgeScrollScheduled = false;
   readonly knowledgePatternsByFamily: Record<string, KnowledgePattern[]> = {
     'One candle': this.knowledgePatterns.filter((pattern) => pattern.family === 'One candle'),
@@ -243,7 +244,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.knowledgeScrollScheduled = true;
     requestAnimationFrame(() => {
       this.knowledgeScrollScheduled = false;
-      const chapters = [...this.knowledgeFamilies, this.fibonacciKnowledgeChapter];
+      const chapters = [...this.knowledgeFamilies, this.fibonacciKnowledgeChapter, this.cprKnowledgeChapter];
       let activeChapter = chapters[0];
       for (const chapter of chapters) {
         const section = document.getElementById(this.knowledgeChapterId(chapter));

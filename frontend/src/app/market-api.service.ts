@@ -43,7 +43,12 @@ export interface DrishtiEmaAlignment {
   conditions: { priceAboveEma9: boolean; priceAboveEma20: boolean; priceAboveEma50: boolean; priceAboveEma200: boolean; ema9AboveEma20: boolean; ema20AboveEma50: boolean; ema50AboveEma200: boolean };
   bullishAlignment: boolean; status: DrishtiAlignmentStatus; alignedSince: string | null;
   transitionIndex: number | null; transitionTimestamp: string | null; candlesAnalyzed: number;
+  minimumHistory: number; recommendedHistory: number; historyStatus: 'SUFFICIENT' | 'MINIMUM_ONLY' | 'INSUFFICIENT';
 }
+
+export interface DrishtiChatSource { title: string; url: string; }
+export interface DrishtiChatMessage { role: 'user' | 'assistant'; content: string; }
+export interface DrishtiChatResponse { answer: string; sources: DrishtiChatSource[]; }
 
 export interface CorporateAction {
   name: string;
@@ -96,6 +101,10 @@ export class MarketApiService {
     if (params.instrumentKey) query['instrument_key'] = params.instrumentKey;
     if (params.exchange) query['exchange'] = params.exchange;
     return this.http.get<DrishtiEmaAlignment>('/api/drishti/ema-alignment', { params: query });
+  }
+
+  drishtiChat(messages: DrishtiChatMessage[]): Observable<DrishtiChatResponse> {
+    return this.http.post<DrishtiChatResponse>('/api/drishti/chat', { messages });
   }
 
   corporateActions(isin: string): Observable<{ actions: CorporateAction[] }> {

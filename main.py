@@ -6,18 +6,24 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 from urllib.parse import quote as url_quote
+from typing import Literal
 
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, Field
+from drishti.assistant import AssistantError, DEFAULT_MODEL, answer_question
 from drishti.ema_alignment import EmaAlignmentResponse, analyze_ema_alignment
 
 load_dotenv()
 
 app = FastAPI(title="Market Desk API")
+openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
+drishti_openai_model = os.getenv("DRISHTI_OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
 client_id = os.getenv("UPSTOX_CLIENT_ID", "")
 client_secret = os.getenv("UPSTOX_CLIENT_SECRET", "")
+configured_access_token = os.getenv("UPSTOX_ACCESS_TOKEN", "").strip()
 redirect_uri = os.getenv("UPSTOX_REDIRECT_URI", "http://localhost:4200/oauth/callback")
 frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:4200")
 access_token: str | None = None
@@ -37,9 +43,19 @@ HISTORICAL_INTERVALS = {
 }
 
 
+class DrishtiChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class DrishtiChatRequest(BaseModel):
+    messages: list[DrishtiChatMessage] = Field(min_length=1, max_length=24)
+
+
 def upstox_is_configured() -> bool:
     placeholders = {"", "your_api_key", "your_api_secret"}
-    return client_id not in placeholders and client_secret not in placeholders
+    token_is_configured = configured_access_token not in {"", "your_daily_access_token"}
+    return token_is_configured or (client_id not in placeholders and client_secret not in placeholders)
 
 
 def next_token_expiry() -> datetime:
@@ -49,6 +65,12 @@ def next_token_expiry() -> datetime:
     if expiry <= now:
         expiry += timedelta(days=1)
     return expiry.astimezone(timezone.utc)
+
+
+# A manually generated token stays on the API server and expires daily.
+if configured_access_token:
+    access_token = configured_access_token
+    access_token_expires_at = next_token_expiry()
 
 
 def require_token() -> str:
@@ -192,6 +214,27 @@ async def logout():
     access_token = None
     access_token_expires_at = None
     return {"connected": False}
+
+
+@app.post("/api/drishti/chat")
+async def drishti_chat(request: DrishtiChatRequest):
+    """Answer general questions through OpenAI without exposing server credentials."""
+    if not openai_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="AI chat is not configured. Add OPENAI_API_KEY to the server .env file and restart the API.",
+        )
+    messages = request.messages[-12:]
+    if messages[-1].role != "user":
+        raise HTTPException(status_code=422, detail="The last chat message must be from the user.")
+    try:
+        return await answer_question(
+            [message.model_dump() for message in messages],
+            api_key=openai_api_key,
+            model=drishti_openai_model,
+        )
+    except AssistantError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.get("/api/historical")

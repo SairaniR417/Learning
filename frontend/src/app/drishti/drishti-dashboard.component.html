@@ -1,7 +1,7 @@
 <section class="drishti-shell">
   <header class="drishti-heading">
     <div class="brand-lockup"><span class="brand-mark">D</span><div><h1>DRISHTI</h1><p>Market intelligence, explained through conversation</p></div></div>
-    <span class="engine-badge">DETERMINISTIC EMA ANALYSIS</span>
+    <span class="engine-badge">AI CHAT · DETERMINISTIC EMA ANALYSIS</span>
   </header>
 
   <section class="chat-workspace" aria-label="DRISHTI conversation">
@@ -20,13 +20,17 @@
       <article class="message" *ngFor="let message of messages" [class.user-message]="message.role === 'user'" [class.assistant-message]="message.role === 'assistant'">
         <div class="avatar">{{ message.role === 'assistant' ? 'D' : 'YOU' }}</div>
         <div class="message-content"><span class="speaker">{{ message.role === 'assistant' ? 'DRISHTI' : 'YOU' }}</span><p>{{ message.text }}</p>
+          <nav class="message-sources" *ngIf="message.sources?.length" aria-label="Answer sources">
+            <a *ngFor="let source of message.sources" [href]="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>
+          </nav>
           <section class="inline-analysis" *ngIf="message.result as data">
             <header><strong>{{ data.status.replace('_', ' ') }}</strong><span>{{ data.symbol }} · {{ data.timeframe }}</span></header>
             <div class="chat-values"><div><small>PRICE</small><b>{{ formatPrice(data.close) }}</b></div><div><small>EMA 9</small><b>{{ formatPrice(data.ema.ema9) }}</b></div><div><small>EMA 20</small><b>{{ formatPrice(data.ema.ema20) }}</b></div><div><small>EMA 50</small><b>{{ formatPrice(data.ema.ema50) }}</b></div><div><small>EMA 200</small><b>{{ formatPrice(data.ema.ema200) }}</b></div></div>
             <div class="chat-conditions"><span *ngFor="let item of conditions" [class.passed]="data.conditions[item.key]">{{ data.conditions[item.key] ? '✓' : '○' }} {{ item.label }}</span></div>
             <small class="as-of">As of {{ formatTimestamp(data.asOf) }} · {{ data.candlesAnalyzed }} candles</small>
             <small class="transition" *ngIf="data.status === 'NEWLY_ALIGNED'">New bullish EMA alignment detected at {{ formatTimestamp(data.transitionTimestamp) }}.</small>
-            <small class="transition" *ngIf="data.status === 'ALIGNED' && data.alignedSince">First confirmed alignment in this history: {{ formatTimestamp(data.alignedSince) }}.</small>
+            <small class="transition" *ngIf="data.status === 'ALIGNED' && data.transitionTimestamp">Current bullish alignment began at {{ formatTimestamp(data.transitionTimestamp) }}.</small>
+            <small class="as-of">History: {{ data.historyStatus }} ({{ data.candlesAnalyzed }} / {{ data.minimumHistory }} minimum, {{ data.recommendedHistory }} recommended)</small>
           </section>
         </div>
       </article>
@@ -34,7 +38,7 @@
     </div>
 
     <div class="prompt-chips"><button type="button" *ngFor="let prompt of quickPrompts" [disabled]="loading" (click)="sendMessage(prompt)">{{ prompt }}</button></div>
-    <form class="composer" (submit)="$event.preventDefault(); sendMessage()"><input type="text" [value]="composer" (input)="composer = $any($event.target).value" placeholder="Ask DRISHTI to analyze or explain the EMA rule…" aria-label="Message DRISHTI"><button type="submit" [disabled]="loading || !composer.trim()" aria-label="Send message">{{ loading ? '…' : '↑' }}</button></form>
-    <p class="disclaimer">DRISHTI Phase 1 answers from deterministic EMA rules and candle data. It does not provide buy, sell, or hold recommendations.</p>
+    <form class="composer" (submit)="$event.preventDefault(); sendMessage()"><input type="text" [value]="composer" (input)="composer = $any($event.target).value" placeholder="Ask DRISHTI anything, or say “analyze this instrument”…" aria-label="Message DRISHTI"><button type="submit" [disabled]="loading || !composer.trim()" aria-label="Send message">{{ loading ? '…' : '↑' }}</button></form>
+    <p class="disclaimer">General answers may include web sources. EMA analysis uses the selected instrument’s candle history and deterministic rules.</p>
   </section>
 </section>

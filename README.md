@@ -13,7 +13,7 @@ A personal market dashboard built with Angular and FastAPI. Upstox supplies live
 
 ## Run locally
 
-1. Copy `.env.example` to `.env` and fill in `UPSTOX_CLIENT_ID` and `UPSTOX_CLIENT_SECRET` from the Upstox developer app. Register `http://localhost:4200/oauth/callback` as the redirect URL in that app.
+1. Copy `.env.example` to `.env` and fill in `UPSTOX_ACCESS_TOKEN` with your daily Upstox access token, plus `OPENAI_API_KEY` for general DRISHTI chat. For OAuth sign-in instead, set `UPSTOX_CLIENT_ID` and `UPSTOX_CLIENT_SECRET`. Register `http://localhost:4200/oauth/callback` as the redirect URL in that app. The OpenAI key stays on the FastAPI server. `DRISHTI_OPENAI_MODEL` can override the configured default model.
 2. In a terminal, install and run the API:
 
    ```powershell
@@ -33,8 +33,16 @@ A personal market dashboard built with Angular and FastAPI. Upstox supplies live
 
 4. Open `http://localhost:4200` and choose either local NSE example without connecting, or **Connect Upstox** to request other instruments and intervals.
 
-Upstox V3 historical data provides minute/hour candles from January 2022 and daily/weekly/monthly candles from January 2000, subject to interval-specific maximum query ranges. The local Reliance sample is sourced from Yahoo Finance historical chart data and is stored in `reliance_nse_daily.csv`; its daily OHLCV values are used for offline indicator testing. Upstox access tokens are held in server memory and expire daily, so reconnect after restarting the API or when the token expires. A public deployment needs HTTPS, per-user sessions, and deployment-specific redirect URI configuration; this starter is for a single local user.
+Upstox V3 historical data provides minute/hour candles from January 2022 and daily/weekly/monthly candles from January 2000, subject to interval-specific maximum query ranges. Bundled Reliance and Adani Ports CSV samples remain available for offline indicator testing; live charts use Upstox historical candles. Upstox access tokens stay on the API server and expire daily. A token in `.env` is loaded at API startup; replace it when it expires. A public deployment needs HTTPS, per-user sessions, and deployment-specific redirect URI configuration; this starter is for a single local user.
 
 ## Instrument analysis
 
 Choose a cash equity or MCX futures market, search an instrument after connecting Upstox, and its history opens in a focused full-screen chart. The chart starts with EMA 9, 20, 50, and 200 overlays. The status panel checks `close > EMA 9 > EMA 20 > EMA 50 > EMA 200`, marks a newly aligned bullish entry, and reports bearish, mixed, or insufficient-history states. Use at least 200 candles for a complete EMA 200 setup. The local selector includes a Reliance bearish sample and an Adani Ports historical bullish-entry sample for testing the EMA rule without connecting.
+
+DRISHTI chat answers general questions through OpenAI's Responses API and can search the web for current information. Asking to analyze the selected instrument continues to use the deterministic EMA endpoint.
+
+
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+uvicorn main:app --reload --port 8000

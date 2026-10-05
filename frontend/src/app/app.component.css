@@ -601,6 +601,27 @@ main.analysis-mode { background: #0b0e11; color: #dce1e8; color-scheme: dark; }
 }
 .loading-indicator { width: 14px; height: 14px; border: 2px solid #343a42; border-top-color: #f0b90b; border-radius: 50%; animation: analysis-spin .8s linear infinite; }
 @keyframes analysis-spin { to { transform: rotate(360deg); } }
+.cpr-knowledge { scroll-margin-top: 108px; }
+.cpr-knowledge h3 { margin: 27px 0 10px; color: #e1e6eb; font-size: 13px; }
+.cpr-level-grid, .cpr-two-column, .cpr-bias-grid, .cpr-checklist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 12px 0; }
+.cpr-level-grid article, .cpr-two-column article, .cpr-bias-grid > div, .cpr-checklist article { display: flex; flex-direction: column; gap: 7px; padding: 12px; border: 1px solid #30363e; border-radius: 5px; background: #15191e; color: #a4adba; font-size: 10px; line-height: 1.7; }
+.cpr-level-grid strong, .cpr-two-column strong, .cpr-bias-grid b, .cpr-checklist strong { color: #e0c467; font-size: 11px; }
+.cpr-level-grid code { color: #d7c5ff; font: 11px Consolas, monospace; }
+.cpr-two-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cpr-bias-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cpr-checklist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cpr-knowledge .cpr-formula, .cpr-summary { padding: 12px; border-left: 2px solid #b69738; background: #191a17; color: #c4c9c1; font-size: 10px; line-height: 1.8; }
+.cpr-knowledge .cpr-table-wrap { overflow-x: auto; }
+.cpr-knowledge .cpr-table { width: 100%; border-collapse: collapse; color: #b6bec8; font-size: 10px; }
+.cpr-knowledge .cpr-table th, .cpr-knowledge .cpr-table td { padding: 9px 11px; border: 1px solid #30363e; text-align: left; }
+.cpr-knowledge .cpr-table th { color: #e0c467; background: #15191e; }
+.cpr-knowledge .cpr-observations { padding-left: 20px; color: #a4adba; font-size: 10px; line-height: 1.9; }
+.cpr-summary { margin: 20px 0 14px; }
+.cpr-summary strong { color: #e0c467; }
+.cpr-summary p { margin: 7px 0; }
+.cpr-summary b { color: #e6d397; }
+@media (max-width: 850px) { .cpr-level-grid, .cpr-bias-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .cpr-level-grid, .cpr-two-column, .cpr-bias-grid, .cpr-checklist { grid-template-columns: 1fr; } }
 
 .moving-average-menu, .ghost-rider-menu { position: relative; z-index: 6; font: 9px "Manrope", "Segoe UI", sans-serif; }
 .moving-average-menu > summary, .ghost-rider-menu > summary { display: inline-flex; align-items: center; gap: 8px; min-height: 28px; padding: 0 10px; border: 1px solid #30363e; border-radius: 4px; background: #15191e; color: #d4dae2; cursor: pointer; list-style: none; user-select: none; }

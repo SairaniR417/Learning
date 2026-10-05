@@ -1,10 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
-import { DrishtiEmaAlignment, Instrument, MarketApiService } from '../market-api.service';
+import { DrishtiChatSource, DrishtiEmaAlignment, Instrument, MarketApiService } from '../market-api.service';
 
 type DrishtiInstrument = { symbol: string; name: string; exchange: string; key?: string; sample?: boolean };
-type DrishtiChatMessage = { role: 'assistant' | 'user'; text: string; result?: DrishtiEmaAlignment };
+type DrishtiChatMessage = { role: 'assistant' | 'user'; text: string; result?: DrishtiEmaAlignment; sources?: DrishtiChatSource[] };
 
 @Component({
   selector: 'app-drishti-dashboard', standalone: true, imports: [CommonModule],
@@ -34,10 +34,10 @@ export class DrishtiDashboardComponent {
   error = '';
   result?: DrishtiEmaAlignment;
   composer = '';
-  readonly quickPrompts = ['Analyze this instrument', 'How is bullish alignment calculated?', 'What does the current status mean?'];
+  readonly quickPrompts = ['Analyze this instrument', 'Explain EMA alignment', 'What is inflation?'];
   messages: DrishtiChatMessage[] = [{
     role: 'assistant',
-    text: 'Hello, I’m DRISHTI. Choose an instrument and timeframe, then ask me to analyze it. I’ll explain the result using deterministic EMA calculations.'
+    text: 'Hello, I’m DRISHTI. Ask me about markets or anything else, or ask me to analyze the selected instrument with deterministic EMA calculations.'
   }];
 
   private dateOffset(days: number): string {
@@ -81,19 +81,29 @@ export class DrishtiDashboardComponent {
     if (!prompt || this.loading) return;
     this.messages = [...this.messages, { role: 'user', text: prompt }];
     this.composer = '';
-    const normalized = prompt.toLowerCase();
-    const symbol = this.samples.find((item) => normalized.includes(item.symbol.toLowerCase()));
-    if (symbol) this.selectSample(symbol.symbol);
+    if (/\b(analy[sz]e|scan|check)\b.*\b(this|selected|current)\b.*\b(instrument|stock|symbol)\b/i.test(prompt)) {
+      this.runAnalysis(prompt);
+    } else {
+      this.runGeneralChat();
+    }
+  }
 
-    if (/how|calculate|calculation|rule|formula|alignment/.test(normalized) && !/analy[sz]|check|scan|status/.test(normalized)) {
-      this.messages = [...this.messages, { role: 'assistant', text: 'Bullish alignment requires the close to be above EMA 9, 20, 50, and 200, while EMA 9 > EMA 20 > EMA 50 > EMA 200. Each EMA is seeded with the simple average of its first N closes, then updated with alpha = 2 / (N + 1). The seven conditions can become true on different candles; they do not need to cross together.' }];
-      return;
-    }
-    if (/what does|meaning|status/.test(normalized) && this.result && !/analy[sz]|check|scan/.test(normalized)) {
-      this.messages = [...this.messages, { role: 'assistant', text: this.statusExplanation(this.result.status), result: this.result }];
-      return;
-    }
-    this.runAnalysis(prompt);
+  private runGeneralChat(): void {
+    this.loading = true;
+    this.error = '';
+    const messages = this.messages.slice(-12).map((message) => ({ role: message.role, content: message.text }));
+    this.api.drishtiChat(messages).subscribe({
+      next: ({ answer, sources }) => {
+        this.messages = [...this.messages, { role: 'assistant', text: answer, sources }];
+        this.loading = false;
+      },
+      error: (error: HttpErrorResponse) => {
+        const message = this.errorMessage(error);
+        this.error = message;
+        this.messages = [...this.messages, { role: 'assistant', text: message }];
+        this.loading = false;
+      }
+    });
   }
 
   private runAnalysis(prompt: string): void {

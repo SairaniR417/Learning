@@ -45,7 +45,7 @@
       <section class="historical-section" aria-labelledby="historical-title">
         <div class="historical-heading">
           <div><span class="eyebrow">MARKET WORKSPACE / {{ historyMarket === 'cash' ? 'EQUITY' : 'COMMODITY' }}</span><h2 id="historical-title">{{ analysisMode ? selectedHistoryInstrument?.name : 'Instrument analysis' }}</h2></div>
-          <div class="historical-status" [class.connected]="connected" [class.demo-status]="demoMode"><i></i>{{ demoMode ? 'YAHOO FINANCE SAMPLE' : connected ? 'UPSTOX DATA' : 'OFFLINE' }}</div>
+          <div class="historical-status" [class.connected]="connected" [class.demo-status]="demoMode"><i></i>{{ demoMode ? 'OFFLINE SAMPLE' : connected ? 'UPSTOX DATA' : 'OFFLINE' }}</div>
         </div>
         <div class="historical-connection" *ngIf="!connected" [hidden]="historicalLoading || historicalCandles.length > 0">
           <p>{{ historyConnectionCopy }}</p>
@@ -54,7 +54,7 @@
             <button class="history-connect demo-button" type="button" (click)="runDemo()">Preview Reliance data <span>▶</span></button>
           </div>
           <div class="historical-setup" *ngIf="!configured">
-            <span>Add <code>UPSTOX_CLIENT_ID</code> and <code>UPSTOX_CLIENT_SECRET</code> to <code>.env</code>, then restart the API. Register the OAuth callback URL in your Upstox app.</span>
+            <span>Add <code>UPSTOX_ACCESS_TOKEN</code> to the server <code>.env</code> and restart the API. Replace the token when it expires.</span>
             <a href="https://account.upstox.com/developer/apps" target="_blank" rel="noreferrer">Upstox Developer Apps ↗</a>
           </div>
         </div>
@@ -82,7 +82,7 @@
           <button class="load-history" type="submit" [disabled]="(!connected && !demoMode) || !selectedHistoryInstrument || historicalLoading">{{ historicalLoading ? 'Loading…' : (demoMode ? 'Update chart' : 'Load candles') }}</button>
         </form>
         <div class="historical-results" [hidden]="!historicalCandles.length">
-          <div class="historical-result-heading"><span>{{ selectedHistoryInstrument?.symbol }} <i>·</i> {{ loadedHistoricalIntervalLabel }} <i>·</i> {{ historicalCandles.length }} candles <b class="sample-label" *ngIf="demoMode">YAHOO FINANCE | HISTORICAL DATA</b></span></div>
+          <div class="historical-result-heading"><span>{{ selectedHistoryInstrument?.symbol }} <i>·</i> {{ loadedHistoricalIntervalLabel }} <i>·</i> {{ historicalCandles.length }} candles <b class="sample-label" *ngIf="demoMode">OFFLINE SAMPLE DATA</b></span></div>
           <section class="ema-alignment-card" *ngIf="technicalSnapshot as snapshot" [class.ema-bullish]="snapshot.emaAlignment === 'Bullish'" [class.ema-bearish]="snapshot.emaAlignment === 'Bearish'" aria-label="EMA alignment status">
             <div class="ema-status-copy"><span>EMA ALIGNMENT</span><strong>{{ snapshot.emaAlignment }}</strong><small>Based on last completed candle: {{ historicalCandles[historicalCandles.length - 1]?.timestamp?.slice(0, 10) }}</small><small *ngIf="snapshot.bullishEntry">Bullish entry crossover on {{ historicalCandles[historicalCandles.length - 1]?.timestamp?.slice(0, 10) }}</small><small *ngIf="snapshot.emaAlignment === 'Bullish' && !snapshot.bullishEntry">Price &gt; EMA 9 &gt; EMA 20 &gt; EMA 50 &gt; EMA 200</small><small *ngIf="snapshot.emaAlignment === 'Bearish'">Price &lt; EMA 9 &lt; EMA 20 &lt; EMA 50 &lt; EMA 200</small><small *ngIf="snapshot.emaAlignment === 'Mixed'">The EMA stack is not fully aligned</small><small *ngIf="snapshot.emaAlignment === 'Needs 200 candles'">Load at least 200 candles to calculate this setup</small></div>
             <div class="ema-values"><div><span>LAST CLOSE</span><strong>{{ formatPrice(snapshot.lastClose) }}</strong></div><div><span>EMA 9</span><strong>{{ formatPrice(snapshot.ema9) }}</strong></div><div><span>EMA 20</span><strong>{{ formatPrice(snapshot.ema20) }}</strong></div><div><span>EMA 50</span><strong>{{ formatPrice(snapshot.ema50) }}</strong></div><div><span>EMA 200</span><strong>{{ formatPrice(snapshot.ema200) }}</strong></div></div>
@@ -337,6 +337,9 @@
         <button type="button" [class.active]="selectedKnowledgeChapter === fibonacciKnowledgeChapter" [attr.aria-current]="selectedKnowledgeChapter === fibonacciKnowledgeChapter ? 'page' : null" (click)="selectKnowledgeChapter(fibonacciKnowledgeChapter)">
           <span class="chapter-number">01</span><span class="chapter-link-copy"><b>Fibonacci Retracement</b><small>Price levels</small></span>
         </button>
+        <button type="button" [class.active]="selectedKnowledgeChapter === cprKnowledgeChapter" [attr.aria-current]="selectedKnowledgeChapter === cprKnowledgeChapter ? 'page' : null" (click)="selectKnowledgeChapter(cprKnowledgeChapter)">
+          <span class="chapter-number">02</span><span class="chapter-link-copy"><b>Central Pivot Range (CPR)</b><small>Levels and trading framework</small></span>
+        </button>
       </aside>
 
       <div class="knowledge-reading">
@@ -360,6 +363,73 @@
         <div class="fib-level" *ngFor="let level of fibonacciLevels"><strong>{{ level.percent }}</strong><span>{{ level.description }}</span></div>
       </div>
       <p class="knowledge-footnote">Example: for a rise from 100 to 200, the 61.8% retracement is 138.20 (200 − 100 × 0.618). The 50% level is widely used but is not a Fibonacci sequence ratio. Levels are reference areas, not guaranteed turning points or trade instructions.</p>
+      </section>
+      <section class="fib-knowledge cpr-knowledge" [id]="knowledgeChapterId(cprKnowledgeChapter)" aria-labelledby="cpr-knowledge-title">
+        <header><div><span class="eyebrow">BOOK 02 · CHART TOOLS · CHAPTER 02</span><h2 id="cpr-knowledge-title">Central Pivot Range (CPR)</h2></div><span class="knowledge-bias">Market reference zone</span></header>
+        <p>CPR is a leading market reference zone calculated from the previous period’s high, low, and close. Once calculated, its levels stay fixed for the trading session. It represents an equilibrium area, not a single price; price above it may develop bullish control, while price below it may develop bearish control.</p>
+
+        <h3>1. The three CPR levels</h3>
+        <div class="cpr-level-grid">
+          <article><strong>Pivot Point · P</strong><code>P = (High + Low + Close) / 3</code><span>The central equilibrium or reference level.</span></article>
+          <article><strong>Top CPR · TC</strong><code>TC = (P + High) / 2</code><span>The upper CPR boundary; the notes interpret it as leaning bullish.</span></article>
+          <article><strong>Bottom CPR · BC</strong><code>BC = (P + Low) / 2</code><span>The lower CPR boundary; the notes interpret it as leaning bearish.</span></article>
+        </div>
+        <p class="cpr-formula"><strong>CPR Width = TC − BC</strong><br>These are the formulas exactly as written in the notes.</p>
+
+        <h3>2. CPR as an equilibrium “magnet”</h3>
+        <p>The notes describe CPR as a magnet because price may revisit the zone. If price opens far away, it may move back toward CPR. The zone can be watched as a potential equilibrium, support or resistance area, or an area where institutional participation may become relevant. These are observations from the notes, not guaranteed outcomes.</p>
+
+        <h3>3. CPR width: narrow and wide</h3>
+        <div class="cpr-two-column">
+          <article><strong>Narrow CPR</strong><p>Described as compression or a spring with energy stored in the market. A strong move or breakout may develop. The notes call it particularly useful in NIFTY and BANK NIFTY.</p><p><b>Trading idea:</b> Narrow → compression → breakout potential → possible directional move.</p></article>
+          <article><strong>Wide CPR</strong><p>Associated with a market that has already expanded. Range-bound behaviour, scalping, or support/resistance bounces may be more likely.</p><p><b>Trading idea:</b> Wide → expanded range → consider a range or bounce mindset instead of assuming a breakout.</p></article>
+        </div>
+
+        <h3>4. Multi-timeframe CPR</h3>
+        <div class="cpr-table-wrap"><table class="cpr-table"><thead><tr><th>CPR timeframe</th><th>Intended use in the notes</th></tr></thead><tbody><tr><td>Daily CPR</td><td>Intraday trading</td></tr><tr><td>Weekly CPR</td><td>Swing trading</td></tr><tr><td>Monthly CPR</td><td>Long-term positioning</td></tr></tbody></table></div>
+        <p>For swing trading, the notes suggest weekly CPR with monthly/daily context. For intraday trading, they suggest daily CPR with lower-timeframe CPR. The handwritten mappings are preserved as recorded: Weekly timeframe → Yearly CPR; Daily timeframe → Monthly CPR; Hourly timeframe → Weekly CPR; Below → Daily CPR. The first handwritten mapping appeared corrected or overwritten, so its wording has not been reinterpreted.</p>
+
+        <h3>5. CPR structure and variations</h3>
+        <div class="cpr-two-column">
+          <article><strong>Ascending CPR</strong><p>Each day’s CPR is above the prior day’s. The notes associate this with bullish continuation, buying dips, and a gradually rising market; their mindset is to favour bullish continuation.</p></article>
+          <article><strong>Descending CPR</strong><p>Each day’s CPR is below the prior day’s. The notes associate this with bearish continuation, distribution, and downward bias; their mindset is to favour bearish continuation.</p></article>
+          <article><strong>Inside CPR</strong><p>Today’s CPR lies within yesterday’s CPR. The notes interpret this as consolidation or compression, with a breakout setup possibly forming.</p></article>
+          <article><strong>Outside CPR</strong><p>Today’s CPR engulfs or exceeds yesterday’s CPR. The notes associate this with volatility expansion and the possibility of a larger move.</p></article>
+          <article><strong>Marching CPR</strong><p>CPR continues in one direction, ascending or descending. The notes call this trend-day behaviour and say: “Never fight a Marching CPR.” In practice, they mean not to trade aggressively against its established direction.</p></article>
+          <article><strong>Trend-reversal CPR</strong><p>CPR suddenly changes direction, such as ascending and then descending. The notes treat a sudden shift as an early possible reversal signal to watch.</p></article>
+          <article><strong>Virgin CPR</strong><p>A previous session’s CPR zone that price/candles have not touched. It may act as a future reference or magnet/cushion. Price may react and bounce, or decisively break through and invalidate the expected support/resistance behaviour.</p></article>
+          <article><strong>Overlapping CPR</strong><p>Today’s CPR overlaps the previous CPR. The notes interpret this as possible trend continuity or continuation.</p></article>
+        </div>
+
+        <h3>6. Market bias and pre-trade framework</h3>
+        <div class="cpr-bias-grid"><div><b>Above CPR</b><span>Bullish environment in this framework.</span></div><div><b>Below CPR</b><span>Bearish environment in this framework.</span></div><div><b>Inside CPR</b><span>Consolidation or breakout preparation.</span></div></div>
+        <p>Treat CPR as an area. Before a trade, review whether it is ascending, descending, marching, inside, outside, narrow, or wide; then check whether price is above or below the zone and whether higher-timeframe CPR supports the lower-timeframe setup. The notes record the personal rule “If CPR is descending → always try to SHORT.” This is that trader’s rule, not a universal market rule.</p>
+
+        <h3>7. Swing and intraday notes</h3>
+        <div class="cpr-two-column">
+          <article><strong>Swing framework</strong><p>The notes use daily and hourly timeframes. On the daily timeframe, look for ascending or marching CPR as bullish structure. On the 1-hour timeframe, price above CPR may be considered a long/bullish setup. The recorded stop is below BC, and pivot/CPR levels may be used toward a target. The note “Use 30% as SL” is preserved; its intended meaning is unclear.</p></article>
+          <article><strong>Intraday framework</strong><p>The notes use hourly and 15-minute views, combining higher-timeframe CPR with daily CPR. Their basic long/bullish condition is bullish higher-timeframe CPR context with 15-minute price above CPR.</p></article>
+        </div>
+        <p><strong>Opening position:</strong> An open between S1 and CPR may move toward CPR or S1; an open between CPR and R1 may interact with CPR or R1. The opening position is an early reference, with direction dependent on market behaviour.</p>
+
+        <h3>8. Recorded pivot-level behaviour</h3>
+        <ul class="cpr-observations"><li>Above P2 and P3 → the notes record a higher probability of reaching/touching P3.</li><li>Above P3 → the notes classify the day as belonging to the bull side.</li><li>Below S2 and S3 → the notes record a higher chance of reaching/touching S3.</li><li>Below S3 → the notes classify the day as belonging to the bear side.</li></ul>
+        <p>These are the recorded trading heuristics, not verified probabilities.</p>
+
+        <h3>9. CPR confluence notes</h3>
+        <p><strong>Golden crossover:</strong> The notes define MA20 crossing MA50 as a reason to consider going long. With ascending CPR, they suggest waiting for an upside crossover before a bullish trade.</p>
+        <p><strong>Trendline:</strong> The notes look for approximately three touch points. On a later interaction, combine a trendline breakout with CPR context and enter on the breakout side only if CPR agrees.</p>
+        <p><strong>NIFTY:</strong> The notes record “NIFTY → 25,000” and deep ITM options to balance ATM/OTM exposure, with “24,000 PE + 24,000 CE” as the example. The intended option strategy is unclear, so it has not been inferred.</p>
+
+        <h3>10. Complete decision checklist</h3>
+        <div class="cpr-checklist">
+          <article><strong>Market context</strong><span>Ascending? Descending? Marching? Inside/outside yesterday? Narrow/wide? Virgin CPR nearby?</span></article>
+          <article><strong>Price</strong><span>Above, below, or inside CPR? Where did the market open? Where is price relative to P, S1, R1, and other pivot levels?</span></article>
+          <article><strong>Confirmation</strong><span>Do higher and lower timeframes agree? Is the trendline breakout confirmed? Do MA20/MA50 and CPR direction agree?</span></article>
+          <article><strong>Risk</strong><span>Are entry, stop, target, and risk/reward defined? Am I fighting a Marching CPR?</span></article>
+        </div>
+        <div class="cpr-summary"><strong>Core idea from the notes</strong><p>CPR shows where the market is balanced. CPR structure shows which direction that balance is moving. CPR width suggests compression or expansion. Price’s position relative to CPR gives the immediate bias. Higher-timeframe CPR provides context, while lower-timeframe price action provides the entry.</p><b>CPR → Direction → Price position → Confluence → Entry → Risk management</b></div>
+        <p class="knowledge-footnote">This chapter preserves the supplied CPR formulas, rules, and heuristics rather than replacing them with a different CPR methodology. CPR observations are not guaranteed outcomes or trade instructions; the notes’ ambiguous handwritten mappings and option example remain identified as unclear.</p>
       </section>
       <p class="knowledge-footnote">These are educational descriptions of rule-based patterns and chart tools. They do not account for news, liquidity, or broader market conditions.</p>
       </div>
