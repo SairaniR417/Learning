@@ -1,9 +1,7 @@
 import os
 import re
 import secrets
-import csv
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 from urllib.parse import urlencode
 from urllib.parse import quote as url_quote
 from typing import Literal
@@ -30,10 +28,6 @@ access_token: str | None = None
 access_token_expires_at: datetime | None = None
 pending_states: dict[str, datetime] = {}
 instrument_key_pattern = re.compile(r"^[A-Z0-9_]+\|[A-Za-z0-9 ._-]+$")
-SAMPLE_HISTORIES = {
-    "RELIANCE": {"file": "reliance_nse_daily.csv", "key": "NSE_EQ|RELIANCE", "name": "Reliance Industries Limited"},
-    "ADANIPORTS": {"file": "adani_ports_nse_bullish.csv", "key": "NSE_EQ|INE742F01042", "name": "Adani Ports and Special Economic Zone Limited"},
-}
 HISTORICAL_INTERVALS = {
     "minutes": {1, 2, 3, 5, 10, 15, 30, 60},
     "hours": {1, 2, 3, 4, 5},
@@ -282,38 +276,6 @@ async def historical_candles(
     return {"candles": candles, "instrument_key": instrument_key, "unit": unit, "interval": interval}
 
 
-@app.get("/api/sample-history")
-async def sample_history(symbol: str = Query(default="RELIANCE", max_length=20)):
-    """Return a local historical equity sample for offline indicator work."""
-    sample = SAMPLE_HISTORIES.get(symbol.upper())
-    if not sample:
-        raise HTTPException(status_code=404, detail="No local sample is available for that instrument.")
-    sample_path = Path(__file__).with_name(sample["file"])
-    try:
-        with sample_path.open(newline="", encoding="utf-8") as sample_file:
-            candles = [
-                {
-                    "timestamp": f"{row['date']}T00:00:00+0530",
-                    "open": float(row["open"]),
-                    "high": float(row["high"]),
-                    "low": float(row["low"]),
-                    "close": float(row["close"]),
-                    "volume": int(row["volume"]),
-                }
-                for row in csv.DictReader(sample_file)
-            ]
-    except (OSError, KeyError, ValueError) as exc:
-        raise HTTPException(status_code=500, detail="The bundled sample data could not be read.") from exc
-    return {
-        "candles": candles,
-        "instrument_key": sample["key"],
-        "symbol": symbol.upper(),
-        "name": sample["name"],
-        "unit": "days",
-        "interval": 1,
-    }
-
-
 @app.get("/api/drishti/ema-alignment", response_model=EmaAlignmentResponse)
 async def drishti_ema_alignment(
     symbol: str = Query(min_length=1, max_length=50),
@@ -324,34 +286,26 @@ async def drishti_ema_alignment(
     from_date: date = Query(alias="from"),
     to_date: date = Query(alias="to"),
 ):
-    """Analyze one instrument using local demo candles or authenticated Upstox history."""
+    """Analyze one instrument using authenticated Upstox history."""
     normalized_symbol = symbol.strip().upper()
     if not re.fullmatch(r"[A-Z0-9][A-Z0-9 .&_-]*", normalized_symbol):
         raise HTTPException(status_code=400, detail="Provide a valid instrument symbol.")
 
     timeframe = f"{unit}:{interval}"
     try:
-        if not instrument_key and normalized_symbol in SAMPLE_HISTORIES:
-            if unit != "days" or interval != 1:
-                raise HTTPException(status_code=400, detail="Bundled sample instruments support the 1 day timeframe only.")
-            history = await sample_history(normalized_symbol)
-            candles = history["candles"]
-            instrument_key = history["instrument_key"]
-            exchange = exchange or instrument_key.split("|", 1)[0]
-        else:
-            if not instrument_key:
-                raise HTTPException(status_code=400, detail="Select a valid instrument key or a bundled sample symbol.")
-            if not instrument_key_pattern.fullmatch(instrument_key):
-                raise HTTPException(status_code=400, detail="Provide a valid Upstox instrument key.")
-            history = await historical_candles(
-                instrument_key=instrument_key,
-                unit=unit,
-                interval=interval,
-                from_date=from_date,
-                to_date=to_date,
-            )
-            candles = history["candles"]
-            exchange = exchange or instrument_key.split("|", 1)[0]
+        if not instrument_key:
+            raise HTTPException(status_code=400, detail="Select an instrument from Upstox search.")
+        if not instrument_key_pattern.fullmatch(instrument_key):
+            raise HTTPException(status_code=400, detail="Provide a valid Upstox instrument key.")
+        history = await historical_candles(
+            instrument_key=instrument_key,
+            unit=unit,
+            interval=interval,
+            from_date=from_date,
+            to_date=to_date,
+        )
+        candles = history["candles"]
+        exchange = exchange or instrument_key.split("|", 1)[0]
     except HTTPException:
         raise
     except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:

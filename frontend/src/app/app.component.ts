@@ -281,12 +281,12 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   updatedTime = 'LIVE FEED OFF';
   clock = '';
   marketLabel = 'Awaiting connection';
-  historySearchText = '';
+  historySearchText = 'NIFTY 50';
   historyMarket: 'cash' | 'commodities' = 'cash';
   historySearchResults: Instrument[] = [];
   historySearchMessage = '';
   historySearchOpen = false;
-  selectedHistoryInstrument?: Instrument;
+  selectedHistoryInstrument?: Instrument = { key: 'NSE_INDEX|Nifty 50', symbol: 'NIFTY 50', name: 'Nifty 50', exchange: 'NSE_INDEX' };
   historicalFrom = dateInputValue(new Date(Date.now() - 400 * 24 * 60 * 60 * 1000));
   historicalTo = dateInputValue(new Date());
   historicalInterval = 'days:1';
@@ -294,10 +294,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   historicalCandles: HistoricalCandle[] = [];
   displayedCandles: HistoricalCandle[] = [];
   historicalLoading = false;
-  demoMode = false;
   chartIsFullscreen = false;
-  private sampleCandles: HistoricalCandle[] = [];
-  sampleSymbol: 'RELIANCE' | 'ADANIPORTS' = 'RELIANCE';
+
   fullscreenChart = true;
   technicalSnapshot?: TechnicalSnapshot;
   companyProfile?: CompanyProfile;
@@ -313,7 +311,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   plannerStopMethod: 'swing' | 'atr' | 'ema20' | 'manual' = 'swing';
   targetRMultiple = 2;
   riskDirection: 'long' | 'short' | '' = '';
-  movingAveragesEnabled = false;
+  movingAveragesEnabled = true;
   movingAverageOpacity = 100;
   ghostRiderEnabled = false;
   ghostRiderAtrMultiplier = 1.5;
@@ -376,22 +374,17 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     if (params.get('auth') === 'failed') this.showToast('Upstox authorization failed. Check app credentials and redirect URI.');
     if (params.get('setup') === '1') this.showToast('Add your Upstox API key and secret in the server .env file first.');
     if (params.has('auth') || params.has('setup')) window.history.replaceState({}, '', '/');
-    this.runDemo();
   }
 
   ngAfterViewInit(): void {
     this.chartReady = true;
     if (this.chart) {
-      this.resizeObserver = new ResizeObserver(() => {
-        this.drawChart();
-        this.drawHistoryChart();
-        this.historyChartApi?.timeScale().fitContent();
-      });
-      if (this.chart) this.resizeObserver.observe(this.chart.nativeElement);
+      this.resizeObserver = new ResizeObserver(() => this.drawChart());
+      this.resizeObserver.observe(this.chart.nativeElement);
     }
     this.initializeAnalysisCharts();
-    if (this.historyChart) this.resizeObserver?.observe(this.historyChart.nativeElement);
     this.drawChart();
+    if (this.historicalCandles.length) this.drawHistoryChart();
   }
 
   ngOnDestroy(): void {
@@ -453,11 +446,13 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   initials(symbol: string): string { return symbol.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'IN'; }
 
   setConnected(connected: boolean): void {
+    const wasConnected = this.connected;
     this.connected = connected;
     this.marketLabel = connected ? 'Live data connected' : 'Awaiting connection';
     this.refreshSubscription?.unsubscribe();
     if (connected) {
       this.updatedTime = 'LIVE QUOTES';
+      if (!wasConnected && this.selectedHistoryInstrument) this.loadHistorical();
       this.refreshSubscription = timer(0, 5000).pipe(
         exhaustMap(() => this.refreshQuotes())
       ).subscribe();
@@ -545,8 +540,6 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   selectHistoryInstrument(instrument: Instrument): void {
-    this.demoMode = false;
-    this.sampleCandles = [];
     this.historicalCandles = [];
     this.displayedCandles = [];
     this.technicalSnapshot = undefined;
@@ -566,7 +559,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.historySearchText = '';
     this.historySearchResults = [];
     this.historySearchOpen = false;
-    this.selectedHistoryInstrument = undefined;
+    this.selectedHistoryInstrument = market === 'cash' ? { key: 'NSE_INDEX|Nifty 50', symbol: 'NIFTY 50', name: 'Nifty 50', exchange: 'NSE_INDEX' } : undefined;
+    this.historySearchText = market === 'cash' ? 'NIFTY 50' : '';
     this.historicalCandles = [];
     this.displayedCandles = [];
     this.technicalSnapshot = undefined;
@@ -575,9 +569,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.riskDirection = '';
     this.plannerEntry = 0;
     this.plannerManualStop = 0;
-    this.demoMode = false;
-    this.sampleCandles = [];
     this.drawHistoryChart();
+    if (this.connected && market === 'cash') { this.loadHistorical(); }
   }
 
   loadHistorical(): void {
@@ -586,13 +579,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       this.showToast('The start date must be on or before the end date.');
       return;
     }
-    if (this.demoMode) {
-      this.loadLocalHistory();
-      return;
-    }
     if (!this.connected) return;
     this.historicalLoading = true;
-    this.demoMode = false;
     this.historicalCandles = [];
     this.displayedCandles = [];
     this.technicalSnapshot = undefined;
@@ -623,52 +611,6 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private loadLocalHistory(): void {
-    const [unit] = this.historicalInterval.split(':');
-    if (unit === 'minutes' || unit === 'hours') {
-      this.showToast('Intraday candles need Upstox data. Local samples contain daily candles only.');
-      return;
-    }
-    const inRange = this.sampleCandles
-      .filter((candle) => {
-        const day = candle.timestamp.slice(0, 10);
-        return day >= this.historicalFrom && day <= this.historicalTo;
-      })
-      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-    const candles = unit === 'weeks' || unit === 'months'
-      ? this.aggregateSampleCandles(inRange, unit)
-      : inRange;
-    this.historicalCandles = candles;
-    this.loadedHistoricalInterval = this.historicalInterval;
-    this.displayedCandles = [...candles].reverse().slice(0, 100);
-    this.technicalSnapshot = candles.length ? this.calculateTechnicalSnapshot(candles) : undefined;
-    this.drawHistoryChart();
-    if (!candles.length) this.showToast('No candles fall within the selected date range.');
-  }
-
-  private aggregateSampleCandles(candles: HistoricalCandle[], unit: 'weeks' | 'months'): HistoricalCandle[] {
-    const buckets = new Map<string, HistoricalCandle>();
-    for (const candle of candles) {
-      const day = candle.timestamp.slice(0, 10);
-      let key = day.slice(0, 7);
-      if (unit === 'weeks') {
-        const monday = new Date(`${day}T00:00:00Z`);
-        monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay() + 6) % 7);
-        key = monday.toISOString().slice(0, 10);
-      }
-      const previous = buckets.get(key);
-      if (!previous) buckets.set(key, { ...candle });
-      else {
-        previous.high = Math.max(previous.high, candle.high);
-        previous.low = Math.min(previous.low, candle.low);
-        previous.close = candle.close;
-        previous.volume += candle.volume;
-        previous.timestamp = candle.timestamp;
-      }
-    }
-    return [...buckets.values()];
-  }
-
   async toggleChartFullscreen(): Promise<void> {
     const chart = this.historyChartWrap?.nativeElement;
     if (!chart) return;
@@ -687,52 +629,6 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   onFullscreenChange(): void {
     this.chartIsFullscreen = document.fullscreenElement === this.historyChartWrap?.nativeElement;
     requestAnimationFrame(() => this.drawHistoryChart());
-  }
-
-  runDemo(symbol: 'RELIANCE' | 'ADANIPORTS' = this.sampleSymbol): void {
-    this.sampleSymbol = symbol;
-    this.plannerEntry = 0;
-    this.plannerManualStop = 0;
-    this.historyMarket = 'cash';
-    this.historicalLoading = true;
-    this.demoMode = false;
-    this.historicalCandles = [];
-    this.displayedCandles = [];
-    this.technicalSnapshot = undefined;
-    this.companyProfile = undefined;
-    this.corporateActions = [];
-    this.drawHistoryChart();
-    this.api.sampleHistory(symbol).subscribe({
-      next: (result) => {
-        const candles = result.candles;
-        this.sampleCandles = candles;
-        this.selectedHistoryInstrument = {
-          key: result.instrument_key,
-          symbol: result.symbol,
-          name: result.name,
-          exchange: 'NSE'
-        };
-        this.historySearchText = `${result.symbol} - ${result.symbol === 'ADANIPORTS' ? 'BULLISH' : 'BEARISH'} NSE SAMPLE`;
-        this.companyProfile = undefined;
-        this.corporateActions = [];
-        this.historicalInterval = 'days:1';
-        this.loadedHistoricalInterval = 'days:1';
-        this.historicalFrom = candles[0]?.timestamp.slice(0, 10) ?? '';
-        this.historicalTo = candles[candles.length - 1]?.timestamp.slice(0, 10) ?? '';
-        this.historicalCandles = candles;
-        this.displayedCandles = [...candles].reverse().slice(0, 100);
-        this.technicalSnapshot = this.calculateTechnicalSnapshot(candles);
-        this.demoMode = true;
-        this.fullscreenChart = true;
-        this.historicalLoading = false;
-        this.drawHistoryChart();
-        if (!candles.length) this.showToast(`The ${result.symbol} sample dataset is empty.`);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.historicalLoading = false;
-        this.showToast(error.error?.detail || `Could not load the bundled ${symbol} sample data.`);
-      }
-    });
   }
 
   addInstrument(instrument: Instrument): void {
@@ -764,8 +660,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         this.technicalSnapshot = undefined;
         this.companyProfile = undefined;
         this.corporateActions = [];
-        this.demoMode = false;
-        this.setConnected(false);
+            this.setConnected(false);
         this.drawChart();
         this.drawHistoryChart();
         this.showToast('Upstox disconnected.');

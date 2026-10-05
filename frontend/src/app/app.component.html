@@ -45,13 +45,12 @@
       <section class="historical-section" aria-labelledby="historical-title">
         <div class="historical-heading">
           <div><span class="eyebrow">MARKET WORKSPACE / {{ historyMarket === 'cash' ? 'EQUITY' : 'COMMODITY' }}</span><h2 id="historical-title">{{ analysisMode ? selectedHistoryInstrument?.name : 'Instrument analysis' }}</h2></div>
-          <div class="historical-status" [class.connected]="connected" [class.demo-status]="demoMode"><i></i>{{ demoMode ? 'OFFLINE SAMPLE' : connected ? 'UPSTOX DATA' : 'OFFLINE' }}</div>
+          <div class="historical-status" [class.connected]="connected"><i></i>{{ connected ? 'UPSTOX DATA' : 'OFFLINE' }}</div>
         </div>
         <div class="historical-connection" *ngIf="!connected" [hidden]="historicalLoading || historicalCandles.length > 0">
           <p>{{ historyConnectionCopy }}</p>
           <div class="history-actions">
             <a class="history-connect" href="/auth/upstox" *ngIf="configured">Connect Upstox <span>↗</span></a>
-            <button class="history-connect demo-button" type="button" (click)="runDemo()">Preview Reliance data <span>▶</span></button>
           </div>
           <div class="historical-setup" *ngIf="!configured">
             <span>Add <code>UPSTOX_ACCESS_TOKEN</code> to the server <code>.env</code> and restart the API. Replace the token when it expires.</span>
@@ -62,11 +61,7 @@
           <label class="history-field market-field"><span>MARKET</span><select [value]="historyMarket" (change)="setHistoryMarket($any($event.target).value)"><option value="cash">Cash equities</option><option value="commodities">MCX commodities</option></select></label>
           <label class="history-field instrument-field">
             <span>{{ historyMarket === 'cash' ? 'CASH INSTRUMENT' : 'COMMODITY FUTURE' }}</span>
-            <select *ngIf="!connected && historyMarket === 'cash'" aria-label="Choose a local stock sample" [value]="sampleSymbol" (change)="runDemo($any($event.target).value)">
-              <option value="RELIANCE">Reliance ? bearish sample</option>
-              <option value="ADANIPORTS">Adani Ports ? bullish EMA entry</option>
-            </select>
-            <input *ngIf="connected" type="search" [placeholder]="historyMarket === 'cash' ? 'Search NSE symbol or company' : 'Search MCX commodity future'" autocomplete="off" [value]="historySearchText" (input)="updateHistorySearch($any($event.target).value)" (focus)="historySearchOpen = historySearchText.length >= 2" />
+            <input type="search" [placeholder]="historyMarket === 'cash' ? 'Search NSE symbol or company' : 'Search MCX commodity future'" autocomplete="off" [disabled]="!connected" [value]="historySearchText" (input)="updateHistorySearch($any($event.target).value)" (focus)="historySearchOpen = historySearchText.length >= 2" />
             <small *ngIf="!connected && historyMarket === 'commodities'">Connect Upstox to search MCX futures.</small>
             <div class="history-search-results" *ngIf="historySearchOpen">
               <div class="search-message" *ngIf="historySearchMessage">{{ historySearchMessage }}</div>
@@ -78,14 +73,11 @@
           <label class="history-field"><span>FROM</span><input type="date" [value]="historicalFrom" (change)="historicalFrom = $any($event.target).value" /></label>
           <label class="history-field"><span>TO</span><input type="date" [value]="historicalTo" (change)="historicalTo = $any($event.target).value" /></label>
           <label class="history-field interval-field"><span>INTERVAL</span><select [value]="historicalInterval" (change)="historicalInterval = $any($event.target).value"><option value="minutes:1">1 minute</option><option value="minutes:3">3 minutes</option><option value="minutes:5">5 minutes</option><option value="minutes:15">15 minutes</option><option value="minutes:30">30 minutes</option><option value="hours:1">1 hour</option><option value="hours:4">4 hours</option><option value="days:1">1 day</option><option value="weeks:1">1 week</option><option value="months:1">1 month</option></select></label>
-          <button class="load-history" type="submit" [disabled]="(!connected && !demoMode) || !selectedHistoryInstrument || historicalLoading">{{ historicalLoading ? 'Loading…' : (demoMode ? 'Update chart' : 'Load candles') }}</button>
+          <button class="load-history" type="submit" [disabled]="!connected || !selectedHistoryInstrument || historicalLoading">{{ historicalLoading ? 'Loading…' : 'Load candles' }}</button>
         </form>
         <div class="historical-results" [hidden]="!historicalCandles.length">
-          <div class="historical-result-heading"><span>{{ selectedHistoryInstrument?.symbol }} <i>·</i> {{ loadedHistoricalIntervalLabel }} <i>·</i> {{ historicalCandles.length }} candles <b class="sample-label" *ngIf="demoMode">OFFLINE SAMPLE DATA</b></span></div>
-          <section class="ema-alignment-card" *ngIf="technicalSnapshot as snapshot" [class.ema-bullish]="snapshot.emaAlignment === 'Bullish'" [class.ema-bearish]="snapshot.emaAlignment === 'Bearish'" aria-label="EMA alignment status">
-            <div class="ema-status-copy"><span>EMA ALIGNMENT</span><strong>{{ snapshot.emaAlignment }}</strong><small>Based on last completed candle: {{ historicalCandles[historicalCandles.length - 1]?.timestamp?.slice(0, 10) }}</small><small *ngIf="snapshot.bullishEntry">Bullish entry crossover on {{ historicalCandles[historicalCandles.length - 1]?.timestamp?.slice(0, 10) }}</small><small *ngIf="snapshot.emaAlignment === 'Bullish' && !snapshot.bullishEntry">Price &gt; EMA 9 &gt; EMA 20 &gt; EMA 50 &gt; EMA 200</small><small *ngIf="snapshot.emaAlignment === 'Bearish'">Price &lt; EMA 9 &lt; EMA 20 &lt; EMA 50 &lt; EMA 200</small><small *ngIf="snapshot.emaAlignment === 'Mixed'">The EMA stack is not fully aligned</small><small *ngIf="snapshot.emaAlignment === 'Needs 200 candles'">Load at least 200 candles to calculate this setup</small></div>
-            <div class="ema-values"><div><span>LAST CLOSE</span><strong>{{ formatPrice(snapshot.lastClose) }}</strong></div><div><span>EMA 9</span><strong>{{ formatPrice(snapshot.ema9) }}</strong></div><div><span>EMA 20</span><strong>{{ formatPrice(snapshot.ema20) }}</strong></div><div><span>EMA 50</span><strong>{{ formatPrice(snapshot.ema50) }}</strong></div><div><span>EMA 200</span><strong>{{ formatPrice(snapshot.ema200) }}</strong></div></div>
-          </section>
+          <div class="historical-result-heading"><span>{{ selectedHistoryInstrument?.symbol }} <i>·</i> {{ loadedHistoricalIntervalLabel }} <i>·</i> {{ historicalCandles.length }} candles</span></div>
+          <details class="analysis-detail"><summary>EMA setup checklist</summary>
           <section class="ema-playbook" *ngIf="technicalSnapshot as snapshot" aria-label="EMA setup monitor">
             <header><span>EMA SETUP MONITOR</span><strong>{{ emaChecklistCount }} / {{ emaChecklist.length }} conditions</strong></header>
             <div class="ema-checklist"><div *ngFor="let item of emaChecklist" [class.complete]="item.complete"><i>{{ item.complete ? '✓' : '·' }}</i><span>{{ item.label }}</span></div></div>
@@ -95,7 +87,8 @@
               <div><span>EMA 9 TRAILING REFERENCE</span><strong>{{ formatPrice(snapshot.ema9) }} <small>{{ snapshot.lastClose < (snapshot.ema9 || snapshot.lastClose) ? 'Close below EMA 9; review trend structure' : 'Close above EMA 9 · watch higher lows' }}</small></strong></div>
             </div>
             <small class="ema-checklist-note">Checklist standardizes the study; it is not a probability score or trade signal. EMAs lag price.</small>
-          </section>
+          </section></details>
+          <details class="analysis-detail"><summary>Technical details</summary>
           <section class="instrument-snapshot" *ngIf="technicalSnapshot as snapshot" aria-label="Technical snapshot">
             <header class="snapshot-heading"><span>TECHNICAL SNAPSHOT</span><strong>₹{{ formatPrice(snapshot.lastClose) }}</strong></header>
             <div class="snapshot-grid">
@@ -104,13 +97,14 @@
               <div><span>ADX 14 / TREND STRENGTH</span><strong>{{ snapshot.adx !== undefined ? snapshot.adx.toFixed(1) + ' · ' + snapshot.trendStrength : snapshot.trendStrength }}</strong></div>
               <div><span>DIRECTIONAL PRESSURE</span><strong>{{ snapshot.directionalPressure }}<small *ngIf="snapshot.positiveDi !== undefined"> · +DI {{ snapshot.positiveDi.toFixed(1) }} / −DI {{ snapshot.negativeDi?.toFixed(1) }}</small></strong></div>
               <div><span>ATR 14 / VOLATILITY</span><strong>{{ snapshot.atr !== undefined ? '₹' + formatPrice(snapshot.atr) + ' · ' + snapshot.atrPercent?.toFixed(2) + '%' : 'Needs more candles' }}</strong></div>
-              <div><span>RSI 14</span><strong>{{ snapshot.rsi !== undefined ? snapshot.rsi.toFixed(1) : 'Needs more candles' }}</strong></div>
+              <div><span>RSI 14</span><strong>{{ snapshot.rsi !== undefined ? snapshot.rsi.toFixed(1) : 'N/A' }}</strong></div>
               <div><span>EMA ALIGNMENT</span><strong [class.positive]="snapshot.emaAlignment === 'Bullish'" [class.negative]="snapshot.emaAlignment === 'Bearish'">{{ snapshot.emaAlignment }}<small>Price vs 9 / 20 / 50 / 200 EMA</small></strong></div>
               <div><span>20-BAR RANGE</span><strong>₹{{ formatPrice(snapshot.lowestLow20) }} — ₹{{ formatPrice(snapshot.highestHigh20) }}</strong></div>
               <div><span>AVERAGE VOLUME · 20 BARS</span><strong>{{ snapshot.averageVolume20?.toLocaleString('en-IN') ?? '—' }}</strong></div>
             </div>
             <p class="snapshot-footnote">Swing structure is a simple higher-high/lower-low heuristic, not full Dow Theory confirmation. {{ holdingWindowNote }}</p>
-          </section>
+          </section></details>
+          <details class="analysis-detail"><summary>Company and market context</summary>
           <section class="fundamentals-strip" aria-label="Company and market context">
             <div class="fundamental-fact"><span>SECTOR</span><strong>{{ companyProfile?.sector || (historyMarket === 'commodities' ? 'MCX commodity future' : 'Not available for this instrument') }}</strong></div>
             <div class="fundamental-fact"><span>DIVIDENDS</span>
@@ -123,7 +117,7 @@
               </ng-container>
             </div>
             <p class="macro-context">{{ globalContextNote }}</p>
-          </section>
+          </section></details>
           <div class="analysis-toolbar">
             <div #studyPanelGroup class="study-toggles" aria-label="Technical studies">
               <details class="moving-average-menu" name="chart-study-panels">
@@ -201,7 +195,13 @@
             </div>
           </div>
           <div #historyChartWrap class="historical-chart-wrap" [class.draw-mode]="trendlineMode" [style.height.px]="analysisChartHeight"><div #historyChart aria-label="Historical candlestick analysis chart with synchronized indicator panes"></div><button class="chart-fullscreen-toggle" type="button" (click)="toggleChartFullscreen()" [attr.aria-label]="chartIsFullscreen ? 'Exit full screen chart' : 'Show chart full screen'" [title]="chartIsFullscreen ? 'Exit full screen' : 'View chart full screen'"><svg *ngIf="!chartIsFullscreen" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M3 3l6 6m7-6h5v5m0-5-6 6M3 16v5h5m-5 0 6-6m10 1v5h-5m5 0-6-6" /></svg><svg *ngIf="chartIsFullscreen" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3m-5 5 6-6m7 1v5h5m-5-5 5 5M8 21v-5H3m5 5-5-5m18 0h-5v5m5-5-6 6" /></svg><span class="visually-hidden">{{ chartIsFullscreen ? 'Exit full screen' : 'View chart full screen' }}</span></button></div>
-          <section class="ghost-rider-dashboard" *ngIf="ghostRiderEnabled && ghostRiderVisibility.dashboard" aria-label="Ghost Rider dashboard">
+          <section class="market-readout" *ngIf="technicalSnapshot as snapshot" aria-label="What is happening in the chart">
+            <header><span>WHAT'S HAPPENING</span><strong [class.positive]="snapshot.emaAlignment === 'Bullish'" [class.negative]="snapshot.emaAlignment === 'Bearish'">{{ snapshot.emaAlignment }}</strong></header>
+            <p>{{ snapshot.emaAlignment === 'Bullish' ? 'Price is above the key EMAs. The broader EMA structure is bullish.' : snapshot.emaAlignment === 'Bearish' ? 'Price is below the key EMAs. The broader EMA structure is bearish.' : snapshot.emaAlignment === 'Needs 200 candles' ? 'More candle history is needed before the long-term EMA trend can be assessed.' : 'The key EMAs are mixed; there is no clear aligned trend right now.' }}</p>
+            <div class="market-readout-metrics"><div><span>LAST CLOSE</span><strong>{{ formatPrice(snapshot.lastClose) }}</strong></div><div><span>PERIOD MOVE</span><strong [class.positive]="snapshot.changePercent >= 0" [class.negative]="snapshot.changePercent < 0">{{ snapshot.changePercent > 0 ? '+' : '' }}{{ snapshot.changePercent.toFixed(2) }}%</strong></div><div><span>RSI 14</span><strong>{{ snapshot.rsi !== undefined ? snapshot.rsi.toFixed(1) : 'N/A' }}</strong></div><div><span>TREND STRENGTH</span><strong>{{ snapshot.trendStrength }}</strong></div></div>
+          </section>
+          <details class="analysis-detail ghost-rider-detail" *ngIf="ghostRiderEnabled && ghostRiderVisibility.dashboard"><summary>Ghost Rider readings</summary>
+          <section class="ghost-rider-dashboard" aria-label="Ghost Rider dashboard">
             <ng-container *ngIf="ghostRiderSnapshot as ghost; else ghostRiderWaiting">
             <header><span>GHOST RIDER v.2</span><strong [class.positive]="ghost.bias.includes('BULL')" [class.negative]="ghost.bias.includes('BEAR')">{{ ghost.bias }}</strong></header>
             <div class="ghost-rider-scores"><div class="bull"><span>PULLERS</span><strong>{{ ghost.bullPct }}%</strong></div><div class="bear"><span>DRAGGERS</span><strong>{{ ghost.bearPct }}%</strong></div></div>
@@ -226,7 +226,8 @@
             <small class="ghost-rider-score-note">Buy/sell triggers use EMA 9/21 crosses. Stop and five targets use the ATR multiplier shown in Ghost Rider settings. Target hits are historical high/low touches.</small>
             </ng-container>
             <ng-template #ghostRiderWaiting><header><span>GHOST RIDER v.2</span></header><small class="ghost-rider-score-note">Load at least 35 candles to calculate Ghost Rider readings.</small></ng-template>
-          </section>
+          </section></details>
+          <details class="analysis-detail"><summary>Trade planner</summary>
           <section class="risk-scenario" *ngIf="technicalSnapshot as snapshot" aria-label="EMA trade planner">
             <header><span>EMA TRADE PLANNER</span><small>HYPOTHETICAL PLAN</small></header>
             <div class="risk-inputs">
@@ -254,10 +255,10 @@
             </div>
             <ng-template #riskPrompt><p class="risk-prompt">Choose long or short and confirm that the selected stop is on the correct side of entry. Structure stops use the recent 20-bar swing range; EMA 20 is a reference, not a guaranteed stop.</p></ng-template>
             <p class="risk-disclaimer">Targets use entry ± (risk per unit × R). For options, this is an underlying-price scenario and lot-size estimate; option premium, strike, expiry pricing, Greeks and actual contract risk are not calculated. Review costs, slippage and gap risk.</p>
-          </section>
+          </section></details>
         </div>
-        <div class="history-empty" *ngIf="historicalLoading"><span class="loading-indicator"></span><span>Loading Reliance historical candles...</span></div>
-        <div class="history-empty" *ngIf="!historicalLoading && !historicalCandles.length"><span class="empty-cross">+</span><span>Preview sample data or connect Upstox to search for a stock or commodity.</span></div>
+        <div class="history-empty" *ngIf="historicalLoading"><span class="loading-indicator"></span><span>Loading Nifty 50 historical candles...</span></div>
+        <div class="history-empty" *ngIf="!historicalLoading && !historicalCandles.length"><span class="empty-cross">+</span><span>Connect Upstox to load Nifty 50 candles or search for another instrument.</span></div>
       </section>
 
       <section class="watchlist-section">
@@ -438,4 +439,5 @@
 </main>
 
 <div class="toast" role="status" aria-live="polite" [class.visible]="!!toast">{{ toast }}</div>
+
 

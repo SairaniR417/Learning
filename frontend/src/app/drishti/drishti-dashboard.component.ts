@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { DrishtiChatSource, DrishtiEmaAlignment, Instrument, MarketApiService } from '../market-api.service';
 
-type DrishtiInstrument = { symbol: string; name: string; exchange: string; key?: string; sample?: boolean };
+type DrishtiInstrument = { symbol: string; name: string; exchange: string; key?: string };
 type DrishtiChatMessage = { role: 'assistant' | 'user'; text: string; result?: DrishtiEmaAlignment; sources?: DrishtiChatSource[] };
 
 @Component({
@@ -12,20 +12,15 @@ type DrishtiChatMessage = { role: 'assistant' | 'user'; text: string; result?: D
 })
 export class DrishtiDashboardComponent {
   private readonly api = inject(MarketApiService);
-  readonly samples: DrishtiInstrument[] = [
-    { symbol: 'RELIANCE', name: 'Reliance Industries sample', exchange: 'NSE_EQ', sample: true },
-    { symbol: 'ADANIPORTS', name: 'Adani Ports sample', exchange: 'NSE_EQ', sample: true }
-  ];
   readonly timeframes = [
     { label: '1 day', unit: 'days', interval: 1 }, { label: '1 week', unit: 'weeks', interval: 1 },
     { label: '1 month', unit: 'months', interval: 1 }, { label: '1 minute', unit: 'minutes', interval: 1 },
     { label: '5 minutes', unit: 'minutes', interval: 5 }, { label: '15 minutes', unit: 'minutes', interval: 15 },
     { label: '30 minutes', unit: 'minutes', interval: 30 }, { label: '1 hour', unit: 'hours', interval: 1 }
   ];
-  selectedSample = 'RELIANCE';
   searchText = '';
   results: Instrument[] = [];
-  selectedInstrument?: DrishtiInstrument = this.samples[0];
+  selectedInstrument?: DrishtiInstrument = { symbol: 'NIFTY 50', name: 'Nifty 50', exchange: 'NSE_INDEX', key: 'NSE_INDEX|Nifty 50' };
   timeframe = 'days:1';
   from = this.dateOffset(-3650);
   to = this.dateOffset(0);
@@ -46,11 +41,6 @@ export class DrishtiDashboardComponent {
   get selectedTimeframe(): { unit: string; interval: number } {
     const [unit, interval] = this.timeframe.split(':'); return { unit, interval: Number(interval) };
   }
-  selectSample(symbol: string): void {
-    this.selectedSample = symbol;
-    this.selectedInstrument = this.samples.find((item) => item.symbol === symbol);
-    this.result = undefined; this.error = '';
-  }
   search(): void {
     const query = this.searchText.trim();
     if (query.length < 2) { this.results = []; return; }
@@ -62,7 +52,6 @@ export class DrishtiDashboardComponent {
   }
   chooseInstrument(instrument: Instrument): void {
     this.selectedInstrument = { symbol: instrument.symbol, name: instrument.name, exchange: instrument.exchange, key: instrument.key };
-    this.selectedSample = '';
     this.searchText = `${instrument.symbol} · ${instrument.exchange}`; this.results = []; this.result = undefined; this.error = '';
   }
   analyze(): void {

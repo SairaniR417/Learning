@@ -86,10 +86,6 @@ export class MarketApiService {
     return this.http.post<{ connected: boolean }>('/api/logout', {});
   }
 
-  sampleHistory(symbol = 'RELIANCE'): Observable<{ candles: HistoricalCandle[]; instrument_key: string; symbol: string; name: string; unit: string; interval: number }> {
-    return this.http.get<{ candles: HistoricalCandle[]; instrument_key: string; symbol: string; name: string; unit: string; interval: number }>('/api/sample-history', { params: { symbol } });
-  }
-
   historical(instrumentKey: string, unit: string, interval: number, from: string, to: string): Observable<{ candles: HistoricalCandle[] }> {
     return this.http.get<{ candles: HistoricalCandle[] }>('/api/historical', {
       params: { instrument_key: instrumentKey, unit, interval, from, to }

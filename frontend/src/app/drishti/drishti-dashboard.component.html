@@ -8,8 +8,7 @@
     <div class="context-bar">
       <div class="context-title"><span class="online-dot"></span><div><strong>Analysis context</strong><small>{{ selectedInstrument?.symbol || 'Choose an instrument' }} · {{ selectedInstrument?.exchange || 'No exchange' }}</small></div></div>
       <div class="context-controls">
-        <label><span>INSTRUMENT</span><select [value]="selectedSample" (change)="selectSample($any($event.target).value)" aria-label="Choose a local sample"><option value="" disabled>Choose local sample</option><option value="RELIANCE">Reliance Industries · sample</option><option value="ADANIPORTS">Adani Ports · sample</option></select></label>
-        <label><span>TIMEFRAME</span><select [value]="timeframe" (change)="timeframe = $any($event.target).value"><option *ngFor="let item of timeframes" [value]="item.unit + ':' + item.interval" [disabled]="selectedInstrument?.sample && (item.unit !== 'days' || item.interval !== 1)">{{ item.label }}</option></select></label>
+        <label><span>TIMEFRAME</span><select [value]="timeframe" (change)="timeframe = $any($event.target).value"><option *ngFor="let item of timeframes" [value]="item.unit + ':' + item.interval">{{ item.label }}</option></select></label>
         <details class="more-options"><summary>Dates</summary><label><span>FROM</span><input type="date" [value]="from" (change)="from = $any($event.target).value"></label><label><span>TO</span><input type="date" [value]="to" (change)="to = $any($event.target).value"></label></details>
       </div>
     </div>
