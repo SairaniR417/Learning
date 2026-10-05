@@ -74,7 +74,6 @@
                 <span><strong>{{ instrument.symbol }}</strong><small>{{ instrument.exchange }} · {{ instrument.name }}</small></span><span class="add-mark">↵</span>
               </button>
             </div>
-            <small class="selected-instrument" *ngIf="selectedHistoryInstrument">{{ selectedHistoryInstrument.key }}</small>
           </label>
           <label class="history-field"><span>FROM</span><input type="date" [value]="historicalFrom" (change)="historicalFrom = $any($event.target).value" /></label>
           <label class="history-field"><span>TO</span><input type="date" [value]="historicalTo" (change)="historicalTo = $any($event.target).value" /></label>
