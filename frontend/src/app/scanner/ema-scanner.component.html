@@ -1,0 +1,64 @@
+<section class="scanner-page" aria-labelledby="scanner-title">
+  <header class="scanner-heading">
+    <div><span class="scanner-eyebrow">NSE EQUITY UNIVERSE</span><h1 id="scanner-title">EMA alignment scanner</h1>
+      <p>Find stocks where price is above EMA 9, 20, 50 and 200, with the averages in bullish order.</p></div>
+    <span class="strategy-chip">EMA 9 &gt; 20 &gt; 50 &gt; 200</span>
+  </header>
+
+  <section class="universe-section" aria-labelledby="universe-title">
+    <header class="universe-heading"><div><h2 id="universe-title">NSE stocks</h2><p>Browse the NSE equity list. Search by symbol or company name.</p></div><span *ngIf="!universeLoading">{{ filteredStocks.length | number }} stocks</span></header>
+    <div class="universe-toolbar"><input type="search" [value]="stockSearch" (input)="searchStocks($any($event.target).value)" placeholder="Search stocks" aria-label="Search NSE stocks"><span *ngIf="universeLoading">Loading NSE stock list…</span><button type="button" *ngIf="universeError" (click)="loadStocks()">Retry</button></div>
+    <p class="universe-error" *ngIf="universeError" role="alert">{{ universeError }}</p>
+    <div class="universe-loading" *ngIf="universeLoading"><span class="progress-indicator"></span>Loading the instrument master…</div>
+    <div class="table-scroll universe-table" *ngIf="!universeLoading && !universeError && visibleStocks.length; else noStocks"><table>
+      <thead><tr><th>SYMBOL</th><th>COMPANY</th><th>EXCHANGE</th></tr></thead>
+      <tbody><tr *ngFor="let stock of visibleStocks"><td><strong>{{ stock.symbol }}</strong></td><td>{{ stock.name }}</td><td>{{ stock.exchange }}</td></tr></tbody>
+    </table></div>
+    <ng-template #noStocks><div class="universe-empty" *ngIf="!universeLoading && !universeError">No NSE stocks match this search.</div></ng-template>
+    <footer class="universe-pagination" *ngIf="!universeLoading && stockPageCount > 1"><span>{{ stockPage * stocksPerPage + 1 }}–{{ stockPageEnd }} of {{ filteredStocks.length }}</span><div><button type="button" [disabled]="stockPage === 0" (click)="changeStockPage(-1)">Previous</button><button type="button" [disabled]="stockPage + 1 >= stockPageCount" (click)="changeStockPage(1)">Next</button></div></footer>
+  </section>
+
+  <section class="scanner-controls" aria-label="Scan settings">
+    <label><span>TIMEFRAME</span><select [value]="timeframe" (change)="setTimeframe($any($event.target).value)"><option *ngFor="let item of timeframes" [value]="item.unit + ':' + item.interval">{{ item.label }}</option></select></label>
+    <label><span>FROM</span><input type="date" [value]="from" (change)="from = $any($event.target).value"></label>
+    <label><span>TO</span><input type="date" [value]="to" (change)="to = $any($event.target).value"></label>
+    <button type="button" class="scan-button" [disabled]="loading" (click)="scan()">{{ loading ? 'Scanning…' : 'Scan NSE equities' }}</button>
+  </section>
+
+  <p class="scan-note">A scan requests candle history for each NSE equity and may take several minutes. At least 200 candles are needed to evaluate EMA 200; use a sufficiently long date range.</p>
+
+  <section class="scan-progress" *ngIf="loading" role="status" aria-live="polite">
+    <span class="progress-indicator"></span><div><strong>Scanning the NSE universe</strong><p>Loading historical candles and checking the EMA alignment for each instrument. Keep this page open.</p></div>
+  </section>
+
+  <div class="scanner-error" *ngIf="error" role="alert"><strong>Scan could not finish</strong><span>{{ error }}</span><a *ngIf="error.toLowerCase().includes('connect')" href="/auth/upstox">Connect Upstox</a></div>
+
+  <ng-container *ngIf="response as data">
+    <section class="scan-summary" aria-label="Scan summary">
+      <div><span>SCANNED</span><strong>{{ data.scanned | number }}</strong></div>
+      <div><span>ALIGNED</span><strong class="matched-count">{{ data.matched | number }}</strong></div>
+      <div><span>TIMEFRAME</span><strong>{{ selectedTimeframe.label }}</strong></div>
+      <div><span>DATA ERRORS</span><strong>{{ data.errors.length | number }}</strong></div>
+    </section>
+
+    <section class="results-section" aria-labelledby="results-title">
+      <header class="results-heading"><div><h2 id="results-title">Bullish alignments</h2><p>Newly aligned stocks appear first.</p></div><span>{{ data.results.length }} results</span></header>
+      <div class="table-scroll" *ngIf="data.results.length; else noMatches"><table>
+        <thead><tr><th>SYMBOL</th><th>STATUS</th><th>PRICE</th><th>EMA 9</th><th>EMA 20</th><th>EMA 50</th><th>EMA 200</th><th>ALIGNED SINCE</th></tr></thead>
+        <tbody><tr *ngFor="let stock of data.results">
+          <td><strong>{{ stock.symbol }}</strong><small>{{ stock.exchange }}</small></td>
+          <td><span class="status-pill" [class.new-status]="stock.status === 'NEWLY_ALIGNED'">{{ stock.status === 'NEWLY_ALIGNED' ? 'NEW' : 'ALIGNED' }}</span></td>
+          <td>{{ formatPrice(stock.close) }}</td><td>{{ formatPrice(stock.ema9) }}</td><td>{{ formatPrice(stock.ema20) }}</td><td>{{ formatPrice(stock.ema50) }}</td><td>{{ formatPrice(stock.ema200) }}</td>
+          <td>{{ stock.alignedSince ? (stock.alignedSince | date:'mediumDate') : '—' }}</td>
+        </tr></tbody>
+      </table></div>
+      <ng-template #noMatches><div class="empty-results"><strong>No current EMA alignments</strong><p>No stocks met the complete bullish alignment in the latest candle for this timeframe.</p></div></ng-template>
+    </section>
+
+    <details class="scan-errors" *ngIf="data.errors.length"><summary>{{ data.errors.length }} instrument history errors</summary><ul><li *ngFor="let item of data.errors"><strong>{{ item.symbol }}</strong><span>{{ item.error }}</span></li></ul></details>
+  </ng-container>
+
+  <section class="scanner-empty" *ngIf="!hasScanned && !loading">
+    <span class="empty-icon">⌕</span><h2>Scan the NSE market</h2><p>Choose a timeframe and date range, then scan for stocks meeting the EMA alignment strategy.</p>
+  </section>
+</section>

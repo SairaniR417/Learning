@@ -13,6 +13,8 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from drishti.assistant import AssistantError, DEFAULT_MODEL, answer_question
 from drishti.ema_alignment import EmaAlignmentResponse, analyze_ema_alignment
+from scanner.ema_scanner import scan_ema_universe
+from scanner.universe import get_nse_equity_universe
 
 load_dotenv()
 
@@ -317,3 +319,62 @@ async def drishti_ema_alignment(
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise HTTPException(status_code=502, detail="Historical data contained malformed candle values.") from exc
+
+
+@app.get("/api/scanner/universe")
+async def scanner_universe():
+    """Return the NSE cash-equity list from the cached Upstox instrument master."""
+    instruments = await get_nse_equity_universe()
+    stocks = sorted(instruments, key=lambda item: item["symbol"])
+    return {"count": len(stocks), "stocks": stocks}
+
+
+@app.get("/api/scanner/ema")
+async def scanner_ema_alignment(
+    unit: str = Query(default="days"),
+    interval: int = Query(default=1, gt=0),
+    from_date: date = Query(alias="from"),
+    to_date: date = Query(alias="to"),
+):
+    """Scan NSE cash equities for bullish EMA 9/20/50/200 alignment."""
+    require_token()
+    if unit not in HISTORICAL_INTERVALS or interval not in HISTORICAL_INTERVALS[unit]:
+        raise HTTPException(status_code=400, detail="Unsupported historical candle interval.")
+    if from_date > to_date:
+        raise HTTPException(status_code=400, detail="The start date must be on or before the end date.")
+    if to_date > datetime.now(timezone.utc).date():
+        raise HTTPException(status_code=400, detail="The end date cannot be in the future.")
+    earliest = date(2022, 1, 1) if unit in {"minutes", "hours"} else date(2000, 1, 1)
+    if from_date < earliest:
+        raise HTTPException(status_code=400, detail=f"{unit.title()} data is available from {earliest.isoformat()}.")
+    if unit == "minutes" and interval <= 15:
+        max_days = 31
+    elif unit in {"minutes", "hours"}:
+        max_days = 92
+    elif unit == "days":
+        max_days = 3653
+    else:
+        max_days = None
+    if max_days is not None and (to_date - from_date).days > max_days:
+        raise HTTPException(status_code=400, detail=f"The selected interval supports a maximum range of about {max_days} days.")
+
+    instruments = await get_nse_equity_universe()
+
+    async def fetch_history(key: str, candle_unit: str, candle_interval: int, start: date, end: date):
+        return await historical_candles(
+            instrument_key=key,
+            unit=candle_unit,
+            interval=candle_interval,
+            from_date=start,
+            to_date=end,
+        )
+
+    return await scan_ema_universe(
+        instruments,
+        fetch_history,
+        unit=unit,
+        interval=interval,
+        from_date=from_date,
+        to_date=to_date,
+        concurrency=10,
+    )

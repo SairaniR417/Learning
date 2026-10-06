@@ -50,6 +50,18 @@ export interface DrishtiChatSource { title: string; url: string; }
 export interface DrishtiChatMessage { role: 'user' | 'assistant'; content: string; }
 export interface DrishtiChatResponse { answer: string; sources: DrishtiChatSource[]; }
 
+export interface EmaScannerResult {
+  symbol: string; instrumentKey: string; exchange: string; timeframe: string;
+  close: number | null; ema9: number | null; ema20: number | null; ema50: number | null; ema200: number | null;
+  status: DrishtiAlignmentStatus; bullishAlignment: boolean; alignedSince: string | null;
+  transitionTimestamp: string | null; candlesAnalyzed: number;
+}
+
+export interface EmaScannerResponse {
+  strategy: string; timeframe: string; scanned: number; matched: number;
+  results: EmaScannerResult[]; errors: { symbol: string; error: string }[];
+}
+
 export interface CorporateAction {
   name: string;
   expiry_date?: string;
@@ -97,6 +109,16 @@ export class MarketApiService {
     if (params.instrumentKey) query['instrument_key'] = params.instrumentKey;
     if (params.exchange) query['exchange'] = params.exchange;
     return this.http.get<DrishtiEmaAlignment>('/api/drishti/ema-alignment', { params: query });
+  }
+
+  scanEmaUniverse(unit: string, interval: number, from: string, to: string): Observable<EmaScannerResponse> {
+    return this.http.get<EmaScannerResponse>('/api/scanner/ema', {
+      params: { unit, interval, from, to }
+    });
+  }
+
+  nseEquityUniverse(): Observable<{ count: number; stocks: Instrument[] }> {
+    return this.http.get<{ count: number; stocks: Instrument[] }>('/api/scanner/universe');
   }
 
   drishtiChat(messages: DrishtiChatMessage[]): Observable<DrishtiChatResponse> {
