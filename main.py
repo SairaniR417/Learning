@@ -4,7 +4,7 @@ import secrets
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode
 from urllib.parse import quote as url_quote
-from typing import Literal
+from typing import Any, Literal
 
 from contextlib import asynccontextmanager
 import httpx
@@ -343,10 +343,10 @@ class StrategyScanRequest(BaseModel):
 
 
 class CandleSyncRequest(BaseModel):
-    unit: str = "days"
-    interval: int = 1
-    lookback_days: int = 730
-    concurrency: int = 15
+    unit: Literal["minutes", "hours", "days"] = "days"
+    interval: int = Field(default=1, ge=1, le=300)
+    lookback_days: int = Field(default=730, ge=1, le=3653)
+    concurrency: int = Field(default=5, ge=1, le=15)
 
 
 @app.get("/api/strategies")
@@ -382,6 +382,8 @@ async def sync_universe():
 async def sync_candles(request: CandleSyncRequest, background_tasks: BackgroundTasks):
     """Trigger delta synchronization of market candles in background."""
     require_token()
+    if request.interval > {"minutes": 300, "hours": 5, "days": 1}[request.unit]:
+        raise HTTPException(status_code=422, detail="Unsupported sync interval.")
     # Run sync in background so HTTP response is returned immediately
     background_tasks.add_task(
         market_sync_service.sync_candles_for_universe,

@@ -71,3 +71,10 @@ class StrategyCache(Base):
     total_matched = Column(Integer, default=0, nullable=False)
     scanned_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     expires_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class CandleRevision(Base):
+    """Monotonic data version for each stored timeframe."""
+    __tablename__ = "candle_revisions"
+    timeframe = Column(String(16), primary_key=True)
+    revision = Column(BigInteger, nullable=False, default=0)

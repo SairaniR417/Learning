@@ -30,7 +30,7 @@ A personal market dashboard built with Angular and FastAPI. Upstox supplies live
 
 4. Open `http://localhost:4200` and connect Upstox to load Nifty 50 by default, then search for other instruments and intervals.
 
-Upstox V3 historical data provides minute/hour candles from January 2022 and daily/weekly/monthly candles from January 2000, subject to interval-specific maximum query ranges. Historical chart data comes from Upstox; no local historical price files are used. Upstox access tokens stay on the API server and expire daily. A token in `.env` is loaded at API startup; replace it when it expires. A public deployment needs HTTPS, per-user sessions, and deployment-specific redirect URI configuration; this starter is for a single local user.
+Upstox V3 historical data provides minute/hour candles from January 2022 and daily/weekly/monthly candles from January 2000, subject to interval-specific maximum query ranges. Charts currently fetch history from Upstox directly. Strategy scans can reuse candles stored in the local database. Upstox access tokens stay on the API server and expire daily. A token in `.env` is loaded at API startup; replace it when it expires. A public deployment needs HTTPS, per-user sessions, and deployment-specific redirect URI configuration; this starter is for a single local user.
 
 ## Instrument analysis
 
@@ -48,3 +48,50 @@ uvicorn main:app --reload --port 8000
 
 .venv/Scripts/uvicorn main:app --reload --port 8000
 
+
+
+## Incremental candle storage
+
+Restart the API after upgrading to create the candle revision table. SQLite stores
+candles in `data/market_desk.db`, keyed by instrument, timeframe, and timestamp.
+Repeated imports skip identical values; corrected OHLCV values replace the old row.
+Changed data advances a timeframe revision so future scans cannot reuse old results.
+
+After connecting Upstox, open `http://localhost:8000/docs`:
+
+1. Call `POST /api/sync/universe` to load the NSE equity master.
+2. Call `POST /api/sync/candles` with
+   `{"unit":"minutes","interval":1,"lookback_days":30,"concurrency":5}`.
+   For hourly or daily candles, use `hours` or `days` with interval `1`.
+3. Repeat the sync request when new candles are available. Existing instruments
+   resume from their latest stored date with a two-day correction overlap.
+4. Call `POST /api/strategies/scan` with
+   `{"strategy_id":"ema_sma_alignment","timeframe":"1m"}` to use stored data.
+
+Backfills use bounded date windows; today's minute/hour candles use the intraday
+endpoint. Open intraday candles are excluded using their duration plus a five-second
+buffer. Daily candles are imported on the following Indian calendar date. No exchange
+calendar or session-close finalization is implemented yet.
+
+Storage keeps one OHLCV row per candle and does not duplicate it per user or strategy.
+Scans load only the latest bounded window per instrument, with ten times the largest
+configured period/minimum history for indicator warm-up. EMA/RSI values may differ
+slightly from calculations seeded at the beginning of all stored history. SQL still
+ranks stored history; this bounds application memory, not total database work.
+
+Current limits: sync is manually triggered and runs in the API process; there is no
+recurring scheduler, durable queue, distributed lock, automatic retry, or job-status
+endpoint. Failed chunks resume on a later sync, but older gaps/corrections outside
+the overlap require a separate reconciliation. Increasing lookback does not backfill
+older history for an already populated instrument. Each requested timeframe is stored
+independently; aggregation and archival retention are not implemented. No existing
+candles are automatically deleted. The universe sync currently covers NSE equities.
+Historical charts still use the provider directly. This is not a 1,000-user deployment.
+
+For production, move to PostgreSQL, durable ingestion workers and rate limiting,
+then add time partitions and an explicit archive/retention policy after measuring
+actual data growth. Keep long-term daily bars and archive older minute bars according
+to backtesting needs. Do not discard minute history before defining that requirement.
+
+Provider references: [historical limits](https://upstox.com/developer/api-documentation/v3/get-historical-candle-data/)
+and [intraday candles](https://upstox.com/developer/api-documentation/v3/get-intra-day-candle-data/).

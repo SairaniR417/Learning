@@ -6,3 +6,4 @@ sqlalchemy[asyncio]>=2.0,<3
 greenlet>=3.0
 aiosqlite>=0.20,<1
 polars>=1.0,<3
+tzdata>=2024.1

@@ -4,13 +4,13 @@ from datetime import datetime, timezone
 import json
 from typing import Any, Sequence
 import polars as pl
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, or_
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.connection import async_session_factory, engine
-from database.models import Instrument, MarketCandle, StrategyCache
+from database.models import Instrument, MarketCandle, StrategyCache, CandleRevision
 
 
 async def upsert_instruments(instruments: Sequence[dict[str, Any]]) -> int:
@@ -69,7 +69,11 @@ async def upsert_candles(candles: Sequence[dict[str, Any]]) -> int:
         is_sqlite = "sqlite" in str(engine.url)
         insert_fn = sqlite_insert if is_sqlite else pg_insert
 
-        batch_size = 1000
+        # Deduplicate before PostgreSQL ON CONFLICT; keep batches below SQLite bind limits.
+        candles = list({(c["instrument_key"], c["timeframe"], c["timestamp"]): c for c in candles}.values())
+        changed = 0
+        changed_timeframes = set()
+        batch_size = 100
         for i in range(0, len(candles), batch_size):
             batch = candles[i : i + batch_size]
             stmt = insert_fn(MarketCandle).values(batch)
@@ -82,10 +86,20 @@ async def upsert_candles(candles: Sequence[dict[str, Any]]) -> int:
                     "close": stmt.excluded.close,
                     "volume": stmt.excluded.volume,
                 },
+                where=or_(*(getattr(MarketCandle, field) != getattr(stmt.excluded, field)
+                            for field in ("open", "high", "low", "close", "volume"))),
             )
-            await session.execute(stmt)
+            result = await session.execute(stmt)
+            changed += result.rowcount
+            if result.rowcount:
+                changed_timeframes.update(c["timeframe"] for c in batch)
+        for timeframe in sorted(changed_timeframes):
+            revision_stmt = insert_fn(CandleRevision).values(timeframe=timeframe, revision=1)
+            await session.execute(revision_stmt.on_conflict_do_update(
+                index_elements=["timeframe"], set_={"revision": CandleRevision.revision + 1}))
+            await session.execute(delete(StrategyCache).where(StrategyCache.timeframe == timeframe))
         await session.commit()
-    return len(candles)
+    return changed
 
 
 async def get_latest_candle_timestamps(timeframe: str) -> dict[str, datetime]:
@@ -121,19 +135,26 @@ async def get_all_active_instruments() -> list[dict[str, Any]]:
 
 async def load_candles_polars(timeframe: str, min_candles: int = 200) -> pl.DataFrame:
     """Load time-series candles directly into a Polars DataFrame for fast vectorized scanning."""
+    if not 1 <= min_candles <= 10000:
+        raise ValueError("Candle window must be between 1 and 10000")
     async with async_session_factory() as session:
+        ranked = select(
+            MarketCandle,
+            func.row_number().over(partition_by=MarketCandle.instrument_key,
+                order_by=MarketCandle.timestamp.desc()).label("position")
+        ).where(MarketCandle.timeframe == timeframe).subquery()
         stmt = (
             select(
-                MarketCandle.instrument_key,
-                MarketCandle.timestamp,
-                MarketCandle.open,
-                MarketCandle.high,
-                MarketCandle.low,
-                MarketCandle.close,
-                MarketCandle.volume,
+                ranked.c.instrument_key,
+                ranked.c.timestamp,
+                ranked.c.open,
+                ranked.c.high,
+                ranked.c.low,
+                ranked.c.close,
+                ranked.c.volume,
             )
-            .where(MarketCandle.timeframe == timeframe)
-            .order_by(MarketCandle.instrument_key, MarketCandle.timestamp.asc())
+            .where(ranked.c.position <= min_candles)
+            .order_by(ranked.c.instrument_key, ranked.c.timestamp.asc())
         )
         result = await session.execute(stmt)
         rows = result.fetchall()
@@ -223,3 +244,9 @@ async def save_strategy_result_cache(
         )
         await session.execute(stmt)
         await session.commit()
+
+
+async def get_candle_revision(timeframe: str) -> int:
+    async with async_session_factory() as session:
+        return (await session.scalar(select(CandleRevision.revision).where(
+            CandleRevision.timeframe == timeframe))) or 0

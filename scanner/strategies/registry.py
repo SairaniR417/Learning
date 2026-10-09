@@ -7,6 +7,7 @@ from typing import Any
 
 from database.candle_repo import (
     get_all_active_instruments,
+    get_candle_revision,
     get_cached_strategy_result,
     load_candles_polars,
     save_strategy_result_cache,
@@ -66,7 +67,19 @@ class StrategyRegistry:
         if params:
             resolved_params.update(params)
 
-        cache_key = self._generate_cache_key(strategy_id, timeframe, resolved_params)
+        for parameter in strategy.metadata.parameters:
+            value = resolved_params[parameter.name]
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"Invalid parameter: {parameter.name}")
+            if parameter.type == "int" and not isinstance(value, int):
+                raise ValueError(f"Expected integer: {parameter.name}")
+            if not (parameter.min_value <= value <= parameter.max_value):
+                raise ValueError(f"Parameter outside allowed range: {parameter.name}")
+        if set(resolved_params) - {p.name for p in strategy.metadata.parameters}:
+            raise ValueError("Unknown strategy parameter")
+        revision = await get_candle_revision(timeframe)
+        cache_key = self._generate_cache_key(strategy_id, timeframe, resolved_params) + f":v{revision}"
+
 
         # 1. Check shared cache
         if not bypass_cache:
@@ -79,13 +92,13 @@ class StrategyRegistry:
         instruments_map = {inst["key"]: inst for inst in instruments}
 
         # 3. Load vectorized candles into Polars DataFrame
-        df = await load_candles_polars(timeframe, min_candles=strategy.metadata.min_candles)
+        df = await load_candles_polars(timeframe, min_candles=max(strategy.metadata.min_candles, *(int(v) for v in resolved_params.values())) * 10)
 
         # 4. Run strategy calculation in memory
         results = strategy.run(df, instruments_map, resolved_params)
 
         # 5. Compute distinct symbols analyzed
-        total_scanned = df["instrument_key"].n_unique() if not df.is_empty() else len(instruments)
+        total_scanned = df["instrument_key"].n_unique() if not df.is_empty() else 0
 
         # 6. Save to cache
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=cache_ttl_minutes)
