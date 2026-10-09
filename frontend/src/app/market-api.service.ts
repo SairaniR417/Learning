@@ -52,9 +52,9 @@ export interface DrishtiChatResponse { answer: string; sources: DrishtiChatSourc
 
 export interface EmaScannerResult {
   symbol: string; instrumentKey: string; exchange: string; timeframe: string;
-  close: number | null; ema9: number | null; ema20: number | null; ema50: number | null; ema200: number | null;
-  status: DrishtiAlignmentStatus; bullishAlignment: boolean; alignedSince: string | null;
-  transitionTimestamp: string | null; candlesAnalyzed: number;
+  close: number; ema9: number; ema20: number; sma50: number; sma200: number;
+  status: 'ALIGNED' | 'NEWLY_ALIGNED'; matches: boolean; matchedSince: string;
+  candlesAnalyzed: number;
 }
 
 export interface EmaScannerResponse {

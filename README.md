@@ -39,6 +39,8 @@ Upstox V3 historical data provides minute/hour candles from January 2022 and dai
 
 Choose a cash equity or MCX futures market, search an instrument after connecting Upstox, and its history opens in a focused full-screen chart. The chart starts with EMA 9, 20, 50, and 200 overlays. The status panel checks `close > EMA 9 > EMA 20 > EMA 50 > EMA 200`, marks a newly aligned bullish entry, and reports bearish, mixed, or insufficient-history states. Use at least 200 candles for a complete EMA 200 setup. The default instrument is Nifty 50, loaded from Upstox after connection.
 
+Use the NSE scanner's **Scan NSE equities** button to scan the full NSE cash-equity universe for the latest candle close above EMA 9, EMA 20, SMA 50, and SMA 200. The scan displays matching symbols, each moving-average value, the close, and when the condition first appeared in the selected history. This scanner rule does not require the averages to be in bullish order.
+
 DRISHTI chat answers general questions through OpenAI's Responses API and can search the web for current information. Asking to analyze the selected instrument continues to use the deterministic EMA endpoint.
 
 

@@ -1,8 +1,8 @@
 <section class="scanner-page" aria-labelledby="scanner-title">
   <header class="scanner-heading">
-    <div><span class="scanner-eyebrow">NSE EQUITY UNIVERSE</span><h1 id="scanner-title">EMA alignment scanner</h1>
-      <p>Find stocks where price is above EMA 9, 20, 50 and 200, with the averages in bullish order.</p></div>
-    <span class="strategy-chip">EMA 9 &gt; 20 &gt; 50 &gt; 200</span>
+    <div><span class="scanner-eyebrow">NSE EQUITY UNIVERSE</span><h1 id="scanner-title">Moving average scanner</h1>
+      <p>Find stocks whose latest candle closes above EMA 9, EMA 20, SMA 50 and SMA 200.</p></div>
+    <span class="strategy-chip">CLOSE &gt; EMA 9, EMA 20, SMA 50, SMA 200</span>
   </header>
 
   <section class="universe-section" aria-labelledby="universe-title">
@@ -36,29 +36,29 @@
   <ng-container *ngIf="response as data">
     <section class="scan-summary" aria-label="Scan summary">
       <div><span>SCANNED</span><strong>{{ data.scanned | number }}</strong></div>
-      <div><span>ALIGNED</span><strong class="matched-count">{{ data.matched | number }}</strong></div>
+      <div><span>MATCHED</span><strong class="matched-count">{{ data.matched | number }}</strong></div>
       <div><span>TIMEFRAME</span><strong>{{ selectedTimeframe.label }}</strong></div>
       <div><span>DATA ERRORS</span><strong>{{ data.errors.length | number }}</strong></div>
     </section>
 
     <section class="results-section" aria-labelledby="results-title">
-      <header class="results-heading"><div><h2 id="results-title">Bullish alignments</h2><p>Newly aligned stocks appear first.</p></div><span>{{ data.results.length }} results</span></header>
+      <header class="results-heading"><div><h2 id="results-title">Matching stocks</h2><p>New matches appear first.</p></div><span>{{ data.results.length }} results</span></header>
       <div class="table-scroll" *ngIf="data.results.length; else noMatches"><table>
-        <thead><tr><th>SYMBOL</th><th>STATUS</th><th>PRICE</th><th>EMA 9</th><th>EMA 20</th><th>EMA 50</th><th>EMA 200</th><th>ALIGNED SINCE</th></tr></thead>
+        <thead><tr><th>SYMBOL</th><th>STATUS</th><th>CLOSE</th><th>EMA 9</th><th>EMA 20</th><th>SMA 50</th><th>SMA 200</th><th>MATCHED SINCE</th></tr></thead>
         <tbody><tr *ngFor="let stock of data.results">
           <td><strong>{{ stock.symbol }}</strong><small>{{ stock.exchange }}</small></td>
-          <td><span class="status-pill" [class.new-status]="stock.status === 'NEWLY_ALIGNED'">{{ stock.status === 'NEWLY_ALIGNED' ? 'NEW' : 'ALIGNED' }}</span></td>
-          <td>{{ formatPrice(stock.close) }}</td><td>{{ formatPrice(stock.ema9) }}</td><td>{{ formatPrice(stock.ema20) }}</td><td>{{ formatPrice(stock.ema50) }}</td><td>{{ formatPrice(stock.ema200) }}</td>
-          <td>{{ stock.alignedSince ? (stock.alignedSince | date:'mediumDate') : '—' }}</td>
+          <td><span class="status-pill" [class.new-status]="stock.status === 'NEWLY_ALIGNED'">{{ stock.status === 'NEWLY_ALIGNED' ? 'NEW' : 'MATCH' }}</span></td>
+          <td>{{ formatPrice(stock.close) }}</td><td>{{ formatPrice(stock.ema9) }}</td><td>{{ formatPrice(stock.ema20) }}</td><td>{{ formatPrice(stock.sma50) }}</td><td>{{ formatPrice(stock.sma200) }}</td>
+          <td>{{ stock.matchedSince | date:'mediumDate' }}</td>
         </tr></tbody>
       </table></div>
-      <ng-template #noMatches><div class="empty-results"><strong>No current EMA alignments</strong><p>No stocks met the complete bullish alignment in the latest candle for this timeframe.</p></div></ng-template>
+      <ng-template #noMatches><div class="empty-results"><strong>No matching stocks</strong><p>No stocks closed above all four moving averages in the latest candle for this timeframe.</p></div></ng-template>
     </section>
 
     <details class="scan-errors" *ngIf="data.errors.length"><summary>{{ data.errors.length }} instrument history errors</summary><ul><li *ngFor="let item of data.errors"><strong>{{ item.symbol }}</strong><span>{{ item.error }}</span></li></ul></details>
   </ng-container>
 
   <section class="scanner-empty" *ngIf="!hasScanned && !loading">
-    <span class="empty-icon">⌕</span><h2>Scan the NSE market</h2><p>Choose a timeframe and date range, then scan for stocks meeting the EMA alignment strategy.</p>
+    <span class="empty-icon">⌕</span><h2>Scan the NSE market</h2><p>Choose a timeframe and date range, then find stocks closing above EMA 9, EMA 20, SMA 50 and SMA 200.</p>
   </section>
 </section>
