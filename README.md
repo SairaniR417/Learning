@@ -1,7 +1,4 @@
-eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI4Q0JGN0YiLCJqdGkiOiI2YWMzYmUyODc3YjdjMTI5OTk5MDNkNmUiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlzRXh0ZW5kZWQiOnRydWUsImlhdCI6MTc5MTIxMzA5NiwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxODIyNzczNjAwfQ.c0zXYeqOABiRA-f7wJzBumLySdnOPxgZndrpoAtdxq4
- 
- 
- # Market Desk
+# Market Desk
 
 A personal market dashboard built with Angular and FastAPI. Upstox supplies live LTP quotes and historical NSE candles. API secrets and access tokens stay on the Python server.
 
@@ -47,4 +44,7 @@ DRISHTI chat answers general questions through OpenAI's Responses API and can se
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8000 
+
+.venv/Scripts/uvicorn main:app --reload --port 8000
+

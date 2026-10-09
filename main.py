@@ -6,19 +6,30 @@ from urllib.parse import urlencode
 from urllib.parse import quote as url_quote
 from typing import Literal
 
+from contextlib import asynccontextmanager
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
+from database.connection import init_db
 from drishti.assistant import AssistantError, DEFAULT_MODEL, answer_question
 from drishti.ema_alignment import EmaAlignmentResponse, analyze_ema_alignment
 from scanner.ema_scanner import scan_ema_universe
+from scanner.strategies import strategy_registry
 from scanner.universe import get_nse_equity_universe
+from services.market_sync import MarketSyncService, map_timeframe
 
 load_dotenv()
 
-app = FastAPI(title="Market Desk API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
+
+
+app = FastAPI(title="Market Desk API", lifespan=lifespan)
 openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
 drishti_openai_model = os.getenv("DRISHTI_OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
 client_id = os.getenv("UPSTOX_CLIENT_ID", "")
@@ -321,6 +332,70 @@ async def drishti_ema_alignment(
         raise HTTPException(status_code=502, detail="Historical data contained malformed candle values.") from exc
 
 
+market_sync_service = MarketSyncService(require_token)
+
+
+class StrategyScanRequest(BaseModel):
+    strategy_id: str
+    timeframe: str = "1d"
+    params: dict[str, Any] = Field(default_factory=dict)
+    bypass_cache: bool = False
+
+
+class CandleSyncRequest(BaseModel):
+    unit: str = "days"
+    interval: int = 1
+    lookback_days: int = 730
+    concurrency: int = 15
+
+
+@app.get("/api/strategies")
+async def get_available_strategies():
+    """List all registered quantitative strategies with their configurable parameters."""
+    return {"strategies": strategy_registry.list_strategies()}
+
+
+@app.post("/api/strategies/scan")
+async def scan_strategy(request: StrategyScanRequest):
+    """Execute any strategy against the centralized multi-timeframe database with shared result caching."""
+    require_token()
+    try:
+        return await strategy_registry.execute_scan(
+            request.strategy_id,
+            timeframe=request.timeframe,
+            params=request.params,
+            bypass_cache=request.bypass_cache,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/sync/universe")
+async def sync_universe():
+    """Sync NSE cash equity universe master into central database."""
+    require_token()
+    count = await market_sync_service.sync_universe()
+    return {"status": "success", "instruments_synced": count}
+
+
+@app.post("/api/sync/candles")
+async def sync_candles(request: CandleSyncRequest, background_tasks: BackgroundTasks):
+    """Trigger delta synchronization of market candles in background."""
+    require_token()
+    # Run sync in background so HTTP response is returned immediately
+    background_tasks.add_task(
+        market_sync_service.sync_candles_for_universe,
+        unit=request.unit,
+        interval=request.interval,
+        lookback_days=request.lookback_days,
+        concurrency=request.concurrency,
+    )
+    return {
+        "status": "sync_started",
+        "message": f"Candle delta synchronization started for {request.unit}:{request.interval} in background.",
+    }
+
+
 @app.get("/api/scanner/universe")
 async def scanner_universe():
     """Return the NSE cash-equity list from the cached Upstox instrument master."""
@@ -336,28 +411,31 @@ async def scanner_ema_alignment(
     from_date: date = Query(alias="from"),
     to_date: date = Query(alias="to"),
 ):
-    """Scan NSE cash equities for bullish EMA 9/20/50/200 alignment."""
+    """Scan NSE cash equities for bullish EMA 9/20/50/200 alignment with instant cached DB execution."""
     require_token()
-    if unit not in HISTORICAL_INTERVALS or interval not in HISTORICAL_INTERVALS[unit]:
-        raise HTTPException(status_code=400, detail="Unsupported historical candle interval.")
-    if from_date > to_date:
-        raise HTTPException(status_code=400, detail="The start date must be on or before the end date.")
-    if to_date > datetime.now(timezone.utc).date():
-        raise HTTPException(status_code=400, detail="The end date cannot be in the future.")
-    earliest = date(2022, 1, 1) if unit in {"minutes", "hours"} else date(2000, 1, 1)
-    if from_date < earliest:
-        raise HTTPException(status_code=400, detail=f"{unit.title()} data is available from {earliest.isoformat()}.")
-    if unit == "minutes" and interval <= 15:
-        max_days = 31
-    elif unit in {"minutes", "hours"}:
-        max_days = 92
-    elif unit == "days":
-        max_days = 3653
-    else:
-        max_days = None
-    if max_days is not None and (to_date - from_date).days > max_days:
-        raise HTTPException(status_code=400, detail=f"The selected interval supports a maximum range of about {max_days} days.")
+    timeframe = map_timeframe(unit, interval)
 
+    # Fast path: Vectorized scan from local/shared database with caching
+    try:
+        scan_output = await strategy_registry.execute_scan(
+            "ema_sma_alignment",
+            timeframe=timeframe,
+            bypass_cache=False,
+        )
+        if scan_output.get("results") or scan_output.get("total_scanned", 0) > 0:
+            return {
+                "strategy": "CLOSE_ABOVE_EMA9_EMA20_SMA50_SMA200",
+                "timeframe": timeframe,
+                "scanned": scan_output.get("total_scanned", 0),
+                "matched": scan_output.get("total_matched", 0),
+                "results": scan_output.get("results", []),
+                "cached": scan_output.get("cached", False),
+                "errors": [],
+            }
+    except Exception as exc:
+        print(f"Fast vectorized scan skipped to fallback: {exc}")
+
+    # Fallback to direct Upstox scan if database has not been seeded yet
     instruments = await get_nse_equity_universe()
 
     async def fetch_history(key: str, candle_unit: str, candle_interval: int, start: date, end: date):
