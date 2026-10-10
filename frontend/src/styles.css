@@ -1,6 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-:root { color-scheme: light; font-family: 'Manrope', 'Segoe UI', sans-serif; color: #20241f; background: #f1f1ed; font-size: 13px; }
-* { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; }
-button, input { font: inherit; }
-[hidden] { display: none !important; }
+﻿@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+:root { color-scheme: dark; font-family:'Manrope','Segoe UI',sans-serif; color:#eceeed; background:#050606; font-size:13px; }
+* { box-sizing:border-box; }
+body { margin:0; min-width:320px; background:#050606; }
+button,input,select { font:inherit; }
+[hidden] { display:none!important; }
+/* Scanner controls use the same dark terminal palette as the dashboard. */
+.scanner-page { --ink:#e8ecea!important; --muted:#929a96!important; --line:#2a2e2d!important; --surface:#0a0c0c!important; --canvas:#050606!important; --orange:#35c99d!important; color:#e8ecea!important; }
+.scanner-heading h1,.universe-heading h2,.results-heading h2,.scanner-empty h2,.empty-results strong { color:#edf0ee!important; }
+.scanner-heading p,.universe-heading p,.results-heading p,.scan-note,.universe-toolbar>span,.universe-pagination,.scanner-empty p,.empty-results p { color:#929a96!important; }
+.strategy-chip,.scan-progress,.scanner-error,.scan-errors,.scanner-empty,.scan-summary>div,.universe-section,.results-section,.scanner-controls,.scan-progress,.scan-errors { background:#0a0c0c!important; border-color:#2a2e2d!important; box-shadow:none!important; }
+.universe-toolbar,.universe-pagination,th { background:#111414!important; border-color:#292d2c!important; }
+.universe-toolbar input,.scanner-controls input,.scanner-controls select,.universe-pagination button { background:#101313!important; color:#e3e7e5!important; border-color:#343938!important; color-scheme:dark; }
+td { color:#d5dad7!important; border-color:#242827!important; } tbody tr:nth-child(even) { background:#0d0f0f!important; } tbody tr:hover { background:#15201c!important; }
+.status-pill { background:#123629!important;color:#52d4a6!important; }.status-pill.new-status { background:#362a17!important;color:#e4b65f!important; }
+.scanner-controls label>span,.scan-summary span { color:#929a96!important; }.scan-summary strong { color:#edf0ee!important; }.scan-summary .matched-count { color:#45d0a7!important; }
+.scan-button { background:#1d7658!important;border-color:#238461!important; }.strategy-chip { color:#78dabb!important; }
+.results-toolbar { padding:10px 15px; border-bottom:1px solid #292d2c; background:#101313; }
+.results-toolbar input { width:min(100%,460px); height:36px; padding:0 11px; border:1px solid #343938; border-radius:4px; outline:0; background:#0a0c0c; color:#e3e7e5; font:inherit; }
+.results-toolbar input:focus { border-color:#35c99d; box-shadow:0 0 0 2px #35c99d22; }
+/* Keep result symbols high contrast on the dark scan table. */
+.scanner-page td:first-child strong { color:#f2f5f3!important; font-weight:700; }
+.scanner-page td:first-child small { color:#929a96!important; }
+.results-toolbar { font-size:0; }
+.results-toolbar input { font-size:12px; }

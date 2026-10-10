@@ -1,6 +1,8 @@
-import os
+﻿import os
 import re
 import secrets
+import base64
+import json
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode
 from urllib.parse import quote as url_quote
@@ -18,7 +20,9 @@ from drishti.ema_alignment import EmaAlignmentResponse, analyze_ema_alignment
 from scanner.ema_scanner import scan_ema_universe
 from scanner.strategies import strategy_registry
 from scanner.universe import get_nse_equity_universe
+from scanner.commodity_universe import get_mcx_front_month_universe
 from services.market_sync import MarketSyncService, map_timeframe
+from database.candle_repo import create_ingestion_job, get_ingestion_job, get_all_active_instruments, load_recent_candles_polars
 
 load_dotenv()
 
@@ -48,8 +52,6 @@ HISTORICAL_INTERVALS = {
     "weeks": {1},
     "months": {1},
 }
-
-
 class DrishtiChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str = Field(min_length=1, max_length=4000)
@@ -74,10 +76,24 @@ def next_token_expiry() -> datetime:
     return expiry.astimezone(timezone.utc)
 
 
-# A manually generated token stays on the API server and expires daily.
+def token_expiry(token: str) -> datetime:
+    """Use the JWT's declared expiry when present; keep the legacy daily fallback."""
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(payload.encode("ascii")))
+        expiry = datetime.fromtimestamp(int(claims["exp"]), timezone.utc)
+        if expiry > datetime.now(timezone.utc):
+            return expiry
+    except (IndexError, KeyError, TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError):
+        pass
+    return next_token_expiry()
+
+
+# Analytics tokens can stay valid for a year; daily OAuth tokens retain their JWT expiry too.
 if configured_access_token:
     access_token = configured_access_token
-    access_token_expires_at = next_token_expiry()
+    access_token_expires_at = token_expiry(configured_access_token)
 
 
 def require_token() -> str:
@@ -136,7 +152,7 @@ async def oauth_callback(code: str | None = None, state: str | None = None, erro
         if not result.get("access_token"):
             raise HTTPException(status_code=502, detail="Upstox did not return an access token.")
         access_token = result["access_token"]
-        access_token_expires_at = next_token_expiry()
+        access_token_expires_at = token_expiry(access_token)
         return RedirectResponse(f"{frontend_origin}/?auth=connected")
     except (HTTPException, httpx.HTTPError) as exc:
         print(f"Upstox token exchange failed: {exc}")
@@ -213,6 +229,74 @@ async def quotes(keys: str = Query(min_length=1)):
         params={"instrument_key": ",".join(instrument_keys)},
     )
     return {"data": result.get("data", {}), "receivedAt": int(datetime.now(timezone.utc).timestamp() * 1000)}
+
+
+@app.get("/api/market/snapshot")
+async def market_snapshot(market: Literal["equities", "commodities"] = Query(default="equities")):
+    """Return live NSE equity or MCX commodity quotes for the dashboard."""
+    token = require_token()
+    if market == "equities":
+        instruments = sorted(await get_nse_equity_universe(), key=lambda item: item["symbol"])
+        chart_key = "NSE_INDEX|Nifty 50"
+        chart_symbol = "NIFTY 50"
+        market_name = "NSE equities"
+    else:
+        instruments = await get_mcx_front_month_universe()
+        chart_instrument = next((item for item in instruments if item["symbol"] == "GOLD"), instruments[0])
+        chart_key = chart_instrument["key"]
+        chart_symbol = chart_instrument["symbol"]
+        market_name = "MCX commodities"
+
+    if not instruments:
+        return {"market": market, "name": market_name, "assets": [], "receivedAt": int(datetime.now(timezone.utc).timestamp() * 1000)}
+
+    quotes_by_key = {}
+    # Upstox's full quote endpoint accepts batches of up to 500 instruments.
+    for offset in range(0, len(instruments), 500):
+        batch = instruments[offset:offset + 500]
+        result = await api_json_request(
+            "https://api.upstox.com/v3/market-quote/quotes",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"instrument_key": ",".join(item["key"] for item in batch)},
+        )
+        for quote in result.get("data", {}).values():
+            instrument_token = quote.get("instrument_token")
+            if instrument_token:
+                quotes_by_key[instrument_token] = quote
+
+    assets = []
+    for instrument in instruments:
+        quote = quotes_by_key.get(instrument["key"])
+        if not quote:
+            continue
+        price = quote.get("last_price")
+        previous_close = quote.get("prev_close_price")
+        if not isinstance(price, (int, float)) or not isinstance(previous_close, (int, float)) or previous_close <= 0:
+            continue
+        change = price - previous_close
+        assets.append({
+            "key": instrument["key"],
+            "symbol": instrument["symbol"],
+            "name": instrument["name"],
+            "exchange": instrument["exchange"],
+            "expiry": instrument.get("expiry"),
+            "price": price,
+            "previousClose": previous_close,
+            "change": change,
+            "changePct": change / previous_close * 100,
+            "volume": quote.get("volume") or 0,
+        })
+
+    if not assets:
+        raise HTTPException(status_code=502, detail="Upstox returned no market quotes for this market.")
+    return {
+        "market": market,
+        "name": market_name,
+        "chartKey": chart_key,
+        "chartSymbol": chart_symbol,
+        "assets": assets,
+        "receivedAt": int(datetime.now(timezone.utc).timestamp() * 1000),
+    }
 
 
 @app.post("/api/logout")
@@ -345,7 +429,7 @@ class StrategyScanRequest(BaseModel):
 class CandleSyncRequest(BaseModel):
     unit: Literal["minutes", "hours", "days"] = "days"
     interval: int = Field(default=1, ge=1, le=300)
-    lookback_days: int = Field(default=730, ge=1, le=3653)
+    lookback_days: int = Field(default=730, ge=1, le=10000)
     concurrency: int = Field(default=5, ge=1, le=15)
 
 
@@ -353,6 +437,25 @@ class CandleSyncRequest(BaseModel):
 async def get_available_strategies():
     """List all registered quantitative strategies with their configurable parameters."""
     return {"strategies": strategy_registry.list_strategies()}
+
+
+@app.get("/api/market/ema-indicators")
+async def market_ema_indicators(timeframe: str = Query(default="1d")):
+    """Return EMA 9/20 and SMA 50/200 for every NSE instrument with enough stored candles."""
+    require_token()
+    if timeframe != "1d":
+        raise HTTPException(status_code=400, detail="EMA indicators are currently available for daily candles only.")
+    strategy = strategy_registry.get("ema_sma_alignment")
+    if strategy is None:
+        raise HTTPException(status_code=503, detail="EMA alignment strategy is unavailable.")
+    instruments = await get_all_active_instruments()
+    instruments_map = {item["key"]: item for item in instruments}
+    # A 200-candle window is enough for SMA 200 plus EMA warm-up, without
+    # loading years of history for every instrument on each live screener scan.
+    df = await load_recent_candles_polars(timeframe, per_instrument=200)
+    indicators = strategy.run(df, instruments_map, {}, include_unmatched=True, include_insufficient_history=True)
+    return {"timeframe": timeframe, "scanned": df["instrument_key"].n_unique() if not df.is_empty() else 0,
+            "indicators": indicators}
 
 
 @app.post("/api/strategies/scan")
@@ -384,19 +487,24 @@ async def sync_candles(request: CandleSyncRequest, background_tasks: BackgroundT
     require_token()
     if request.interval > {"minutes": 300, "hours": 5, "days": 1}[request.unit]:
         raise HTTPException(status_code=422, detail="Unsupported sync interval.")
-    # Run sync in background so HTTP response is returned immediately
+    timeframe = map_timeframe(request.unit, request.interval)
+    now = datetime.now(timezone.utc)
+    job_id = await create_ingestion_job(timeframe, now - timedelta(days=request.lookback_days), now)
     background_tasks.add_task(
         market_sync_service.sync_candles_for_universe,
-        unit=request.unit,
-        interval=request.interval,
-        lookback_days=request.lookback_days,
-        concurrency=request.concurrency,
+        unit=request.unit, interval=request.interval, lookback_days=request.lookback_days,
+        concurrency=request.concurrency, job_id=job_id,
     )
-    return {
-        "status": "sync_started",
-        "message": f"Candle delta synchronization started for {request.unit}:{request.interval} in background.",
-    }
+    return {"status": "sync_started", "job_id": job_id,
+            "message": f"Candle delta synchronization started for {request.unit}:{request.interval} in background."}
 
+
+@app.get("/api/sync/jobs/{job_id}")
+async def sync_job_status(job_id: int):
+    job = await get_ingestion_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Sync job not found.")
+    return job
 
 @app.get("/api/scanner/universe")
 async def scanner_universe():
@@ -458,3 +566,6 @@ async def scanner_ema_alignment(
         to_date=to_date,
         concurrency=10,
     )
+
+
+

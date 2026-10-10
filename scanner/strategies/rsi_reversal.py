@@ -36,7 +36,8 @@ class RsiStrategy(BaseStrategy):
         # Calculate price delta
         delta_df = df.with_columns(
             [
-                (pl.col("close") - pl.col("close").shift(1)).over("instrument_key").alias("diff")
+                (pl.col("close") - pl.col("close").shift(1)).over("instrument_key").alias("diff"),
+                pl.col("close").shift(1).over("instrument_key").alias("prev_close"),
             ]
         ).with_columns(
             [
@@ -75,6 +76,8 @@ class RsiStrategy(BaseStrategy):
         for row in latest_df.iter_rows(named=True):
             key = row["instrument_key"]
             meta = instruments_map.get(key, {})
+            previous_close = row["prev_close"]
+            change_pct = ((row["close"] - previous_close) / previous_close * 100) if previous_close else None
             matches.append(
                 {
                     "symbol": meta.get("symbol") or key,
@@ -82,6 +85,8 @@ class RsiStrategy(BaseStrategy):
                     "instrumentKey": key,
                     "exchange": meta.get("exchange") or "NSE",
                     "close": round(row["close"], 2),
+                    "previousClose": round(previous_close, 2) if previous_close is not None else None,
+                    "changePct": round(change_pct, 2) if change_pct is not None else None,
                     "rsi": round(row["rsi"], 2),
                     "prevRsi": round(row["prev_rsi"], 2) if row["prev_rsi"] else None,
                     "volume": row["volume"],

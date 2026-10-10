@@ -1,64 +1,93 @@
 <section class="scanner-page" aria-labelledby="scanner-title">
-  <header class="scanner-heading">
-    <div><span class="scanner-eyebrow">NSE EQUITY UNIVERSE</span><h1 id="scanner-title">Moving average scanner</h1>
-      <p>Find stocks whose latest candle closes above EMA 9, EMA 20, SMA 50 and SMA 200.</p></div>
-    <span class="strategy-chip">CLOSE &gt; EMA 9, EMA 20, SMA 50, SMA 200</span>
+  <header class="scanner-topbar">
+    <div class="scanner-brand"><span class="scanner-brand-mark">TG</span><span><strong>Market Scanner</strong><small>NSE · All listed equities</small></span></div>
+    <div class="saved-controls">
+      <select aria-label="Saved screeners" [value]="selectedSaved" (change)="loadScreener($any($event.target).value)"><option value="">My Screeners</option><option *ngFor="let saved of savedScreeners" [value]="saved.name">{{ saved.name }}</option></select>
+      <button type="button" class="quiet-button" (click)="deleteScreener()" [disabled]="!selectedSaved">Delete</button>
+    </div>
   </header>
 
-  <section class="universe-section" aria-labelledby="universe-title">
-    <header class="universe-heading"><div><h2 id="universe-title">NSE stocks</h2><p>Browse the NSE equity list. Search by symbol or company name.</p></div><span *ngIf="!universeLoading">{{ filteredStocks.length | number }} stocks</span></header>
-    <div class="universe-toolbar"><input type="search" [value]="stockSearch" (input)="searchStocks($any($event.target).value)" placeholder="Search stocks" aria-label="Search NSE stocks"><span *ngIf="universeLoading">Loading NSE stock list…</span><button type="button" *ngIf="universeError" (click)="loadStocks()">Retry</button></div>
-    <p class="universe-error" *ngIf="universeError" role="alert">{{ universeError }}</p>
-    <div class="universe-loading" *ngIf="universeLoading"><span class="progress-indicator"></span>Loading the instrument master…</div>
-    <div class="table-scroll universe-table" *ngIf="!universeLoading && !universeError && visibleStocks.length; else noStocks"><table>
-      <thead><tr><th>SYMBOL</th><th>COMPANY</th><th>EXCHANGE</th></tr></thead>
-      <tbody><tr *ngFor="let stock of visibleStocks"><td><strong>{{ stock.symbol }}</strong></td><td>{{ stock.name }}</td><td>{{ stock.exchange }}</td></tr></tbody>
-    </table></div>
-    <ng-template #noStocks><div class="universe-empty" *ngIf="!universeLoading && !universeError">No NSE stocks match this search.</div></ng-template>
-    <footer class="universe-pagination" *ngIf="!universeLoading && stockPageCount > 1"><span>{{ stockPage * stocksPerPage + 1 }}–{{ stockPageEnd }} of {{ filteredStocks.length }}</span><div><button type="button" [disabled]="stockPage === 0" (click)="changeStockPage(-1)">Previous</button><button type="button" [disabled]="stockPage + 1 >= stockPageCount" (click)="changeStockPage(1)">Next</button></div></footer>
-  </section>
+  <div class="scanner-tabs"><button class="active" type="button">{{ selectedSector === 'All sectors' ? 'NSE Stocks' : selectedSector }}</button><span class="tab-strategy">{{ isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Selected strategy' }}</span><span class="universe-count">{{ totalScanned ? (totalScanned | number) : '2,700+' }} instruments · {{ isMarketScreener ? 'Live market data' : selectedTimeframe + ' strategy results' }}</span></div>
 
-  <section class="scanner-controls" aria-label="Scan settings">
-    <label><span>TIMEFRAME</span><select [value]="timeframe" (change)="setTimeframe($any($event.target).value)"><option *ngFor="let item of timeframes" [value]="item.unit + ':' + item.interval">{{ item.label }}</option></select></label>
-    <label><span>FROM</span><input type="date" [value]="from" (change)="from = $any($event.target).value"></label>
-    <label><span>TO</span><input type="date" [value]="to" (change)="to = $any($event.target).value"></label>
-    <button type="button" class="scan-button" [disabled]="loading" (click)="scan()">{{ loading ? 'Scanning…' : 'Scan NSE equities' }}</button>
-  </section>
+  <div class="scanner-layout">
+    <aside class="factor-sidebar">
+      <header class="sidebar-heading"><div><h2>Scanner filters</h2><p>Build a screen from market factors</p></div><button class="icon-button" type="button" (click)="rules = []; selectedSector = 'All sectors'" title="Clear filters">↺</button></header>
 
-  <p class="scan-note">A scan requests candle history for each NSE equity and may take several minutes. At least 200 candles are needed to evaluate EMA 200; use a sufficiently long date range.</p>
+      <label class="control-label">STRATEGY</label>
+      <select class="wide-control strategy-select" [value]="selectedStrategy" (change)="selectStrategy($any($event.target).value)">
+        <option value="market_screener">Market Screener</option>
+        <optgroup label="Available strategies">
+          <option *ngFor="let strategy of strategies" [value]="strategy.id">{{ strategy.name }}</option>
+        </optgroup>
+        <optgroup label="Coming soon">
+          <option disabled>RSI Divergence</option>
+          <option disabled>MACD Crossover</option>
+          <option disabled>Supertrend Reversal</option>
+          <option disabled>VWAP Crossover / Rejection</option>
+          <option disabled>Narrow CPR Breakout</option>
+          <option disabled>Support / Resistance Breakout</option>
+          <option disabled>Trendline Breakout and Retest</option>
+          <option disabled>Candlestick Pattern Detection</option>
+          <option disabled>Volume Spike / Relative Volume</option>
+          <option disabled>Multi-timeframe Confirmation</option>
+        </optgroup>
+      </select>
+      <p class="strategy-description">{{ isMarketScreener ? 'Screen every NSE stock using current price, daily change and traded volume.' : activeStrategy?.description }}</p>
 
-  <section class="scan-progress" *ngIf="loading" role="status" aria-live="polite">
-    <span class="progress-indicator"></span><div><strong>Scanning the NSE universe</strong><p>Loading historical candles and checking the EMA alignment for each instrument. Keep this page open.</p></div>
-  </section>
+      <div class="strategy-params" *ngIf="!isMarketScreener && activeStrategy">
+        <label *ngFor="let param of activeStrategy.parameters"><span>{{ param.display_name }}</span><input type="number" [min]="param.min_value ?? null" [max]="param.max_value ?? null" [value]="strategyParams[param.name]" (input)="updateStrategyParam(param.name, $any($event.target).value)"></label>
+      </div>
+      <label class="control-label timeframe-label">TIMEFRAME</label>
+      <select class="wide-control" [value]="timeframe" (change)="timeframe = $any($event.target).value">
+        <option value="1d">Daily</option><option value="1w">Weekly</option><option value="1M">Monthly</option><option value="1h">1 hour</option><option value="15m">15 minutes</option>
+      </select>
+      <p class="strategy-description" *ngIf="!isMarketScreener">{{ activeStrategy?.min_candles }} candles minimum. Results use locally stored history.</p>
 
-  <div class="scanner-error" *ngIf="error" role="alert"><strong>Scan could not finish</strong><span>{{ error }}</span><a *ngIf="error.toLowerCase().includes('connect')" href="/auth/upstox">Connect Upstox</a></div>
+      <div class="factor-title"><strong>Factors</strong><span>Higher values&nbsp; · &nbsp;Important</span></div>
+      <div class="factor-row" *ngFor="let rule of rules; let i = index">
+        <div class="factor-row-title"><select aria-label="Factor" [value]="rule.field" (change)="updateRule(i, 'field', $any($event.target).value)"><option *ngFor="let factor of factors" [value]="factor.id">{{ factor.label }}</option></select><button type="button" (click)="removeFactor(i)" aria-label="Remove factor">×</button></div>
+        <div class="range-inputs"><label><small>Min</small><input type="number" [value]="rule.min" (input)="updateRule(i, 'min', $any($event.target).value)" placeholder="Any"></label><label><small>Max</small><input type="number" [value]="rule.max" (input)="updateRule(i, 'max', $any($event.target).value)" placeholder="Any"></label></div>
+        <select class="importance-select" [value]="rule.importance" (change)="updateRule(i, 'importance', $any($event.target).value)"><option>Important</option><option>Optional</option></select>
+      </div>
+      <button type="button" class="add-factor" (click)="addFactor()">＋ Add Factor</button>
 
-  <ng-container *ngIf="response as data">
-    <section class="scan-summary" aria-label="Scan summary">
-      <div><span>SCANNED</span><strong>{{ data.scanned | number }}</strong></div>
-      <div><span>MATCHED</span><strong class="matched-count">{{ data.matched | number }}</strong></div>
-      <div><span>TIMEFRAME</span><strong>{{ selectedTimeframe.label }}</strong></div>
-      <div><span>DATA ERRORS</span><strong>{{ data.errors.length | number }}</strong></div>
-    </section>
+      <label class="control-label sector-label">SECTOR</label>
+      <select class="wide-control" [value]="selectedSector" (change)="selectSector($any($event.target).value)"><option *ngFor="let sector of sectors" [value]="sector">{{ sector }}</option></select>
+      <div class="save-row"><input type="text" [value]="saveName" (input)="saveName = $any($event.target).value" placeholder="Screener name"><button type="button" (click)="saveScreener()" [disabled]="!saveName.trim()">Save</button></div>
+    </aside>
 
-    <section class="results-section" aria-labelledby="results-title">
-      <header class="results-heading"><div><h2 id="results-title">Matching stocks</h2><p>New matches appear first.</p></div><span>{{ data.results.length }} results</span></header>
-      <div class="table-scroll" *ngIf="data.results.length; else noMatches"><table>
-        <thead><tr><th>SYMBOL</th><th>STATUS</th><th>CLOSE</th><th>EMA 9</th><th>EMA 20</th><th>SMA 50</th><th>SMA 200</th><th>MATCHED SINCE</th></tr></thead>
-        <tbody><tr *ngFor="let stock of data.results">
-          <td><strong>{{ stock.symbol }}</strong><small>{{ stock.exchange }}</small></td>
-          <td><span class="status-pill" [class.new-status]="stock.status === 'NEWLY_ALIGNED'">{{ stock.status === 'NEWLY_ALIGNED' ? 'NEW' : 'MATCH' }}</span></td>
-          <td>{{ formatPrice(stock.close) }}</td><td>{{ formatPrice(stock.ema9) }}</td><td>{{ formatPrice(stock.ema20) }}</td><td>{{ formatPrice(stock.sma50) }}</td><td>{{ formatPrice(stock.sma200) }}</td>
-          <td>{{ stock.matchedSince | date:'mediumDate' }}</td>
-        </tr></tbody>
-      </table></div>
-      <ng-template #noMatches><div class="empty-results"><strong>No matching stocks</strong><p>No stocks closed above all four moving averages in the latest candle for this timeframe.</p></div></ng-template>
-    </section>
+    <main class="results-main">
+      <header class="results-toolbar">
+        <div><div class="results-title-row"><h1>{{ selectedSector !== 'All sectors' ? selectedSector : (isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Market Scanner') }}</h1><span class="live-tag"><i></i>{{ isMarketScreener ? 'LIVE SCREENER' : 'STRATEGY SCAN' }}</span></div><p>{{ isMarketScreener ? 'Apply factors to the full NSE cash equity universe.' : activeStrategy?.description }}</p></div>
+        <button class="run-scan" type="button" [disabled]="loading || loadingStrategies" (click)="scan()">{{ loading ? 'Scanning…' : '▶  Scan Stocks' }}</button>
+      </header>
 
-    <details class="scan-errors" *ngIf="data.errors.length"><summary>{{ data.errors.length }} instrument history errors</summary><ul><li *ngFor="let item of data.errors"><strong>{{ item.symbol }}</strong><span>{{ item.error }}</span></li></ul></details>
-  </ng-container>
+      <div class="results-meta" *ngIf="hasScanned"><span>Displaying <strong>{{ filteredResults.length | number }}</strong> matches of <strong>{{ totalScanned | number }}</strong> scanned</span><span>{{ isMarketScreener ? 'Generated from live Upstox quotes' : selectedTimeframe + ' · strategy results' }}</span></div>
+      <div class="progress-line" *ngIf="loading"><span></span></div>
+      <div class="scanner-error" *ngIf="error" role="alert"><strong>Scan could not finish</strong><span>{{ error }}</span><a *ngIf="error.toLowerCase().includes('connect')" href="/auth/upstox">Connect Upstox</a></div>
 
-  <section class="scanner-empty" *ngIf="!hasScanned && !loading">
-    <span class="empty-icon">⌕</span><h2>Scan the NSE market</h2><p>Choose a timeframe and date range, then find stocks closing above EMA 9, EMA 20, SMA 50 and SMA 200.</p>
-  </section>
+      <div class="table-tools" *ngIf="results.length"><span>{{ selectedSector }}</span><span class="color-rank"><small>More Preferred</small><i></i><small>Less Preferred</small></span><span class="right-panel-hint">Use the right toolbar to choose columns or filter results.</span></div>
+      <div class="grid-tools-wrap" *ngIf="results.length; else emptyResults">
+        <div class="grid-wrap" *ngIf="filteredResults.length; else noFilteredResults"><ag-grid-angular class="market-grid" [theme]="gridTheme" [rowData]="filteredResults" [columnDefs]="columnDefs" [defaultColDef]="defaultColDef" [pagination]="true" [paginationPageSize]="50" [paginationPageSizeSelector]="[25, 50, 100]" [rowHeight]="104" [suppressCellFocus]="true" (gridReady)="onGridReady($event)"></ag-grid-angular></div>
+        <ng-template #noFilteredResults><div class="empty-results"><strong>No stocks match these filters</strong><p>Change or clear a filter to see the scanned results again.</p></div></ng-template>
+        <aside class="grid-tool-panel" *ngIf="gridPanel" [attr.aria-label]="gridPanel === 'columns' ? 'Choose visible columns' : 'Filter stock results'">
+          <header><strong>{{ gridPanel === 'columns' ? 'Columns' : 'Filters' }}</strong><button type="button" (click)="gridPanel = ''" aria-label="Close panel">×</button></header>
+          <ng-container *ngIf="gridPanel === 'columns'; else filterPanel"><p class="panel-help">Choose which columns appear in the results grid.</p><label class="column-option" *ngFor="let column of gridColumns"><input type="checkbox" [checked]="column.visible" (change)="setGridColumnVisible(column, $any($event.target).checked)"><span>{{ column.label }}</span></label></ng-container>
+          <ng-template #filterPanel>
+            <p class="panel-help">Filter the current scan results.</p>
+            <label class="side-filter">Symbol or company<input type="search" [value]="rightFilters.symbol" (input)="setRightFilter('symbol', $any($event.target).value)" placeholder="Search stocks"></label>
+            <label class="side-filter">Status<select [value]="rightFilters.status" (change)="setRightFilter('status', $any($event.target).value)"><option value="">Any status</option><option *ngFor="let status of statusOptions" [value]="status.value">{{ status.label }}</option></select></label>
+            <label class="side-filter">Sector<select [value]="rightFilters.sector" (change)="setRightFilter('sector', $any($event.target).value)"><option value="">All sectors</option><option *ngFor="let sector of sectors.slice(1)" [value]="sector">{{ sector }}</option></select></label>
+            <fieldset class="range-filter"><legend>Change %</legend><input type="number" [value]="rightFilters.changeMin" (input)="setRightFilter('changeMin', $any($event.target).value)" placeholder="Min"><input type="number" [value]="rightFilters.changeMax" (input)="setRightFilter('changeMax', $any($event.target).value)" placeholder="Max"></fieldset>
+            <fieldset class="range-filter"><legend>Volume</legend><input type="number" [value]="rightFilters.volumeMin" (input)="setRightFilter('volumeMin', $any($event.target).value)" placeholder="Min"><input type="number" [value]="rightFilters.volumeMax" (input)="setRightFilter('volumeMax', $any($event.target).value)" placeholder="Max"></fieldset>
+            <fieldset class="range-filter"><legend>Last price ₹</legend><input type="number" [value]="rightFilters.priceMin" (input)="setRightFilter('priceMin', $any($event.target).value)" placeholder="Min"><input type="number" [value]="rightFilters.priceMax" (input)="setRightFilter('priceMax', $any($event.target).value)" placeholder="Max"></fieldset>
+            <button type="button" class="clear-side-filters" (click)="clearRightFilters()">Clear filters</button>
+          </ng-template>
+        </aside>
+        <nav class="grid-tool-rail" aria-label="Grid tools"><button type="button" [class.active]="gridPanel === 'columns'" (click)="toggleGridPanel('columns')" aria-label="Columns"><span>▤</span><small>Columns</small></button><button type="button" [class.active]="gridPanel === 'filters'" (click)="toggleGridPanel('filters')" aria-label="Filters"><span>▽</span><small>Filters</small></button></nav>
+      </div>
+      <ng-template #emptyResults><div class="empty-results" *ngIf="hasScanned && !loading"><strong>No matching stocks</strong><p>Try widening the factor range or changing the strategy.</p></div><div class="empty-results welcome" *ngIf="!hasScanned && !loading"><strong>Build your NSE stock screen</strong><p>Choose a strategy or add factors, then scan the entire available universe.</p></div></ng-template>
+      <details class="strategy-note" *ngIf="results.length && !isMarketScreener"><summary>Strategy scan details</summary><p>Technical strategy results come from the candles currently stored in your database. Run the daily candle sync to scan stocks with available history.</p></details>
+    </main>
+  </div>
 </section>

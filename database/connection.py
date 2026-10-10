@@ -1,6 +1,9 @@
-"""Database connection configuration and session factory."""
+﻿"""Database connection configuration and session factory."""
 
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -40,3 +43,6 @@ async def init_db():
     """Initialize database tables."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+

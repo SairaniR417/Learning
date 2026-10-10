@@ -21,6 +21,28 @@ export interface LtpQuote {
   cp?: number;
 }
 
+export interface MarketAssetQuote {
+  key: string;
+  symbol: string;
+  name: string;
+  exchange: 'NSE' | 'MCX';
+  expiry?: string;
+  price: number;
+  previousClose: number;
+  change: number;
+  changePct: number;
+  volume: number;
+}
+
+export interface MarketSnapshot {
+  market: 'equities' | 'commodities';
+  name: string;
+  chartKey: string;
+  chartSymbol: string;
+  assets: MarketAssetQuote[];
+  receivedAt: number;
+}
+
 export interface ApiStatus {
   connected: boolean;
   configured: boolean;
@@ -62,6 +84,11 @@ export interface EmaScannerResponse {
   results: EmaScannerResult[]; errors: { symbol: string; error: string }[];
 }
 
+export interface ScannerStrategyParameter { name: string; display_name: string; type: 'int' | 'float' | 'bool' | 'str'; default: number | string | boolean; min_value?: number | null; max_value?: number | null; description?: string; }
+export interface ScannerStrategy { id: string; name: string; category: string; description: string; default_timeframe: string; min_candles: number; parameters: ScannerStrategyParameter[]; }
+export interface StrategyScanResponse { strategy_id: string; strategy_name: string; timeframe: string; total_scanned: number; total_matched: number; scanned_at: string; results: Record<string, unknown>[]; cached: boolean; }
+export interface MarketEmaIndicator { instrumentKey: string; symbol: string; name: string; ema9: number | null; ema20: number | null; sma50: number | null; sma200: number | null; close: number; previousClose: number | null; changePct: number | null; volume: number; status: string; historySufficient: boolean; }
+
 export interface CorporateAction {
   name: string;
   expiry_date?: string;
@@ -90,6 +117,14 @@ export class MarketApiService {
     });
   }
 
+  marketSnapshot(market: 'equities' | 'commodities'): Observable<MarketSnapshot> {
+    return this.http.get<MarketSnapshot>('/api/market/snapshot', { params: { market } });
+  }
+
+  marketEmaIndicators(timeframe = '1d'): Observable<{ timeframe: string; scanned: number; indicators: MarketEmaIndicator[] }> {
+    return this.http.get<{ timeframe: string; scanned: number; indicators: MarketEmaIndicator[] }>('/api/market/ema-indicators', { params: { timeframe } });
+  }
+
   search(query: string, market: 'cash' | 'commodities' = 'cash'): Observable<{ instruments: Instrument[] }> {
     return this.http.get<{ instruments: Instrument[] }>('/api/instruments', { params: { q: query, market } });
   }
@@ -115,6 +150,14 @@ export class MarketApiService {
     return this.http.get<EmaScannerResponse>('/api/scanner/ema', {
       params: { unit, interval, from, to }
     });
+  }
+
+  scannerStrategies(): Observable<{ strategies: ScannerStrategy[] }> {
+    return this.http.get<{ strategies: ScannerStrategy[] }>('/api/strategies');
+  }
+
+  scanStrategy(strategyId: string, timeframe: string, params: Record<string, number | string | boolean> = {}, bypassCache = false): Observable<StrategyScanResponse> {
+    return this.http.post<StrategyScanResponse>('/api/strategies/scan', { strategy_id: strategyId, timeframe, params, bypass_cache: bypassCache });
   }
 
   nseEquityUniverse(): Observable<{ count: number; stocks: Instrument[] }> {

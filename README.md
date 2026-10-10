@@ -1,4 +1,4 @@
-# Market Desk
+﻿# Market Desk
 
 A personal market dashboard built with Angular and FastAPI. Upstox supplies live LTP quotes and historical NSE candles. API secrets and access tokens stay on the Python server.
 
@@ -95,3 +95,22 @@ to backtesting needs. Do not discard minute history before defining that require
 
 Provider references: [historical limits](https://upstox.com/developer/api-documentation/v3/get-historical-candle-data/)
 and [intraday candles](https://upstox.com/developer/api-documentation/v3/get-intra-day-candle-data/).
+
+## PostgreSQL historical storage
+
+The API can store Upstox OHLCV history in the PostgreSQL `traders_gita` database. The SQLAlchemy mappings use the existing `instruments`, `candles`, `ingestion_jobs`, and `data_coverage` tables. On startup, the API also creates its scan cache and candle revision support tables when missing.
+
+1. Install the PostgreSQL driver after installing the Python requirements: `python -m pip install -r requirements.txt`.
+2. Add a connection string to the project `.env` (edit the example; do not commit your password):
+
+   ```dotenv
+   DATABASE_URL=postgresql+asyncpg://postgres:YOUR_PASSWORD@localhost:5432/traders_gita
+   ```
+
+3. Restart the API and connect Upstox. In `http://localhost:8000/docs`, call `POST /api/sync/universe` once to save the NSE equity instrument master.
+4. Call `POST /api/sync/candles` with `{"unit":"days","interval":1,"lookback_days":10000,"concurrency":5}` to backfill available daily history from January 2000 for active NSE equities. The response includes a `job_id`; poll `GET /api/sync/jobs/{job_id}` for `pending`, `running`, `complete`, `partial`, or `failed` status.
+5. Check stored ranges with `SELECT i.symbol, c.timeframe, c.earliest_candle, c.latest_candle FROM data_coverage c JOIN instruments i ON i.id=c.instrument_id ORDER BY i.symbol;` in psql.
+
+A full-universe backfill makes many provider requests and can take a long time. The API uses bounded concurrency; provider throttling or per-symbol errors can leave a job `partial`. Repeat the sync to retry from recent stored candles. Daily bars are the recommended first backfill; minute data uses a much shorter provider history window and creates substantially more data. Upstox authorization, data availability, and provider rate limits apply. Background jobs currently run inside the API process and are not durable across a server restart.
+
+

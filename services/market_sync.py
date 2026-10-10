@@ -1,6 +1,7 @@
-"""Centralized Market Data Ingestion and Delta Synchronization Engine."""
+﻿"""Centralized Market Data Ingestion and Delta Synchronization Engine."""
 
 import asyncio
+import time
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Sequence
 from urllib.parse import quote as url_quote
@@ -11,6 +12,8 @@ from database.candle_repo import (
     get_latest_candle_timestamps,
     upsert_candles,
     upsert_instruments,
+    upsert_data_coverage,
+    update_ingestion_job,
 )
 from scanner.universe import get_nse_equity_universe
 
@@ -48,7 +51,18 @@ class MarketSyncService:
     def __init__(self, get_token_fn: Callable[[], str]):
         self.get_token = get_token_fn
         self._sync_lock = asyncio.Lock()
+        self._request_lock = asyncio.Lock()
+        self._last_request_at = 0.0
 
+    async def _rate_limited_get(self, client: httpx.AsyncClient, url: str, headers: dict[str, str]):
+        # Keep below Upstox's combined historical-data quota of 2,000 calls per 30 minutes.
+        async with self._request_lock:
+            wait = 1.05 - (time.monotonic() - self._last_request_at)
+            if wait > 0:
+                await asyncio.sleep(wait)
+            response = await client.get(url, headers=headers)
+            self._last_request_at = time.monotonic()
+            return response
     async def sync_universe(self) -> int:
         """Fetch daily master and synchronize instruments table."""
         universe = await get_nse_equity_universe()
@@ -76,15 +90,18 @@ class MarketSyncService:
         lookback_days: int = 730,  # Default 2 years for 1d
         concurrency: int = 15,
         target_instruments: Sequence[dict[str, Any]] | None = None,
+        job_id: int | None = None,
     ) -> dict[str, Any]:
         """Delta-sync historical and recent candles for all active universe instruments."""
         if unit not in {"minutes", "hours", "days"} or not (1 <= interval <= {"minutes": 300, "hours": 5, "days": 1}[unit]):
             raise ValueError("Unsupported sync timeframe")
-        if not 1 <= concurrency <= 15 or not 1 <= lookback_days <= 3653:
+        if not 1 <= concurrency <= 15 or not 1 <= lookback_days <= 10000:
             raise ValueError("Invalid concurrency or lookback")
         async with self._sync_lock:
             token = self.get_token()
             timeframe = map_timeframe(unit, interval)
+            if job_id is not None:
+                await update_ingestion_job(job_id, 'running')
             today = datetime.now(INDIA).date()
             default_start_date = today - timedelta(days=lookback_days)
 
@@ -121,7 +138,7 @@ class MarketSyncService:
                     async with semaphore:
                         try:
                             for url in urls:
-                                response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+                                response = await self._rate_limited_get(client, url, {"Authorization": f"Bearer {token}"})
                                 response.raise_for_status()
                                 payload = response.json()
                                 if payload.get("status") != "success":
@@ -136,11 +153,20 @@ class MarketSyncService:
                                         "timestamp": ts, "open": float(row[1]), "high": float(row[2]),
                                         "low": float(row[3]), "close": float(row[4]), "volume": int(row[5])})
                                 stats["candles_changed"] += await upsert_candles(records)
+                                await upsert_data_coverage(key, timeframe, [item["timestamp"] for item in records])
                             stats["synced"] += 1
                         except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
                             stats["failed"] += 1
                             errors.append({"instrument_key": key, "error": type(exc).__name__})
                 for offset in range(0, len(instruments), 50):
                     await asyncio.gather(*(sync_one(item) for item in instruments[offset:offset + 50]))
+            final_status = "complete" if not errors else ("partial" if stats["synced"] else "failed")
+            if job_id is not None:
+                summary = "; ".join(item["instrument_key"] + ": " + item["error"] for item in errors[:20]) or None
+                await update_ingestion_job(job_id, final_status, summary)
             return {"timeframe": timeframe, "stats": stats, "errors": errors,
                     "completed_at": datetime.now(timezone.utc).isoformat()}
+
+
+
+

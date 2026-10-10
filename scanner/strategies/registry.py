@@ -9,11 +9,13 @@ from database.candle_repo import (
     get_all_active_instruments,
     get_candle_revision,
     get_cached_strategy_result,
-    load_candles_polars,
+    load_recent_candles_polars,
     save_strategy_result_cache,
 )
 from scanner.strategies.base import BaseStrategy
 from scanner.strategies.ema_alignment import EmaAlignmentStrategy
+from scanner.strategies.golden_death_cross import GoldenDeathCrossStrategy
+from scanner.strategies.multi_ma_bullish import MultiMovingAverageBullishStrategy
 from scanner.strategies.rsi_reversal import RsiStrategy
 
 
@@ -24,6 +26,8 @@ class StrategyRegistry:
         self._strategies: dict[str, BaseStrategy] = {}
         # Register built-in strategies
         self.register(EmaAlignmentStrategy())
+        self.register(GoldenDeathCrossStrategy())
+        self.register(MultiMovingAverageBullishStrategy())
         self.register(RsiStrategy())
 
     def register(self, strategy: BaseStrategy):
@@ -40,7 +44,9 @@ class StrategyRegistry:
 
     def _generate_cache_key(self, strategy_id: str, timeframe: str, params: dict[str, Any]) -> str:
         serialized = json.dumps(params, sort_keys=True)
-        digest = hashlib.sha256(f"{strategy_id}:{timeframe}:{serialized}".encode("utf-8")).hexdigest()[:16]
+        # Bump the result schema version when strategy outputs change so cached
+        # rows created before changePct was added are not served to the UI.
+        digest = hashlib.sha256(f"v3:{strategy_id}:{timeframe}:{serialized}".encode("utf-8")).hexdigest()[:16]
         return f"{strategy_id}:{timeframe}:{digest}"
 
     async def execute_scan(
@@ -91,8 +97,11 @@ class StrategyRegistry:
         instruments = await get_all_active_instruments()
         instruments_map = {inst["key"]: inst for inst in instruments}
 
-        # 3. Load vectorized candles into Polars DataFrame
-        df = await load_candles_polars(timeframe, min_candles=max(strategy.metadata.min_candles, *(int(v) for v in resolved_params.values())) * 10)
+        # 3. Load the same bounded history using the indexed per-instrument
+        # latest-candle query. This avoids ranking every candle in the table
+        # before discarding older rows for each instrument.
+        candles_per_instrument = strategy.candle_window(resolved_params)
+        df = await load_recent_candles_polars(timeframe, per_instrument=candles_per_instrument)
 
         # 4. Run strategy calculation in memory
         results = strategy.run(df, instruments_map, resolved_params)

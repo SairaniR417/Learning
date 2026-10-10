@@ -1,13 +1,34 @@
 <header class="topbar">
-  <a class="brand" href="/" aria-label="Trader's Gita home"><span class="brand-mark">T</span><span>TRADER'S <span class="brand-light">GITA</span></span></a>
-  <div class="topbar-right">
-    <span class="session-clock">{{ clock }}</span>
-    <span class="connection-state" [class.connected]="connected"><i></i>{{ connected ? 'Upstox connected' : 'Upstox not connected' }}</span>
-    <a class="connect-button" href="/auth/upstox" [hidden]="connected">Connect Upstox</a>
-    <button class="disconnect-button" type="button" [hidden]="!connected" (click)="disconnect()">Disconnect</button>
-  </div>
+  <a class="brand" href="/" aria-label="Trader's Gita home"><span class="brand-mark">⌁</span><span><strong>TRADERS GITA</strong><small>MARKET INTELLIGENCE TERMINAL</small></span></a>
+  <div class="topbar-right"><span class="session-clock">{{ clock }}</span><span class="connection-state" [class.connected]="connected"><i></i>{{ connected ? 'Upstox connected' : 'Upstox not connected' }}</span><a class="connect-button" href="/auth/upstox" [hidden]="connected">Connect Upstox</a><button class="disconnect-button" type="button" [hidden]="!connected" (click)="disconnect()">Disconnect</button></div>
 </header>
-
 <main>
-  <app-ema-scanner></app-ema-scanner>
+  <nav class="primary-nav" aria-label="Main navigation"><button *ngFor="let item of pages" type="button" [class.active]="page === item" (click)="selectPage(item)">{{ item }}</button></nav>
+  <section class="overview page-shell" *ngIf="page === 'Overview'">
+    <div class="overview-title"><div><span class="eyebrow">INDIAN MARKETS</span><h1>Market overview</h1><p>NSE equities and MCX commodity futures · Live Upstox quotes</p></div><span class="live-pill"><i></i>{{ receivedAt ? ('Updated ' + (receivedAt | date:'shortTime')) : 'Connecting' }}</span></div>
+    <div class="market-grid">
+      <article class="panel index-panel">
+        <div class="panel-head"><h2>Market Overview</h2><div class="segmented market-tabs" role="tablist" aria-label="Choose Indian market"><button type="button" role="tab" [attr.aria-selected]="market === 'equities'" [class.selected]="market === 'equities'" (click)="selectMarket('equities')">Indian Stocks</button><button type="button" role="tab" [attr.aria-selected]="market === 'commodities'" [class.selected]="market === 'commodities'" (click)="selectMarket('commodities')">Commodities</button></div></div>
+        <div class="chart-caption"><strong>{{ chartSymbol }}</strong><span>{{ marketName }} · 1 year</span></div>
+        <svg class="line-chart" viewBox="0 0 520 150" preserveAspectRatio="none" role="img" [attr.aria-label]="chartSymbol + ' one year daily price chart'">
+          <defs><linearGradient id="market-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#36d7ae" stop-opacity=".2"/><stop offset="1" stop-color="#36d7ae" stop-opacity="0"/></linearGradient></defs>
+          <path *ngIf="chartAreaPath" [attr.d]="chartAreaPath" fill="url(#market-area)"/>
+          <path *ngIf="chartPath" [attr.d]="chartPath" fill="none" stroke="#35d2aa" stroke-width="3" vector-effect="non-scaling-stroke"/>
+          <text *ngIf="trendLoading" x="260" y="78" text-anchor="middle" class="chart-message">Loading historical prices…</text>
+          <text *ngIf="trendError && !trendLoading" x="260" y="78" text-anchor="middle" class="chart-message">{{ trendError }}</text>
+        </svg>
+        <div class="chart-axis"><span>{{ chartLabels[0] || '—' }}</span><span>{{ chartLabels[1] || '' }}</span><span>{{ chartLabels[2] || '—' }}</span></div>
+        <div class="leaders" *ngIf="leaders.length; else marketLoading"><div *ngFor="let stock of leaders"><span class="ticker-icon" [class]="'ticker-icon ' + stock.color">{{ stock.icon }}</span><span class="leader-name"><strong>{{ stock.symbol }}<small>{{ stock.name }}</small></strong></span><span class="leader-quote"><b>{{ formatPrice(stock.price) }}</b><em [class]="stock.color">{{ stock.changeLabel }}</em></span></div></div>
+        <ng-template #marketLoading><div class="market-empty" role="status">{{ marketError || (loadingMarket ? 'Loading live market data…' : 'No quotes are available for this market.') }} <a *ngIf="marketError && !connected" href="/auth/upstox">Connect Upstox</a></div></ng-template>
+      </article>
+      <article class="panel heat-panel"><div class="panel-head"><h2>{{ market === 'equities' ? 'Indian Stock Heatmap' : 'MCX Commodity Heatmap' }}</h2><span class="muted">{{ receivedAt ? 'Live daily change' : 'Waiting for quotes' }}</span></div><label class="sector-filter" *ngIf="market === 'equities'">Sector <select [value]="selectedSector" (change)="selectSector($any($event.target).value)"><option *ngFor="let sector of sectors" [value]="sector">{{ sector }}</option></select><span>{{ filteredHeatAssets.length | number }} stocks</span></label><div class="heatmap" *ngIf="heatTiles.length; else heatmapEmpty"><button type="button" *ngFor="let tile of heatTiles; let i = index" [class]="'heat-tile ' + tile.color" [class.featured]="i < 3" [style.grid-column]="'span ' + tile.w" [style.grid-row]="'span ' + tile.h" [attr.title]="tile.name + ' · ' + tile.sector + ' · ' + formatPrice(tile.price) + ' · ' + tile.changeLabel"><b>{{ tile.symbol }}</b><span>{{ tile.changeLabel }}</span></button></div><ng-template #heatmapEmpty><div class="heatmap-empty">{{ marketError || (loadingMarket ? 'Loading live quotes…' : 'No quotes are available for this market.') }}</div></ng-template><div class="heatmap-footer" *ngIf="hasMultipleHeatPages"><span>{{ heatPageStart }}–{{ heatPageEnd }} of {{ filteredHeatAssets.length | number }} {{ market === 'equities' ? 'stocks' : 'contracts' }}, sorted by volume</span><div><button type="button" (click)="prevHeatPage()" [disabled]="heatPage === 0">Previous</button><button type="button" (click)="nextHeatPage()" [disabled]="heatPage + 1 >= heatPageCount">Next</button></div></div><div class="heat-legend"><span>−3%</span><i></i><span>0%</span><i></i><span>+3%</span></div></article>
+    </div>
+    <h2 class="section-title">{{ market === 'equities' ? 'Today’s Indian market movers' : 'Today’s commodity movers' }}</h2><div class="opportunities panel"><div *ngFor="let opp of opportunities"><span><strong>{{ opp.title }}</strong><small>{{ opp.detail }}</small></span><b>{{ opp.tag }}</b></div><p *ngIf="!opportunities.length" class="empty-opportunities">{{ marketError || 'Waiting for live market quotes.' }}</p></div><button type="button" class="scanner-cta" (click)="selectPage('Market Scanner')">Open Market Scanner <span>→</span></button>
+  </section>
+  @defer (when page === 'Market Scanner') {
+    <div [hidden]="page !== 'Market Scanner'"><app-ema-scanner /></div>
+  } @placeholder {
+    <section class="terminal-placeholder page-shell" *ngIf="page === 'Market Scanner'"><span class="eyebrow">NSE EQUITY UNIVERSE</span><h1>Loading Market Scanner…</h1><p>Preparing the stock grid and filters.</p></section>
+  }
+  <section class="terminal-placeholder page-shell" *ngIf="page !== 'Overview' && page !== 'Market Scanner'"><span class="eyebrow">TRADERS GITA TERMINAL · {{ marketName | uppercase }}</span><h1>{{ page }}</h1><p>Current quotes from the selected Indian market.</p><div class="placeholder-grid"><article class="panel" *ngFor="let item of leaders"><span class="ticker-icon" [class]="'ticker-icon ' + item.color">{{ item.icon }}</span><strong>{{ item.symbol }}</strong><small>{{ item.name }}</small><b>{{ formatPrice(item.price) }}</b><em [class]="item.color">{{ item.changeLabel }}</em></article></div></section>
 </main>

@@ -28,6 +28,8 @@ class EmaAlignmentStrategy(BaseStrategy):
         df: pl.DataFrame,
         instruments_map: dict[str, dict[str, Any]],
         params: dict[str, Any],
+        include_unmatched: bool = False,
+        include_insufficient_history: bool = False,
     ) -> list[dict[str, Any]]:
         if df.is_empty():
             return []
@@ -57,16 +59,15 @@ class EmaAlignmentStrategy(BaseStrategy):
         ).with_columns(
             [
                 pl.col("is_match").shift(1).over("instrument_key").alias("prev_match"),
+                pl.col("close").shift(1).over("instrument_key").alias("prev_close"),
                 pl.len().over("instrument_key").alias("candle_count"),
             ]
         )
 
         # Filter latest candle for each symbol
-        latest_df = (
-            calc_df.group_by("instrument_key")
-            .last()
-            .filter((pl.col("candle_count") >= self.metadata.min_candles) & (pl.col("is_match") == True))
-        )
+        minimum_history = 1 if include_insufficient_history else self.metadata.min_candles
+        latest_df = (calc_df.group_by("instrument_key").last().filter(
+            (pl.col("candle_count") >= minimum_history) & (pl.lit(include_unmatched) | pl.col("is_match"))))
 
         matches = []
         for row in latest_df.iter_rows(named=True):
@@ -77,6 +78,8 @@ class EmaAlignmentStrategy(BaseStrategy):
             exchange = meta.get("exchange") or "NSE"
 
             is_new = row["prev_match"] is False
+            previous_close = row["prev_close"]
+            change_pct = ((row["close"] - previous_close) / previous_close * 100) if previous_close else None
             matches.append(
                 {
                     "symbol": symbol,
@@ -84,14 +87,17 @@ class EmaAlignmentStrategy(BaseStrategy):
                     "instrumentKey": key,
                     "exchange": exchange,
                     "close": round(row["close"], 2),
+                    "previousClose": round(previous_close, 2) if previous_close is not None else None,
+                    "changePct": round(change_pct, 2) if change_pct is not None else None,
                     "ema9": round(row["ema_fast"], 2) if row["ema_fast"] is not None else None,
                     "ema20": round(row["ema_med"], 2) if row["ema_med"] is not None else None,
                     "sma50": round(row["sma_inter"], 2) if row["sma_inter"] is not None else None,
                     "sma200": round(row["sma_long"], 2) if row["sma_long"] is not None else None,
                     "volume": row["volume"],
-                    "status": "NEWLY_ALIGNED" if is_new else "ALIGNED",
+                    "status": ("NEWLY_ALIGNED" if is_new else "ALIGNED") if row["is_match"] else "NOT_ALIGNED",
                     "matchedSince": row["timestamp"].isoformat() if hasattr(row["timestamp"], "isoformat") else str(row["timestamp"]),
                     "candlesAnalyzed": row["candle_count"],
+                    "historySufficient": row["candle_count"] >= self.metadata.min_candles,
                 }
             )
 

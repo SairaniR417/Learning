@@ -35,6 +35,10 @@ class BaseStrategy(ABC):
 
     metadata: StrategyMetadata
 
+    def candle_window(self, params: dict[str, Any]) -> int:
+        """Choose a bounded per-instrument history window for a scan."""
+        return max(self.metadata.min_candles, *(int(value) for value in params.values())) * 10
+
     @abstractmethod
     def run(
         self,

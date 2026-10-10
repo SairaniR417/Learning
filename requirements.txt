@@ -7,3 +7,4 @@ greenlet>=3.0
 aiosqlite>=0.20,<1
 polars>=1.0,<3
 tzdata>=2024.1
+asyncpg>=0.29,<1
