@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, timer } from 'rxjs';
+import { AlertNotificationsService } from './alert-notifications.service';
+import { WatchlistComponent } from './watchlist/watchlist.component';
 import { StockDetailsComponent } from './stock-details/stock-details.component';
 import { EmaScannerComponent } from './scanner/ema-scanner.component';
 import { MarketApiService, MarketAssetQuote, SelectedStock } from './market-api.service';
@@ -22,9 +24,11 @@ interface Opportunity {
   tag: string;
 }
 
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent, StockDetailsComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent, StockDetailsComponent, WatchlistComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
 export class AppComponent implements OnInit, OnDestroy {
   private readonly api = inject(MarketApiService);
+  readonly notifications = inject(AlertNotificationsService);
+  notificationMenu = false;
   private statusSubscription?: Subscription;
   private clockSubscription?: Subscription;
   private marketSubscription?: Subscription;

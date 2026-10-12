@@ -3,6 +3,7 @@ import re
 import secrets
 import base64
 import json
+import math
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode
 from urllib.parse import quote as url_quote
@@ -23,6 +24,7 @@ from scanner.universe import get_nse_equity_universe
 from scanner.commodity_universe import get_mcx_front_month_universe
 from services.market_sync import MarketSyncService, map_timeframe
 from database.candle_repo import create_ingestion_job, get_ingestion_job, get_all_active_instruments, load_recent_candles_polars
+from services import watchlists
 
 load_dotenv()
 
@@ -30,7 +32,13 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    yield
+    watchlists.quote_fetcher = fetch_watchlist_quotes
+    watchlists.monitor = watchlists.AlertMonitor(fetch_watchlist_quotes)
+    watchlists.monitor.start()
+    try:
+        yield
+    finally:
+        await watchlists.monitor.stop()
 
 
 app = FastAPI(title="Market Desk API", lifespan=lifespan)
@@ -38,6 +46,7 @@ from services.stock_details import router as stock_details_router
 app.include_router(stock_details_router)
 from services.index_constituents import router as index_constituents_router
 app.include_router(index_constituents_router)
+app.include_router(watchlists.router)
 openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
 drishti_openai_model = os.getenv("DRISHTI_OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
 client_id = os.getenv("UPSTOX_CLIENT_ID", "")
@@ -118,6 +127,28 @@ async def api_json_request(url: str, *, method: str = "GET", headers: dict | Non
         message = errors[0].get("message") if errors else body.get("message") if isinstance(body, dict) else None
         raise HTTPException(status_code=502, detail=message or f"Upstox returned HTTP {response.status_code}.")
     return body
+
+
+async def fetch_watchlist_quotes(keys: list[str]):
+    token = require_token()
+    quotes_by_key = {}
+    for offset in range(0, len(keys), 50):
+        result = await api_json_request(
+            "https://api.upstox.com/v3/market-quote/quotes",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"instrument_key": ",".join(keys[offset:offset + 50])},
+        )
+        for row in result.get("data", {}).values():
+            key = row.get("instrument_token")
+            price = row.get("last_price")
+            previous = row.get("prev_close_price")
+            if key not in keys or not isinstance(price, (int, float)) or not math.isfinite(price) or price <= 0:
+                continue
+            valid_previous = isinstance(previous, (int, float)) and math.isfinite(previous) and previous > 0
+            change = price - previous if valid_previous else None
+            quotes_by_key[key] = {"price": price, "previousClose": previous if valid_previous else None,
+                "change": change, "changePct": change / previous * 100 if valid_previous else None, "volume": row.get("volume") or 0}
+    return quotes_by_key
 
 
 @app.get("/api/status")

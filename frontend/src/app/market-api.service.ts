@@ -107,10 +107,27 @@ export interface CompanyProfile {
 export interface SelectedStock { key: string; symbol: string; name: string; exchange: string; strategy?: string; timeframe?: string; status?: string; detail?: string; price?: number; metrics?: { label: string; value: number; compareToClose: boolean }[]; checks?: { label: string; passed?: boolean }[]; }
 export interface StockHistory { total: number; page: number; pageSize: number; earliest: string | null; latest: string | null; high: number | null; low: number | null; totalVolume: number; candles: HistoricalCandle[]; chart: HistoricalCandle[]; source: string; }
 export interface StockNews { items: { title: string; url: string; publishedAt: string; source: string }[]; fetchedAt: string; source: string; }
+export interface WatchEntry { key: string; symbol: string; name: string; exchange: string; section: string; flag: '' | 'red' | 'green' | 'yellow' | 'blue'; }
+export interface Watchlist { id: number; name: string; sections: string[]; entries: WatchEntry[]; }
+export interface WatchQuote { price: number; previousClose: number | null; change: number | null; changePct: number | null; volume: number; }
+export interface PriceAlert { id: number; key: string; symbol: string; name: string; exchange: string; condition: 'above' | 'below' | 'cross_up' | 'cross_down'; target: number; active: boolean; lastPrice: number | null; triggeredAt: string | null; }
+export interface AlertNotification { id: number; key: string; symbol: string; name: string; exchange: string; message: string; price: number; createdAt: string; read: boolean; }
+export interface NotificationInbox { notifications: AlertNotification[]; unread: number; monitor: { running: boolean; lastCheck: string | null; error: string; }; }
 
 @Injectable({ providedIn: 'root' })
 export class MarketApiService {
   private readonly http = inject(HttpClient);
+  watchlists(): Observable<{ lists: Watchlist[] }> { return this.http.get<{ lists: Watchlist[] }>('/api/watchlists'); }
+  createWatchlist(list: Omit<Watchlist, 'id'>): Observable<Watchlist> { return this.http.post<Watchlist>('/api/watchlists', list); }
+  saveWatchlist(list: Watchlist): Observable<Watchlist> { return this.http.put<Watchlist>(`/api/watchlists/${list.id}`, list); }
+  deleteWatchlist(id: number): Observable<unknown> { return this.http.delete(`/api/watchlists/${id}`); }
+  watchQuotes(keys: string[]): Observable<{ quotes: Record<string, WatchQuote>; receivedAt: string }> { return this.http.get<{ quotes: Record<string, WatchQuote>; receivedAt: string }>('/api/watchlists/quotes', { params: { keys: keys.join(',') } }); }
+  priceAlerts(): Observable<{ alerts: PriceAlert[] }> { return this.http.get<{ alerts: PriceAlert[] }>('/api/watchlists/alerts'); }
+  createPriceAlert(alert: Pick<PriceAlert, 'key' | 'symbol' | 'name' | 'exchange' | 'condition' | 'target'>): Observable<PriceAlert> { return this.http.post<PriceAlert>('/api/watchlists/alerts', alert); }
+  cancelPriceAlert(id: number): Observable<unknown> { return this.http.delete(`/api/watchlists/alerts/${id}`); }
+  notificationInbox(): Observable<NotificationInbox> { return this.http.get<NotificationInbox>('/api/watchlists/notifications'); }
+  readNotifications(): Observable<unknown> { return this.http.post('/api/watchlists/notifications/read', {}); }
+  readNotification(id: number): Observable<unknown> { return this.http.post(`/api/watchlists/notifications/${id}/read`, {}); }
   indexConstituents(id: string): Observable<IndexConstituents> { return this.http.get<IndexConstituents>(`/api/market/index-constituents/${encodeURIComponent(id)}`); }
   stockHistory(key: string, page = 1): Observable<StockHistory> { return this.http.get<StockHistory>('/api/stocks/history', { params: { instrument_key: key, page } }); }
   stockNews(symbol: string, name: string): Observable<StockNews> { return this.http.get<StockNews>('/api/stocks/news', { params: { symbol, name } }); }

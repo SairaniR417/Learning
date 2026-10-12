@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
     BigInteger, Boolean, Column, Date, DateTime, ForeignKey, Index, Integer,
-    Numeric, PrimaryKeyConstraint, String, Text, UniqueConstraint,
+    Numeric, PrimaryKeyConstraint, String, Text, UniqueConstraint, Float,
 )
 from sqlalchemy.orm import synonym
 from database.connection import Base
@@ -76,3 +76,39 @@ class CandleRevision(Base):
     __tablename__ = "candle_revisions"
     timeframe = Column(String(16), primary_key=True)
     revision = Column(BigInteger, nullable=False, default=0)
+
+
+class UserWatchlist(Base):
+    __tablename__ = "user_watchlists"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(80), nullable=False)
+    content_json = Column(Text, nullable=False, default='{"sections":["Stocks"],"entries":[]}')
+
+
+class PriceAlert(Base):
+    __tablename__ = "price_alerts"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    instrument_key = Column(Text, nullable=False)
+    symbol = Column(String(100), nullable=False)
+    name = Column(String(200), nullable=False)
+    exchange = Column(String(30), nullable=False)
+    condition = Column(String(20), nullable=False)
+    target = Column(Float, nullable=False)
+    active = Column(Boolean, nullable=False, default=True)
+    last_price = Column(Float)
+    triggered_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+class AlertNotification(Base):
+    __tablename__ = "alert_notifications"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    alert_id = Column(Integer, nullable=False, unique=True)
+    instrument_key = Column(Text, nullable=False)
+    symbol = Column(String(100), nullable=False)
+    name = Column(String(200), nullable=False)
+    exchange = Column(String(30), nullable=False)
+    message = Column(Text, nullable=False)
+    price = Column(Float, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    read = Column(Boolean, nullable=False, default=False)
