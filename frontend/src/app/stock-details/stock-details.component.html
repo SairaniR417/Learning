@@ -29,6 +29,7 @@
       <ng-container *ngFor="let metric of signalMetrics; let i = index"><span class="chain-separator" *ngIf="metric.compareToClose && (i > 0 || stock.price != null)" [class.chain-failed]="(i === 0 ? stock.price ?? 0 : signalMetrics[i - 1].value) <= metric.value">{{ (i === 0 ? stock.price ?? 0 : signalMetrics[i - 1].value) > metric.value ? '&gt;' : '&le;' }}</span><div class="signal-value" [class.oscillator]="!metric.compareToClose"><small>{{ metric.label }}</small><strong>{{ metric.compareToClose ? (metric.value | currency:'INR':'symbol':'1.2-2') : (metric.value | number:'1.2-2') }}</strong></div></ng-container>
     </div>
     <div class="signal-confirmations" *ngIf="confirmationChecks.length"><span *ngFor="let check of confirmationChecks" [class.failed]="!check.passed"><span class="check-icon" aria-hidden="true">{{ check.passed ? '&#10003;' : '&#10005;' }}</span><span>{{ check.label }}</span><span class="sr-only">{{ check.passed ? 'Passed' : 'Not passed' }}</span></span></div>
+    <div class="signal-confirmations" *ngIf="divergenceEvidence.length"><span *ngFor="let evidence of divergenceEvidence">{{ evidence.label }}</span></div>
     <footer class="signal-footer"><span class="snapshot-icon" aria-hidden="true">&#9684;</span> Signal at selection <span class="footer-divider">&middot;</span> Re-scan to update</footer>
   </article>
 

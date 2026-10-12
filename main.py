@@ -47,6 +47,8 @@ app.include_router(stock_details_router)
 from services.index_constituents import router as index_constituents_router
 app.include_router(index_constituents_router)
 app.include_router(watchlists.router)
+from services.trade_journal import router as journal_router
+app.include_router(journal_router)
 openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
 drishti_openai_model = os.getenv("DRISHTI_OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
 client_id = os.getenv("UPSTOX_CLIENT_ID", "")
@@ -456,6 +458,7 @@ market_sync_service = MarketSyncService(require_token)
 
 class StrategyScanRequest(BaseModel):
     strategy_id: str
+    market: Literal['equities', 'commodities'] = 'equities'
     timeframe: str = "1d"
     params: dict[str, Any] = Field(default_factory=dict)
     bypass_cache: bool = False
@@ -496,8 +499,14 @@ async def market_ema_indicators(timeframe: str = Query(default="1d")):
 @app.post("/api/strategies/scan")
 async def scan_strategy(request: StrategyScanRequest):
     """Execute any strategy against the centralized multi-timeframe database with shared result caching."""
-    require_token()
+    token = require_token()
     try:
+        if request.market == 'commodities':
+            from services.commodity_scanner import scan_commodities
+            strategy = strategy_registry.get(request.strategy_id)
+            if not strategy:
+                raise ValueError('Unknown scanner strategy')
+            return await scan_commodities(strategy, request.timeframe, request.params, token)
         return await strategy_registry.execute_scan(
             request.strategy_id,
             timeframe=request.timeframe,

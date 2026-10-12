@@ -87,7 +87,7 @@ export interface EmaScannerResponse {
 
 export interface ScannerStrategyParameter { name: string; display_name: string; type: 'int' | 'float' | 'bool' | 'str'; default: number | string | boolean; min_value?: number | null; max_value?: number | null; description?: string; }
 export interface ScannerStrategy { id: string; name: string; category: string; description: string; default_timeframe: string; min_candles: number; parameters: ScannerStrategyParameter[]; }
-export interface StrategyScanResponse { strategy_id: string; strategy_name: string; timeframe: string; total_scanned: number; total_matched: number; scanned_at: string; results: Record<string, unknown>[]; cached: boolean; }
+export interface StrategyScanResponse { coverage?: { symbol: string; candles: number; required: number; sufficient: boolean }[]; errors?: { symbol: string; error: string }[]; strategy_id: string; strategy_name: string; timeframe: string; total_scanned: number; total_matched: number; scanned_at: string; results: Record<string, unknown>[]; cached: boolean; }
 export interface MarketEmaIndicator { instrumentKey: string; symbol: string; name: string; ema9: number | null; ema20: number | null; sma50: number | null; sma200: number | null; close: number; previousClose: number | null; changePct: number | null; volume: number; status: string; historySufficient: boolean; }
 
 export interface CorporateAction {
@@ -181,8 +181,8 @@ export class MarketApiService {
     return this.http.get<{ strategies: ScannerStrategy[] }>('/api/strategies');
   }
 
-  scanStrategy(strategyId: string, timeframe: string, params: Record<string, number | string | boolean> = {}, bypassCache = false): Observable<StrategyScanResponse> {
-    return this.http.post<StrategyScanResponse>('/api/strategies/scan', { strategy_id: strategyId, timeframe, params, bypass_cache: bypassCache });
+  scanStrategy(strategyId: string, timeframe: string, params: Record<string, number | string | boolean> = {}, bypassCache = false, market: 'equities' | 'commodities' = 'equities'): Observable<StrategyScanResponse> {
+    return this.http.post<StrategyScanResponse>('/api/strategies/scan', { strategy_id: strategyId, timeframe, params, bypass_cache: bypassCache, market });
   }
 
   nseEquityUniverse(): Observable<{ count: number; stocks: Instrument[] }> {

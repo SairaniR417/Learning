@@ -78,6 +78,15 @@ class CandleRevision(Base):
     revision = Column(BigInteger, nullable=False, default=0)
 
 
+class JournalTrade(Base):
+    __tablename__ = "journal_trades"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    content_json = Column(Text, nullable=False)
+    import_key = Column(String(64), unique=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
 class UserWatchlist(Base):
     __tablename__ = "user_watchlists"
     id = Column(Integer, primary_key=True, autoincrement=True)

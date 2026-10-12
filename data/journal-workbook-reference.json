@@ -1,0 +1,18 @@
+{
+  "files": ["Trading_Journal(1).xlsx", "reflecttion journal.xlsx"],
+  "summary": "The trade template contains 500 numbered blank rows, not 500 executed trades. The reflection workbook contains one filled trade.",
+  "warnings": [
+    "The trade template's net P&L formula refers to itself. The app calculates gross P&L minus charges directly.",
+    "The reflection workbook records SELL at 37, exit 80 and position size 100. These inputs produce a gross loss of INR 4,300. Its cached INR 3,225 profit uses a hard-coded multiplier of 75 and the opposite sign. Confirm the original direction and quantity before relying on this result.",
+    "The reflection row does not record an option strike, expiry, lot size, brokerage or stop price. Quantity is preserved as 100 units, lot size as 1 until corrected; charges default to 0 and recorded risk to INR 1,000. No contract details are inferred."
+  ],
+  "trades": [{
+    "account": "Main account", "symbol": "Nifty 50", "segment": "Options", "instrumentType": "CE",
+    "direction": "SHORT", "entryAt": "2026-05-05T10:47:00+05:30", "exitAt": "2026-05-05T12:20:00+05:30",
+    "entryPrice": 37, "exitPrice": 80, "quantity": 100, "lotSize": 1, "charges": 0, "recordedRisk": 1000,
+    "setup": "Reversal", "marketTrend": "Trend Reversal", "reason": "Reversal",
+    "emotionBefore": "Confident", "emotionDuring": "Confident", "emotionAfter": "Neutral",
+    "mistake": "Early Exit", "didWell": "Followed Plan", "learned": "Trust the Plan", "rating": 5,
+    "chartLink": "https://www.tradingview.com/x/Kptp2BJg/", "notes": "divergence along with sl sweep\nImported from reflecttion journal.xlsx, row 2. Source direction: SELL; source quantity: 100; source cached profit: 3225. Direction/quantity need verification. Missing charges default to 0; option contract details and lot size are not provided."
+  }]
+}

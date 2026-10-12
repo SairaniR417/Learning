@@ -1,0 +1,655 @@
+{
+  "generatedAt": "2026-10-12T09:58:30.610689+00:00",
+  "symbols": 2701,
+  "from": "2009-08-06T18:30:00+00:00",
+  "to": "2026-10-08T18:30:00+00:00",
+  "holdoutFrom": "2024-01-01",
+  "configs": {
+    "pivot3": {
+      "period": 14,
+      "pivot_bars": 3,
+      "min_gap": 5,
+      "max_gap": 60,
+      "min_rsi_delta": 3.0,
+      "min_price_pct": 0.5,
+      "trend_period": 50,
+      "max_wait": 20,
+      "freshness": 5
+    },
+    "pivot5": {
+      "period": 14,
+      "pivot_bars": 5,
+      "min_gap": 5,
+      "max_gap": 60,
+      "min_rsi_delta": 3.0,
+      "min_price_pct": 0.5,
+      "trend_period": 50,
+      "max_wait": 20,
+      "freshness": 5
+    }
+  },
+  "counts": {
+    "pivot3:patterns": 36963,
+    "pivot5:patterns": 30225,
+    "pivot3:detected:overlapSkipped": 3606,
+    "pivot3:detected:unfillableOrCensored": 802,
+    "pivot5:detected:overlapSkipped": 2460,
+    "pivot3:confirmed:overlapSkipped": 365,
+    "pivot5:confirmed:overlapSkipped": 205,
+    "pivot5:detected:unfillableOrCensored": 519,
+    "pivot3:confirmed:unfillableOrCensored": 212,
+    "pivot5:confirmed:unfillableOrCensored": 169
+  },
+  "seconds": 97.85,
+  "method": "Last 1500 completed daily candles per currently active NSE instrument; 250-bar warm-up; next-open entry; pivot stop buffered 0.1%; 2R target; 10-bar timeout; stop first on ambiguous bars; 20bps round-trip costs; one position per symbol within each scenario. Bearish trades are hypothetical shorts, not executable cash delivery trades. Current-universe survivorship bias, raw corporate-action prices, gaps, liquidity and historical slippage remain limitations. Segments reset on >25% close jumps, bad OHLC, >10-day gaps. No portfolio equity or annualized return claim.",
+  "results": [
+    {
+      "config": "pivot3",
+      "entryMode": "confirmed",
+      "sample": "development",
+      "divergenceType": "HIDDEN_BEARISH",
+      "trades": 945,
+      "winRatePct": 44.34,
+      "meanNetPct": -1.2555,
+      "medianNetPct": -1.3594,
+      "profitFactor": 0.6814,
+      "meanNetPctAt50bpsCost": -1.5555,
+      "meanForward10NetPct": -1.5281,
+      "exits": {
+        "STOP": 172,
+        "GAP_STOP": 29,
+        "TARGET": 53,
+        "TIME": 691
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "confirmed",
+      "sample": "development",
+      "divergenceType": "HIDDEN_BULLISH",
+      "trades": 1411,
+      "winRatePct": 45.64,
+      "meanNetPct": 0.333,
+      "medianNetPct": -0.6147,
+      "profitFactor": 1.0963,
+      "meanNetPctAt50bpsCost": 0.033,
+      "meanForward10NetPct": 0.6871,
+      "exits": {
+        "STOP": 195,
+        "GAP_STOP": 17,
+        "TARGET": 90,
+        "TIME": 1109
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "confirmed",
+      "sample": "development",
+      "divergenceType": "REGULAR_BEARISH",
+      "trades": 1773,
+      "winRatePct": 45.69,
+      "meanNetPct": -1.3191,
+      "medianNetPct": -0.5456,
+      "profitFactor": 0.6175,
+      "meanNetPctAt50bpsCost": -1.6191,
+      "meanForward10NetPct": -1.2997,
+      "exits": {
+        "STOP": 229,
+        "GAP_STOP": 30,
+        "TARGET": 27,
+        "TIME": 1487
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "confirmed",
+      "sample": "development",
+      "divergenceType": "REGULAR_BULLISH",
+      "trades": 1275,
+      "winRatePct": 45.02,
+      "meanNetPct": -0.1258,
+      "medianNetPct": -0.7399,
+      "profitFactor": 0.963,
+      "meanNetPctAt50bpsCost": -0.4258,
+      "meanForward10NetPct": -0.2974,
+      "exits": {
+        "STOP": 105,
+        "GAP_STOP": 6,
+        "TARGET": 66,
+        "TIME": 1098
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "confirmed",
+      "sample": "holdout",
+      "divergenceType": "HIDDEN_BEARISH",
+      "trades": 2185,
+      "winRatePct": 48.05,
+      "meanNetPct": -0.8898,
+      "medianNetPct": -0.4093,
+      "profitFactor": 0.7719,
+      "meanNetPctAt50bpsCost": -1.1898,
+      "meanForward10NetPct": -0.6438,
+      "exits": {
+        "STOP": 443,
+        "GAP_STOP": 72,
+        "TARGET": 103,
+        "TIME": 1567
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "confirmed",
+      "sample": "holdout",
+      "divergenceType": "HIDDEN_BULLISH",
+      "trades": 1717,
+      "winRatePct": 41.7,
+      "meanNetPct": -0.726,
+      "medianNetPct": -1.3647,
+      "profitFactor": 0.8106,
+      "meanNetPctAt50bpsCost": -1.026,
+      "meanForward10NetPct": -0.4614,
+      "exits": {
+        "STOP": 288,
+        "GAP_STOP": 29,
+        "TARGET": 89,
+        "TIME": 1311
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "confirmed",
+      "sample": "holdout",
+      "divergenceType": "REGULAR_BEARISH",
+      "trades": 2813,
+      "winRatePct": 46.57,
+      "meanNetPct": -1.2291,
+      "medianNetPct": -0.5778,
+      "profitFactor": 0.6565,
+      "meanNetPctAt50bpsCost": -1.5291,
+      "meanForward10NetPct": -1.1537,
+      "exits": {
+        "STOP": 371,
+        "GAP_STOP": 68,
+        "TARGET": 49,
+        "TIME": 2325
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "confirmed",
+      "sample": "holdout",
+      "divergenceType": "REGULAR_BULLISH",
+      "trades": 2534,
+      "winRatePct": 40.53,
+      "meanNetPct": -1.0229,
+      "medianNetPct": -1.7154,
+      "profitFactor": 0.7406,
+      "meanNetPctAt50bpsCost": -1.3229,
+      "meanForward10NetPct": -0.8245,
+      "exits": {
+        "STOP": 262,
+        "GAP_STOP": 38,
+        "TARGET": 101,
+        "TIME": 2133
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "detected",
+      "sample": "development",
+      "divergenceType": "HIDDEN_BEARISH",
+      "trades": 2151,
+      "winRatePct": 45.56,
+      "meanNetPct": -0.0383,
+      "medianNetPct": -1.1145,
+      "profitFactor": 0.9846,
+      "meanNetPctAt50bpsCost": -0.3383,
+      "meanForward10NetPct": -0.2258,
+      "exits": {
+        "STOP": 856,
+        "GAP_STOP": 110,
+        "TARGET": 457,
+        "TIME": 728
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "detected",
+      "sample": "development",
+      "divergenceType": "HIDDEN_BULLISH",
+      "trades": 3094,
+      "winRatePct": 40.63,
+      "meanNetPct": -0.0295,
+      "medianNetPct": -1.7381,
+      "profitFactor": 0.9895,
+      "meanNetPctAt50bpsCost": -0.3295,
+      "meanForward10NetPct": 0.6418,
+      "exits": {
+        "STOP": 1262,
+        "GAP_STOP": 108,
+        "TARGET": 720,
+        "TIME": 1004
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "detected",
+      "sample": "development",
+      "divergenceType": "REGULAR_BEARISH",
+      "trades": 4051,
+      "winRatePct": 43.67,
+      "meanNetPct": -0.5235,
+      "medianNetPct": -1.1141,
+      "profitFactor": 0.8138,
+      "meanNetPctAt50bpsCost": -0.8235,
+      "meanForward10NetPct": -0.8321,
+      "exits": {
+        "STOP": 1399,
+        "GAP_STOP": 166,
+        "TARGET": 483,
+        "TIME": 2003
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "detected",
+      "sample": "development",
+      "divergenceType": "REGULAR_BULLISH",
+      "trades": 2832,
+      "winRatePct": 37.25,
+      "meanNetPct": -0.5715,
+      "medianNetPct": -2.0057,
+      "profitFactor": 0.8137,
+      "meanNetPctAt50bpsCost": -0.8715,
+      "meanForward10NetPct": -0.2096,
+      "exits": {
+        "STOP": 872,
+        "GAP_STOP": 74,
+        "TARGET": 410,
+        "TIME": 1476
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "detected",
+      "sample": "holdout",
+      "divergenceType": "HIDDEN_BEARISH",
+      "trades": 4194,
+      "winRatePct": 45.76,
+      "meanNetPct": -0.3115,
+      "medianNetPct": -0.9123,
+      "profitFactor": 0.889,
+      "meanNetPctAt50bpsCost": -0.6115,
+      "meanForward10NetPct": -0.225,
+      "exits": {
+        "STOP": 1586,
+        "GAP_STOP": 209,
+        "TARGET": 805,
+        "TIME": 1594
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "detected",
+      "sample": "holdout",
+      "divergenceType": "HIDDEN_BULLISH",
+      "trades": 4139,
+      "winRatePct": 36.63,
+      "meanNetPct": -0.6044,
+      "medianNetPct": -2.0265,
+      "profitFactor": 0.7934,
+      "meanNetPctAt50bpsCost": -0.9044,
+      "meanForward10NetPct": -0.5086,
+      "exits": {
+        "STOP": 1805,
+        "GAP_STOP": 156,
+        "TARGET": 787,
+        "TIME": 1391
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "detected",
+      "sample": "holdout",
+      "divergenceType": "REGULAR_BEARISH",
+      "trades": 5898,
+      "winRatePct": 45.02,
+      "meanNetPct": -0.4196,
+      "medianNetPct": -0.8233,
+      "profitFactor": 0.847,
+      "meanNetPctAt50bpsCost": -0.7196,
+      "meanForward10NetPct": -0.5133,
+      "exits": {
+        "STOP": 1802,
+        "GAP_STOP": 285,
+        "TARGET": 735,
+        "TIME": 3076
+      }
+    },
+    {
+      "config": "pivot3",
+      "entryMode": "detected",
+      "sample": "holdout",
+      "divergenceType": "REGULAR_BULLISH",
+      "trades": 5852,
+      "winRatePct": 35.94,
+      "meanNetPct": -0.8823,
+      "medianNetPct": -2.1385,
+      "profitFactor": 0.7257,
+      "meanNetPctAt50bpsCost": -1.1823,
+      "meanForward10NetPct": -0.5309,
+      "exits": {
+        "STOP": 2226,
+        "GAP_STOP": 172,
+        "TARGET": 782,
+        "TIME": 2672
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "confirmed",
+      "sample": "development",
+      "divergenceType": "HIDDEN_BEARISH",
+      "trades": 756,
+      "winRatePct": 42.2,
+      "meanNetPct": -1.993,
+      "medianNetPct": -1.4931,
+      "profitFactor": 0.5264,
+      "meanNetPctAt50bpsCost": -2.293,
+      "meanForward10NetPct": -2.1457,
+      "exits": {
+        "STOP": 114,
+        "GAP_STOP": 19,
+        "TARGET": 21,
+        "TIME": 602
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "confirmed",
+      "sample": "development",
+      "divergenceType": "HIDDEN_BULLISH",
+      "trades": 1057,
+      "winRatePct": 47.68,
+      "meanNetPct": 0.461,
+      "medianNetPct": -0.2345,
+      "profitFactor": 1.1453,
+      "meanNetPctAt50bpsCost": 0.161,
+      "meanForward10NetPct": 0.6951,
+      "exits": {
+        "STOP": 86,
+        "GAP_STOP": 3,
+        "TARGET": 46,
+        "TIME": 922
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "confirmed",
+      "sample": "development",
+      "divergenceType": "REGULAR_BEARISH",
+      "trades": 1441,
+      "winRatePct": 43.93,
+      "meanNetPct": -1.6033,
+      "medianNetPct": -0.8946,
+      "profitFactor": 0.5548,
+      "meanNetPctAt50bpsCost": -1.9033,
+      "meanForward10NetPct": -1.5192,
+      "exits": {
+        "STOP": 142,
+        "GAP_STOP": 19,
+        "TARGET": 13,
+        "TIME": 1267
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "confirmed",
+      "sample": "development",
+      "divergenceType": "REGULAR_BULLISH",
+      "trades": 1070,
+      "winRatePct": 46.82,
+      "meanNetPct": -0.045,
+      "medianNetPct": -0.4506,
+      "profitFactor": 0.9867,
+      "meanNetPctAt50bpsCost": -0.345,
+      "meanForward10NetPct": -0.0368,
+      "exits": {
+        "STOP": 60,
+        "GAP_STOP": 3,
+        "TARGET": 38,
+        "TIME": 969
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "confirmed",
+      "sample": "holdout",
+      "divergenceType": "HIDDEN_BEARISH",
+      "trades": 1758,
+      "winRatePct": 52.39,
+      "meanNetPct": -0.2767,
+      "medianNetPct": 0.5465,
+      "profitFactor": 0.9252,
+      "meanNetPctAt50bpsCost": -0.5767,
+      "meanForward10NetPct": -0.0079,
+      "exits": {
+        "STOP": 251,
+        "GAP_STOP": 48,
+        "TARGET": 53,
+        "TIME": 1406
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "confirmed",
+      "sample": "holdout",
+      "divergenceType": "HIDDEN_BULLISH",
+      "trades": 1528,
+      "winRatePct": 43.39,
+      "meanNetPct": -0.5165,
+      "medianNetPct": -0.9121,
+      "profitFactor": 0.8516,
+      "meanNetPctAt50bpsCost": -0.8165,
+      "meanForward10NetPct": -0.3272,
+      "exits": {
+        "STOP": 157,
+        "GAP_STOP": 18,
+        "TARGET": 57,
+        "TIME": 1296
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "confirmed",
+      "sample": "holdout",
+      "divergenceType": "REGULAR_BEARISH",
+      "trades": 2358,
+      "winRatePct": 47.07,
+      "meanNetPct": -1.1135,
+      "medianNetPct": -0.4207,
+      "profitFactor": 0.6831,
+      "meanNetPctAt50bpsCost": -1.4135,
+      "meanForward10NetPct": -1.0164,
+      "exits": {
+        "STOP": 223,
+        "GAP_STOP": 48,
+        "TARGET": 21,
+        "TIME": 2066
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "confirmed",
+      "sample": "holdout",
+      "divergenceType": "REGULAR_BULLISH",
+      "trades": 2167,
+      "winRatePct": 38.9,
+      "meanNetPct": -1.2621,
+      "medianNetPct": -2.019,
+      "profitFactor": 0.6922,
+      "meanNetPctAt50bpsCost": -1.5621,
+      "meanForward10NetPct": -1.1765,
+      "exits": {
+        "STOP": 149,
+        "GAP_STOP": 26,
+        "TARGET": 53,
+        "TIME": 1939
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "detected",
+      "sample": "development",
+      "divergenceType": "HIDDEN_BEARISH",
+      "trades": 1635,
+      "winRatePct": 41.65,
+      "meanNetPct": -0.6888,
+      "medianNetPct": -1.5581,
+      "profitFactor": 0.7651,
+      "meanNetPctAt50bpsCost": -0.9888,
+      "meanForward10NetPct": -0.9829,
+      "exits": {
+        "STOP": 607,
+        "GAP_STOP": 72,
+        "TARGET": 211,
+        "TIME": 745
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "detected",
+      "sample": "development",
+      "divergenceType": "HIDDEN_BULLISH",
+      "trades": 2156,
+      "winRatePct": 42.3,
+      "meanNetPct": 0.1768,
+      "medianNetPct": -1.3887,
+      "profitFactor": 1.0646,
+      "meanNetPctAt50bpsCost": -0.1232,
+      "meanForward10NetPct": 0.7877,
+      "exits": {
+        "STOP": 702,
+        "GAP_STOP": 57,
+        "TARGET": 375,
+        "TIME": 1022
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "detected",
+      "sample": "development",
+      "divergenceType": "REGULAR_BEARISH",
+      "trades": 3639,
+      "winRatePct": 42.37,
+      "meanNetPct": -0.984,
+      "medianNetPct": -1.296,
+      "profitFactor": 0.6816,
+      "meanNetPctAt50bpsCost": -1.284,
+      "meanForward10NetPct": -1.1749,
+      "exits": {
+        "STOP": 1138,
+        "GAP_STOP": 128,
+        "TARGET": 282,
+        "TIME": 2091
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "detected",
+      "sample": "development",
+      "divergenceType": "REGULAR_BULLISH",
+      "trades": 2474,
+      "winRatePct": 39.53,
+      "meanNetPct": -0.5605,
+      "medianNetPct": -1.7189,
+      "profitFactor": 0.8244,
+      "meanNetPctAt50bpsCost": -0.8605,
+      "meanForward10NetPct": -0.4081,
+      "exits": {
+        "STOP": 671,
+        "GAP_STOP": 46,
+        "TARGET": 292,
+        "TIME": 1465
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "detected",
+      "sample": "holdout",
+      "divergenceType": "HIDDEN_BEARISH",
+      "trades": 3117,
+      "winRatePct": 48.28,
+      "meanNetPct": -0.1532,
+      "medianNetPct": -0.3245,
+      "profitFactor": 0.9491,
+      "meanNetPctAt50bpsCost": -0.4532,
+      "meanForward10NetPct": -0.1093,
+      "exits": {
+        "STOP": 922,
+        "GAP_STOP": 137,
+        "TARGET": 421,
+        "TIME": 1637
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "detected",
+      "sample": "holdout",
+      "divergenceType": "HIDDEN_BULLISH",
+      "trades": 3190,
+      "winRatePct": 39.91,
+      "meanNetPct": -0.5453,
+      "medianNetPct": -1.6172,
+      "profitFactor": 0.8146,
+      "meanNetPctAt50bpsCost": -0.8453,
+      "meanForward10NetPct": -0.3627,
+      "exits": {
+        "STOP": 1092,
+        "GAP_STOP": 95,
+        "TARGET": 489,
+        "TIME": 1514
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "detected",
+      "sample": "holdout",
+      "divergenceType": "REGULAR_BEARISH",
+      "trades": 5402,
+      "winRatePct": 46.46,
+      "meanNetPct": -0.5064,
+      "medianNetPct": -0.5584,
+      "profitFactor": 0.8233,
+      "meanNetPctAt50bpsCost": -0.8064,
+      "meanForward10NetPct": -0.5834,
+      "exits": {
+        "STOP": 1416,
+        "GAP_STOP": 260,
+        "TARGET": 490,
+        "TIME": 3236
+      }
+    },
+    {
+      "config": "pivot5",
+      "entryMode": "detected",
+      "sample": "holdout",
+      "divergenceType": "REGULAR_BULLISH",
+      "trades": 5344,
+      "winRatePct": 35.46,
+      "meanNetPct": -0.987,
+      "medianNetPct": -2.1935,
+      "profitFactor": 0.707,
+      "meanNetPctAt50bpsCost": -1.287,
+      "meanForward10NetPct": -0.9756,
+      "exits": {
+        "STOP": 1789,
+        "GAP_STOP": 134,
+        "TARGET": 600,
+        "TIME": 2821
+      }
+    }
+  ]
+}

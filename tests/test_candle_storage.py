@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from database.connection import Base
 from database import candle_repo as repo
-from services.market_sync import MarketSyncService, candle_closed, history_windows
+from services.market_sync import MarketSyncService, candle_closed, history_windows, nse_daily_closed
 
 
 class StorageTests(unittest.IsolatedAsyncioTestCase):
@@ -26,6 +26,7 @@ class StorageTests(unittest.IsolatedAsyncioTestCase):
         await self.engine.dispose()
 
     async def test_duplicates_corrections_and_bounded_reads(self):
+        await repo.upsert_instruments([{'key': key, 'symbol': key, 'exchange': 'NSE'} for key in ('A', 'B')])
         records = [{"instrument_key": key, "timeframe": "1m",
                     "timestamp": datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(minutes=i),
                     "open": 10., "high": 12., "low": 9., "close": 11., "volume": 100}
@@ -76,3 +77,13 @@ class StorageTests(unittest.IsolatedAsyncioTestCase):
         now = datetime(2026, 1, 2, 8, tzinfo=timezone.utc)
         self.assertFalse(candle_closed(now, "days", 1, now))
         self.assertTrue(candle_closed(now - timedelta(days=1), "days", 1, now))
+
+    def test_nse_daily_only_after_session_buffer(self):
+        ts = datetime(2026, 10, 11, 18, 30, tzinfo=timezone.utc)
+        before = datetime(2026, 10, 12, 10, 29, tzinfo=timezone.utc)
+        after = datetime(2026, 10, 12, 10, 30, tzinfo=timezone.utc)
+        self.assertFalse(nse_daily_closed(ts, before))
+        self.assertTrue(nse_daily_closed(ts, after))
+        self.assertTrue(candle_closed(ts, 'days', 1, after, 'NSE'))
+        self.assertFalse(candle_closed(ts, 'days', 1, after, 'MCX'))
+        self.assertFalse(nse_daily_closed(ts + timedelta(days=1), after))

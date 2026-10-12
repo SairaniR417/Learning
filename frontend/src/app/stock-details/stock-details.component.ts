@@ -89,6 +89,7 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
     }));
   }
   get passedChecks(): number { return this.confirmationChecks.filter(check => check.passed).length; }
+  get divergenceEvidence(): { label: string }[] { return this.stock?.strategy === 'RSI Divergence' ? (this.stock.checks ?? []).filter(check => check.passed === undefined && !check.label.startsWith('Current RSI')) : []; }
   ngOnChanges(): void { this.activeTab = 'overview'; this.load(); }
   ngOnDestroy(): void { clearTimeout(this.searchTimer); this.searchSubscription?.unsubscribe(); this.subscriptions.unsubscribe(); this.chartApi?.remove(); if (this.expanded) document.body.style.overflow = this.previousOverflow; }
   load(): void {

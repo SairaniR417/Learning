@@ -17,6 +17,8 @@ from scanner.strategies.ema_alignment import EmaAlignmentStrategy
 from scanner.strategies.golden_death_cross import GoldenDeathCrossStrategy
 from scanner.strategies.multi_ma_bullish import MultiMovingAverageBullishStrategy
 from scanner.strategies.rsi_reversal import RsiStrategy
+from scanner.strategies.rsi_divergence import RsiDivergenceStrategy
+from scanner.strategies.ghost_rider import GhostRiderStrategy
 
 
 class StrategyRegistry:
@@ -29,6 +31,8 @@ class StrategyRegistry:
         self.register(GoldenDeathCrossStrategy())
         self.register(MultiMovingAverageBullishStrategy())
         self.register(RsiStrategy())
+        self.register(RsiDivergenceStrategy())
+        self.register(GhostRiderStrategy())
 
     def register(self, strategy: BaseStrategy):
         """Register a new strategy instance."""
@@ -65,6 +69,10 @@ class StrategyRegistry:
         strategy = self.get(strategy_id)
         if not strategy:
             raise ValueError(f"Strategy '{strategy_id}' is not registered.")
+        if strategy_id == 'rsi_divergence' and timeframe != '1d':
+            raise ValueError('RSI Divergence currently supports completed daily candles only.')
+        if strategy_id == 'ghost_rider' and timeframe != '1d':
+            raise ValueError('Ghost Rider currently supports completed daily candles only.')
 
         resolved_params = {}
         # Fill defaults
@@ -95,13 +103,15 @@ class StrategyRegistry:
 
         # 2. Load instrument metadata map
         instruments = await get_all_active_instruments()
-        instruments_map = {inst["key"]: inst for inst in instruments}
+        instruments_map = {inst["key"]: inst for inst in instruments if inst.get('exchange') == 'NSE'}
 
         # 3. Load the same bounded history using the indexed per-instrument
         # latest-candle query. This avoids ranking every candle in the table
         # before discarding older rows for each instrument.
         candles_per_instrument = strategy.candle_window(resolved_params)
         df = await load_recent_candles_polars(timeframe, per_instrument=candles_per_instrument)
+        if not df.is_empty():
+            df = df.filter(df['instrument_key'].is_in(list(instruments_map)))
 
         # 4. Run strategy calculation in memory
         results = strategy.run(df, instruments_map, resolved_params)

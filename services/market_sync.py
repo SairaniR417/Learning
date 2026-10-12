@@ -37,12 +37,26 @@ def history_windows(start, end, unit, interval):
         start = stop + timedelta(days=1)
 
 
-def candle_closed(ts, unit, interval, now):
+def candle_closed(ts, unit, interval, now, exchange=None):
     if unit == "days":
-        # Daily bars are admitted on the following local date until calendars exist.
+        if exchange == 'NSE':
+            return nse_daily_closed(ts, now)
         return ts.astimezone(INDIA).date() < now.astimezone(INDIA).date()
     duration = timedelta(minutes=interval) if unit == "minutes" else timedelta(hours=interval)
     return ts + duration + timedelta(seconds=5) <= now
+
+
+def nse_daily_closed(ts, now=None):
+    """NSE equity bars: accept today after 16:00 IST, with a post-close buffer.
+
+    A provider candle must exist; this does not infer holiday trading or MCX
+    session completion. Future dates and today's in-session bars are excluded.
+    """
+    now = (now or datetime.now(timezone.utc)).astimezone(INDIA)
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    day = ts.astimezone(INDIA).date()
+    return day < now.date() or (day == now.date() and now.hour >= 16)
 
 
 class MarketSyncService:
@@ -133,7 +147,7 @@ class MarketSyncService:
                     base = "https://api.upstox.com/v3/historical-candle"
                     urls = [f"{base}/{encoded_key}/{unit}/{interval}/{end}/{begin}"
                             for begin, end in history_windows(start, today - timedelta(days=1), unit, interval)]
-                    if unit in {"minutes", "hours"}:
+                    if unit in {"minutes", "hours"} or (unit == 'days' and instrument.get('exchange') == 'NSE' and datetime.now(INDIA).hour >= 16):
                         urls.append(f"{base}/intraday/{encoded_key}/{unit}/{interval}")
                     async with semaphore:
                         try:
@@ -147,7 +161,7 @@ class MarketSyncService:
                                 now = datetime.now(timezone.utc)
                                 for row in payload["data"]["candles"]:
                                     ts = datetime.fromisoformat(row[0].replace("Z", "+00:00")).astimezone(timezone.utc)
-                                    if not candle_closed(ts, unit, interval, now):
+                                    if not candle_closed(ts, unit, interval, now, instrument.get('exchange')):
                                         continue
                                     records.append({"instrument_key": key, "timeframe": timeframe,
                                         "timestamp": ts, "open": float(row[1]), "high": float(row[2]),

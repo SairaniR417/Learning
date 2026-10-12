@@ -1,13 +1,13 @@
 <section class="scanner-page" aria-labelledby="scanner-title">
   <header class="scanner-topbar">
-    <div class="scanner-brand"><span class="scanner-brand-mark">TG</span><span><strong>Market Scanner</strong><small>NSE · All listed equities</small></span></div>
+    <div class="scanner-brand"><span class="scanner-brand-mark">TG</span><span><strong>Market Scanner</strong><small>{{ isCommodities ? 'MCX · Front-month futures' : 'NSE · All listed equities' }}</small></span></div>
     <div class="saved-controls">
       <select aria-label="Saved screeners" [value]="selectedSaved" (change)="loadScreener($any($event.target).value)"><option value="">My Screeners</option><option *ngFor="let saved of savedScreeners" [value]="saved.name">{{ saved.name }}</option></select>
       <button type="button" class="quiet-button" (click)="deleteScreener()" [disabled]="!selectedSaved">Delete</button>
     </div>
   </header>
 
-  <div class="scanner-tabs"><button [class.active]="!isCommodities" type="button" (click)="selectMarket('equities')">{{ selectedSector === 'All sectors' ? 'NSE Stocks' : selectedSector }}</button><button [class.active]="isCommodities" type="button" (click)="selectMarket('commodities')">Commodities</button><span class="tab-strategy">{{ isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Selected strategy' }}</span><span class="universe-count">{{ totalScanned ? (totalScanned | number) : (isCommodities ? '?' : '2,700+') }} instruments · {{ isMarketScreener ? 'Live market data' : selectedTimeframe + ' strategy results' }}</span></div>
+  <div class="scanner-tabs"><button [class.active]="!isCommodities" type="button" (click)="selectMarket('equities')">{{ selectedSector === 'All sectors' ? 'NSE Stocks' : selectedSector }}</button><button [class.active]="isCommodities" type="button" (click)="selectMarket('commodities')">Commodities</button><span class="tab-strategy">{{ isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Selected strategy' }}</span><span class="universe-count">{{ totalScanned ? (totalScanned | number) : (isCommodities ? 'MCX' : '2,700+') }} instruments · {{ isMarketScreener ? 'Live market data' : selectedTimeframe + ' strategy results' }}</span></div>
 
   <div class="scanner-layout">
     <aside class="factor-sidebar">
@@ -16,11 +16,11 @@
       <label class="control-label">STRATEGY</label>
       <select class="wide-control strategy-select" [value]="selectedStrategy" (change)="selectStrategy($any($event.target).value)">
         <option value="market_screener">Market Screener</option>
-        <optgroup label="Available strategies" [disabled]="isCommodities">
+        <optgroup label="Available strategies">
           <option *ngFor="let strategy of strategies" [value]="strategy.id">{{ strategy.name }}</option>
         </optgroup>
         <optgroup label="Coming soon">
-          <option disabled>RSI Divergence</option>
+          
           <option disabled>MACD Crossover</option>
           <option disabled>Supertrend Reversal</option>
           <option disabled>VWAP Crossover / Rejection</option>
@@ -34,12 +34,14 @@
       </select>
       <p class="strategy-description">{{ isMarketScreener ? (isCommodities ? 'Screen MCX front-month futures using live price, daily change and contract volume.' : 'Screen every NSE stock using current price, daily change and traded volume.') : activeStrategy?.description }}</p>
 
+      <p class="strategy-description" *ngIf="!isCommodities && selectedStrategy === 'rsi_divergence'">Completed daily candles · WATCH is a detected pattern; CONFIRMED requires a closing breakout. Pivots appear after the right-side bars finish. Hidden patterns require a matching trend.</p>
+      <p class="strategy-description" *ngIf="!isCommodities && selectedStrategy === 'rsi_divergence'">Pattern screen, not a trade recommendation. The tested standalone entry rules had negative average returns after costs in the later-period sample.</p>
       <div class="strategy-params" *ngIf="!isMarketScreener && activeStrategy">
         <label *ngFor="let param of activeStrategy.parameters"><span>{{ param.display_name }}</span><input type="number" [min]="param.min_value ?? null" [max]="param.max_value ?? null" [value]="strategyParams[param.name]" (input)="updateStrategyParam(param.name, $any($event.target).value)"></label>
       </div>
       <label class="control-label timeframe-label">TIMEFRAME</label>
-      <select class="wide-control" [disabled]="isCommodities" [value]="timeframe" (change)="timeframe = $any($event.target).value">
-        <option value="1d">Daily</option><option value="1w">Weekly</option><option value="1M">Monthly</option><option value="1h">1 hour</option><option value="15m">15 minutes</option>
+      <select class="wide-control" [disabled]="!isCommodities && (selectedStrategy === 'rsi_divergence' || selectedStrategy === 'ghost_rider')" [value]="timeframe" (change)="timeframe = $any($event.target).value">
+        <option value="1d">Daily</option><option *ngIf="!isCommodities" value="1w">Weekly</option><option *ngIf="!isCommodities" value="1M">Monthly</option><option value="1h">1 hour</option><option value="15m">15 minutes</option>
       </select>
       <p class="strategy-description" *ngIf="!isMarketScreener">{{ activeStrategy?.min_candles }} candles minimum. Results use locally stored history.</p>
 
@@ -58,11 +60,12 @@
 
     <main class="results-main">
       <header class="results-toolbar">
-        <div><div class="results-title-row"><h1>{{ selectedSector !== 'All sectors' ? selectedSector : (isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Market Scanner') }}</h1><span class="live-tag"><i></i>{{ isMarketScreener ? 'LIVE SCREENER' : 'STRATEGY SCAN' }}</span></div><p>{{ isMarketScreener ? (isCommodities ? 'Live MCX quotes ? nearest unexpired contract per commodity.' : 'Apply factors to the full NSE cash equity universe.') : activeStrategy?.description }}</p></div>
-        <button class="run-scan" type="button" [disabled]="loading || loadingStrategies" (click)="scan()">{{ loading ? 'Scanning…' : '▶  Scan Stocks' }}</button>
+        <div><div class="results-title-row"><h1>{{ selectedSector !== 'All sectors' ? selectedSector : (isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Market Scanner') }}</h1><span class="live-tag"><i></i>{{ isMarketScreener ? 'LIVE SCREENER' : 'STRATEGY SCAN' }}</span></div><p>{{ isMarketScreener ? (isCommodities ? 'Live MCX quotes: nearest unexpired contract per commodity.' : 'Apply factors to the full NSE cash equity universe.') : activeStrategy?.description }}</p></div>
+        <button class="run-scan" type="button" [disabled]="loading || loadingStrategies" (click)="scan()">{{ loading ? 'Scanning...' : (isCommodities ? 'Scan Commodities' : 'Scan Stocks') }}</button>
       </header>
 
       <div class="results-meta" *ngIf="hasScanned"><span>Displaying <strong>{{ filteredResults.length | number }}</strong> matches of <strong>{{ totalScanned | number }}</strong> scanned</span><span>{{ isMarketScreener ? 'Generated from live Upstox quotes' : selectedTimeframe + ' · strategy results' }}</span></div>
+      <p class="strategy-description" *ngIf="coverageNote">Insufficient or unavailable contract history: {{ coverageNote }}</p>
       <div class="progress-line" *ngIf="loading"><span></span></div>
       <div class="scanner-error" *ngIf="error" role="alert"><strong>Scan could not finish</strong><span>{{ error }}</span><a *ngIf="error.toLowerCase().includes('connect')" href="/auth/upstox">Connect Upstox</a></div>
 
@@ -76,6 +79,7 @@
           <ng-template #filterPanel>
             <p class="panel-help">Filter the current scan results.</p>
             <label class="side-filter">Symbol or company<input type="search" [value]="rightFilters.symbol" (input)="setRightFilter('symbol', $any($event.target).value)" placeholder="Search stocks"></label>
+            <label class="side-filter" *ngIf="!isCommodities && selectedStrategy === 'rsi_divergence'">Divergence<select [value]="rightFilters.divergence" (change)="setRightFilter('divergence', $any($event.target).value)"><option value="">All four patterns</option><option value="REGULAR_BULLISH">Regular bullish</option><option value="REGULAR_BEARISH">Regular bearish</option><option value="HIDDEN_BULLISH">Hidden bullish</option><option value="HIDDEN_BEARISH">Hidden bearish</option></select></label>
             <label class="side-filter">Status<select [value]="rightFilters.status" (change)="setRightFilter('status', $any($event.target).value)"><option value="">Any status</option><option *ngFor="let status of statusOptions" [value]="status.value">{{ status.label }}</option></select></label>
             <label class="side-filter">Sector<select [value]="rightFilters.sector" (change)="setRightFilter('sector', $any($event.target).value)"><option value="">All sectors</option><option *ngFor="let sector of sectors.slice(1)" [value]="sector">{{ sector }}</option></select></label>
             <fieldset class="range-filter"><legend>Change %</legend><input type="number" [value]="rightFilters.changeMin" (input)="setRightFilter('changeMin', $any($event.target).value)" placeholder="Min"><input type="number" [value]="rightFilters.changeMax" (input)="setRightFilter('changeMax', $any($event.target).value)" placeholder="Max"></fieldset>
@@ -86,7 +90,7 @@
         </aside>
         <nav class="grid-tool-rail" aria-label="Grid tools"><button type="button" [class.active]="gridPanel === 'columns'" (click)="toggleGridPanel('columns')" aria-label="Columns"><span>▤</span><small>Columns</small></button><button type="button" [class.active]="gridPanel === 'filters'" (click)="toggleGridPanel('filters')" aria-label="Filters"><span>▽</span><small>Filters</small></button></nav>
       </div>
-      <ng-template #emptyResults><div class="empty-results" *ngIf="hasScanned && !loading"><strong>No matching instruments</strong><p>Try widening the factor range or changing the strategy.</p></div><div class="empty-results welcome" *ngIf="!hasScanned && !loading"><strong>{{ isCommodities ? 'Build your commodity screen' : 'Build your NSE stock screen' }}</strong><p>{{ isCommodities ? 'Set price, change % or volume factors, then scan live MCX futures. Technical strategies require stored commodity history.' : 'Choose a strategy or add factors, then scan the entire available universe.' }}</p></div></ng-template>
+      <ng-template #emptyResults><div class="empty-results" *ngIf="hasScanned && !loading"><strong>No matching instruments</strong><p>Try widening the factor range or changing the strategy.</p></div><div class="empty-results welcome" *ngIf="!hasScanned && !loading"><strong>{{ isCommodities ? 'Build your commodity screen' : 'Build your NSE stock screen' }}</strong><p>{{ isCommodities ? 'Choose a strategy, then scan MCX contract history. Use 15-minute candles for technical scans; daily contracts may have limited history.' : 'Choose a strategy or add factors, then scan the entire available universe.' }}</p></div></ng-template>
       <details class="strategy-note" *ngIf="results.length && !isMarketScreener"><summary>Strategy scan details</summary><p>Technical strategy results come from the candles currently stored in your database. Run the daily candle sync to scan stocks with available history.</p></details>
     </main>
   </div>
