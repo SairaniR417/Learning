@@ -156,3 +156,18 @@ Settings offers a reviewable import of the one filled reflection trade. The numb
 Trades can be edited/deleted with confirmation for deletion and exported as filtered CSV. Chart links accept only HTTP(S). The scaling simulator is a linear historical replay, not a forecast: fills, margin, liquidity and non-linear charges are not simulated. Quick re-entry flags mean a same-account entry within five minutes of a completed loss; they do not diagnose revenge trading. Starting balance and hidden-price settings are local to the browser and do not alter records.
 
 Validation: `.venv/Scripts/python.exe -m unittest tests.test_trade_journal -v`. Manual browser test `tests/journal_browser_smoke.py` intercepts all API calls so it cannot modify real trades. Requires frontend on 4200 and a temporary headless Chrome instance on debugging port 9333.
+
+
+## Focused shortlist
+
+The Focused tab combines all six registered strategies against one shared NSE daily database snapshot. It returns all qualified stocks and shows five per page by default, with reasons and links to stock analysis. Pagination gives access to every match without expanding the page. The database scan requires no broker token. Results are cached for 15 minutes and invalidated by the daily candle revision.
+
+Qualification requires at least two confirmed directional strategies from at least two signal families. Trend, crossover and momentum each contribute at most three points, so overlapping MA checks do not inflate the score. SUPER requires three confirmed strategies, at least six points and no opposing evidence. Scores are deterministic confluence points, not calibrated probabilities or a backtested combined trading system. Absence of a bullish match never creates a bearish vote. Conflicting confirmed signals, weakened cross setups, unconfirmed divergence, old/stopped Ghost Rider setups and stale stock data are excluded.
+
+Focused uses at most 500 recent candles per stock with default parameters; Golden/Death Cross votes require a cross within 30 bars and Ghost Rider votes within five bars. The individual strategy screens retain their existing history windows. Stocks require 251 candles, price at least Rs 20, positive latest volume, and average 20-day traded value of at least Rs 1 crore. Results use the newest completed date present in the database, which is shown explicitly. Shortlists are not padded when few stocks qualify.
+
+Reference entry is the latest completed close. A new SL is placed beyond the latest ten-bar low/high with a 0.25 ATR-14 buffer, at least 1.5 ATR away. Targets are 2R and 3R projections from this close. Nonpositive levels and stop distances above 12% are excluded. These plans are separate from historical Ghost Rider targets. Bearish analysis does not imply an available overnight cash-equity short.
+
+Default UI ranking uses company market capitalization (largest first), then traded value and signal score. Other sorts use traded value, signal score or share price. Price and market-cap filters are optional; neither company size nor share price is presented as a business-quality rating. The NSE PR archive market-cap report is imported into `data/nse-market-cap.json`; import_nse_bhavcopy updates it on each applied daily import. Metadata is attached to cached scanner results only when its trading date matches. Missing caps remain unknown and sort last.
+
+API: `GET /api/focused?limit=5` (limit 1?200); background scan jobs return the complete list. Tests: `.venv/Scripts/python -m unittest tests.test_focused`.

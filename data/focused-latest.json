@@ -1,0 +1,2277 @@
+{
+  "bullish": [
+    {
+      "instrumentKey": "NSE_EQ|INE036D01028",
+      "symbol": "KARURVYSYA",
+      "name": "KARURVYSYA",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "SUPER BULLISH",
+      "score": 8,
+      "maxScore": 9,
+      "strategyCount": 4,
+      "strongStrategyCount": 3,
+      "independentFamilies": 3,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bullish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 342.3,
+      "changePct": 0.71,
+      "averageTurnover": 667548531.49,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 342.3,
+        "stopLoss": 309.04,
+        "target1": 408.82,
+        "target2": 442.07,
+        "riskPct": 9.72,
+        "atr14": 9.43,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 330853894994.7,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE103A01014",
+      "symbol": "MRPL",
+      "name": "MRPL",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "SUPER BULLISH",
+      "score": 7,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 3,
+      "independentFamilies": 3,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bullish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 4 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 173.72,
+      "changePct": 0.92,
+      "averageTurnover": 1844661299.3,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 173.72,
+        "stopLoss": 159.55,
+        "target1": 202.07,
+        "target2": 216.24,
+        "riskPct": 8.16,
+        "atr14": 7.82,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 304461459540.45,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE136S01016",
+      "symbol": "NEOGEN",
+      "name": "NEOGEN",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "SUPER BULLISH",
+      "score": 6,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 3,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "trend",
+          "reason": "Bullish MA order, rising long-term trend, RSI and volume confirmed; closing breakout above prior 20-bar high",
+          "state": "STRONG_BULLISH"
+        },
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Hidden Bullish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 2534.5,
+      "changePct": 6.57,
+      "averageTurnover": 531331771.34,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 2534.5,
+        "stopLoss": 2272.22,
+        "target1": 3059.07,
+        "target2": 3321.35,
+        "riskPct": 10.35,
+        "atr14": 111.14,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 76142531231.5,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE032B01021",
+      "symbol": "PRIMESECU",
+      "name": "PRIMESECU",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "SUPER BULLISH",
+      "score": 6,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 3,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "golden_death_cross",
+          "strategy": "Golden Cross / Death Cross",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "crossover",
+          "reason": "Golden cross with all six current confirmations passing",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "trend",
+          "reason": "Bullish MA order, rising long-term trend, RSI and volume confirmed; closing breakout above prior 20-bar high",
+          "state": "STRONG_BULLISH"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 312.2,
+      "changePct": 4.26,
+      "averageTurnover": 13864315.47,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 312.2,
+        "stopLoss": 276.92,
+        "target1": 382.77,
+        "target2": 418.05,
+        "riskPct": 11.3,
+        "atr14": 12.34,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 10607096465.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE763I01026",
+      "symbol": "TARIL",
+      "name": "TARIL",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 6,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bullish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 294.8,
+      "changePct": 1.43,
+      "averageTurnover": 1320149893.16,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 294.8,
+        "stopLoss": 263.84,
+        "target1": 356.71,
+        "target2": 387.67,
+        "riskPct": 10.5,
+        "atr14": 11.02,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 88488887863.2,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE343H01029",
+      "symbol": "SOLARINDS",
+      "name": "SOLARINDS",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 20334.0,
+      "changePct": 1.67,
+      "averageTurnover": 5122901324.35,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 20334.0,
+        "stopLoss": 18486.31,
+        "target1": 24029.39,
+        "target2": 25877.08,
+        "riskPct": 9.09,
+        "atr14": 654.78,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 1840024778370.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE305A01023",
+      "symbol": "TFCILTD",
+      "name": "TFCILTD",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Hidden Bullish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 151.77,
+      "changePct": 3.21,
+      "averageTurnover": 2033525075.3,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 151.77,
+        "stopLoss": 134.44,
+        "target1": 186.43,
+        "target2": 203.76,
+        "riskPct": 11.42,
+        "atr14": 5.84,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 70266055714.8,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE944F01028",
+      "symbol": "RADICO",
+      "name": "RADICO",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 4555.0,
+      "changePct": 0.11,
+      "averageTurnover": 1370692388.9,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 4555.0,
+        "stopLoss": 4204.16,
+        "target1": 5256.68,
+        "target2": 5607.52,
+        "riskPct": 7.7,
+        "atr14": 122.56,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 610289822890.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE457A01014",
+      "symbol": "MAHABANK",
+      "name": "MAHABANK",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 83.0,
+      "changePct": -0.19,
+      "averageTurnover": 1141141075.89,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 83.0,
+        "stopLoss": 78.26,
+        "target1": 92.49,
+        "target2": 97.23,
+        "riskPct": 5.71,
+        "atr14": 2.45,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 638399060850.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE684F01012",
+      "symbol": "FSL",
+      "name": "FSL",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 277.35,
+      "changePct": 3.45,
+      "averageTurnover": 1051519345.38,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 277.35,
+        "stopLoss": 244.45,
+        "target1": 343.16,
+        "target2": 376.06,
+        "riskPct": 11.86,
+        "atr14": 10.22,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 193310405591.1,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE048G01026",
+      "symbol": "NAVINFLUOR",
+      "name": "NAVINFLUOR",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 8561.0,
+      "changePct": 2.5,
+      "averageTurnover": 930423899.08,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 8561.0,
+        "stopLoss": 7979.57,
+        "target1": 9723.85,
+        "target2": 10305.28,
+        "riskPct": 6.79,
+        "atr14": 221.71,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 439114013814.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE614B01018",
+      "symbol": "KTKBANK",
+      "name": "KTKBANK",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 1 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 337.65,
+      "changePct": 2.88,
+      "averageTurnover": 640283077.95,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 337.65,
+        "stopLoss": 313.77,
+        "target1": 385.4,
+        "target2": 409.28,
+        "riskPct": 7.07,
+        "atr14": 10.51,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 127762371900.6,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE810G01011",
+      "symbol": "SHYAMMETL",
+      "name": "SHYAMMETL",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 1088.5,
+      "changePct": 2.68,
+      "averageTurnover": 622760978.4,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 1088.5,
+        "stopLoss": 1006.95,
+        "target1": 1251.59,
+        "target2": 1333.14,
+        "riskPct": 7.49,
+        "atr14": 32.18,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 303835021990.5,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE217B01036",
+      "symbol": "KAJARIACER",
+      "name": "KAJARIACER",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 1224.7,
+      "changePct": 0.77,
+      "averageTurnover": 614501901.21,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 1224.7,
+        "stopLoss": 1158.36,
+        "target1": 1357.39,
+        "target2": 1423.73,
+        "riskPct": 5.42,
+        "atr14": 34.57,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 192453093335.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE491A01021",
+      "symbol": "CUB",
+      "name": "CUB",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 231.17,
+      "changePct": -0.11,
+      "averageTurnover": 570653597.26,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 231.17,
+        "stopLoss": 208.58,
+        "target1": 276.36,
+        "target2": 298.95,
+        "riskPct": 9.77,
+        "atr14": 8.45,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 229040285808.45,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE055S01018",
+      "symbol": "CYIENTDLM",
+      "name": "CYIENTDLM",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Hidden Bullish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 979.1,
+      "changePct": 2.81,
+      "averageTurnover": 462206113.92,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 979.1,
+        "stopLoss": 868.7,
+        "target1": 1199.91,
+        "target2": 1310.31,
+        "riskPct": 11.28,
+        "atr14": 46.41,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 77724255608.8,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE277A01016",
+      "symbol": "SWARAJENG",
+      "name": "SWARAJENG",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "rsi_reversal",
+          "strategy": "RSI Oversold Bounce",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "momentum",
+          "reason": "RSI recovered from below 30 to 73.4",
+          "state": "OVERSOLD_REVERSAL"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 3738.4,
+      "changePct": 8.7,
+      "averageTurnover": 289432815.54,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 3738.4,
+        "stopLoss": 3392.86,
+        "target1": 4429.48,
+        "target2": 4775.03,
+        "riskPct": 9.24,
+        "atr14": 94.57,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 45421055316.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE08N601015",
+      "symbol": "MBEL",
+      "name": "MBEL",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bullish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 2 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 271.27,
+      "changePct": 1.75,
+      "averageTurnover": 149467884.03,
+      "candlesAnalyzed": 292,
+      "plan": {
+        "entry": 271.27,
+        "stopLoss": 242.47,
+        "target1": 328.87,
+        "target2": 357.67,
+        "riskPct": 10.62,
+        "atr14": 13.32,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 15505987971.85,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE616Z01012",
+      "symbol": "YASHO",
+      "name": "YASHO",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Hidden Bullish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 4 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 4065.4,
+      "changePct": -1.44,
+      "averageTurnover": 148363873.66,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 4065.4,
+        "stopLoss": 3742.86,
+        "target1": 4710.49,
+        "target2": 5033.03,
+        "riskPct": 7.93,
+        "atr14": 215.03,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 49016914013.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE435A01051",
+      "symbol": "ANDHRAPAP",
+      "name": "ANDHRAPAP",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 71.34,
+      "changePct": 6.14,
+      "averageTurnover": 52427374.85,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 71.34,
+        "stopLoss": 65.29,
+        "target1": 83.43,
+        "target2": 89.48,
+        "riskPct": 8.48,
+        "atr14": 3.83,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 14185972911.3,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE335K01011",
+      "symbol": "COFFEEDAY",
+      "name": "COFFEEDAY",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 3,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "multi_ma_bullish",
+          "strategy": "Multi-MA Bullish Confirmation",
+          "direction": "BULLISH",
+          "weight": 1,
+          "family": "trend",
+          "reason": "Fresh bullish EMA crossover with RSI above 50; early signal",
+          "state": "EARLY_BULLISH"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 31.7,
+      "changePct": 2.89,
+      "averageTurnover": 33459790.26,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 31.7,
+        "stopLoss": 28.45,
+        "target1": 38.21,
+        "target2": 41.46,
+        "riskPct": 10.26,
+        "atr14": 1.65,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 6696679492.3,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE425Y01011",
+      "symbol": "RPSGVENT",
+      "name": "RPSGVENT",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BULLISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bullish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 874.85,
+      "changePct": -1.85,
+      "averageTurnover": 27975857.62,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 874.85,
+        "stopLoss": 807.69,
+        "target1": 1009.18,
+        "target2": 1076.34,
+        "riskPct": 7.68,
+        "atr14": 33.46,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 28945644913.65,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE591G01025",
+      "symbol": "COFORGE",
+      "name": "COFORGE",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 1 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 1846.6,
+      "changePct": -1.14,
+      "averageTurnover": 3867419469.38,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 1846.6,
+        "stopLoss": 1706.96,
+        "target1": 2125.87,
+        "target2": 2265.51,
+        "riskPct": 7.56,
+        "atr14": 60.14,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 818003340994.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE388Y01029",
+      "symbol": "NYKAA",
+      "name": "NYKAA",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 3 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 340.0,
+      "changePct": -0.87,
+      "averageTurnover": 1616955806.09,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 340.0,
+        "stopLoss": 313.53,
+        "target1": 392.95,
+        "target2": 419.42,
+        "riskPct": 7.79,
+        "atr14": 9.89,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 973860236420.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE572E01012",
+      "symbol": "PNBHOUSING",
+      "name": "PNBHOUSING",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 1200.0,
+      "changePct": 3.63,
+      "averageTurnover": 1243532294.62,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 1200.0,
+        "stopLoss": 1056.82,
+        "target1": 1486.36,
+        "target2": 1629.54,
+        "riskPct": 11.93,
+        "atr14": 34.32,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 312964695600.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE119A01028",
+      "symbol": "BALRAMCHIN",
+      "name": "BALRAMCHIN",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 3 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 700.8,
+      "changePct": 3.34,
+      "averageTurnover": 885538987.08,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 700.8,
+        "stopLoss": 630.73,
+        "target1": 840.95,
+        "target2": 911.02,
+        "riskPct": 10.0,
+        "atr14": 29.09,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 148287525196.8,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE777K01022",
+      "symbol": "RRKABEL",
+      "name": "RRKABEL",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 4 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 2721.5,
+      "changePct": 0.59,
+      "averageTurnover": 867104990.56,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 2721.5,
+        "stopLoss": 2416.71,
+        "target1": 3331.07,
+        "target2": 3635.86,
+        "riskPct": 11.2,
+        "atr14": 94.35,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 307816631857.5,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE291A01017",
+      "symbol": "GRWRHITECH",
+      "name": "GRWRHITECH",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 4 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 7193.5,
+      "changePct": 2.8,
+      "averageTurnover": 390572541.5,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 7193.5,
+        "stopLoss": 6456.83,
+        "target1": 8666.84,
+        "target2": 9403.51,
+        "riskPct": 10.24,
+        "atr14": 278.68,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 167122226239.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE00VM01036",
+      "symbol": "MANORAMA",
+      "name": "MANORAMA",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 4 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 1984.0,
+      "changePct": -2.91,
+      "averageTurnover": 334113046.58,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 1984.0,
+        "stopLoss": 1806.91,
+        "target1": 2338.17,
+        "target2": 2515.26,
+        "riskPct": 8.93,
+        "atr14": 68.35,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 125234821760.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE854B01010",
+      "symbol": "JAYNECOIND",
+      "name": "JAYNECOIND",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "NEWLY_ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 4 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 93.78,
+      "changePct": 2.6,
+      "averageTurnover": 243140561.98,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 93.78,
+        "stopLoss": 85.89,
+        "target1": 109.57,
+        "target2": 117.46,
+        "riskPct": 8.42,
+        "atr14": 3.53,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 91060215322.3,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE385F01024",
+      "symbol": "SGMART",
+      "name": "SGMART",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 1 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 764.1,
+      "changePct": -1.48,
+      "averageTurnover": 179894325.03,
+      "candlesAnalyzed": 267,
+      "plan": {
+        "entry": 764.1,
+        "stopLoss": 711.77,
+        "target1": 868.76,
+        "target2": 921.09,
+        "riskPct": 6.85,
+        "atr14": 32.92,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 96303496320.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE665J01013",
+      "symbol": "VMART",
+      "name": "VMART",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 1 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 817.7,
+      "changePct": -0.52,
+      "averageTurnover": 68736256.45,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 817.7,
+        "stopLoss": 729.0,
+        "target1": 995.09,
+        "target2": 1083.79,
+        "riskPct": 10.85,
+        "atr14": 30.39,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 65068796403.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE898S01029",
+      "symbol": "AURUM",
+      "name": "AURUM",
+      "exchange": "NSE",
+      "direction": "BULLISH",
+      "tier": "BULLISH",
+      "score": 4,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "ema_sma_alignment",
+          "strategy": "EMA & SMA Bullish Alignment",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "trend",
+          "reason": "Close above EMA 9, EMA 20, SMA 50 and SMA 200",
+          "state": "ALIGNED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BULLISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 buy setup, 4 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 228.12,
+      "changePct": -2.0,
+      "averageTurnover": 25210067.88,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 228.12,
+        "stopLoss": 212.9,
+        "target1": 258.55,
+        "target2": 273.77,
+        "riskPct": 6.67,
+        "atr14": 8.38,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 17433457813.45,
+      "marketCapAsOf": "2026-10-12"
+    }
+  ],
+  "bearish": [
+    {
+      "instrumentKey": "NSE_EQ|INE665L01035",
+      "symbol": "VARROC",
+      "name": "VARROC",
+      "exchange": "NSE",
+      "direction": "BEARISH",
+      "tier": "BEARISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BEARISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bearish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BEARISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 sell setup, 4 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 820.6,
+      "changePct": 3.4,
+      "averageTurnover": 231910978.88,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 820.6,
+        "stopLoss": 875.21,
+        "target1": 711.38,
+        "target2": 656.78,
+        "riskPct": 6.65,
+        "atr14": 32.83,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 125376519840.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE901L01018",
+      "symbol": "APLLTD",
+      "name": "APLLTD",
+      "exchange": "NSE",
+      "direction": "BEARISH",
+      "tier": "BEARISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BEARISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bearish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BEARISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 sell setup, 2 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 789.05,
+      "changePct": -1.49,
+      "averageTurnover": 204781889.07,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 789.05,
+        "stopLoss": 882.73,
+        "target1": 601.69,
+        "target2": 508.01,
+        "riskPct": 11.87,
+        "atr14": 25.32,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 155098132992.2,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE491J01022",
+      "symbol": "ASKAUTOLTD",
+      "name": "ASKAUTOLTD",
+      "exchange": "NSE",
+      "direction": "BEARISH",
+      "tier": "BEARISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BEARISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bearish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BEARISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 sell setup, 5 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 603.55,
+      "changePct": 2.62,
+      "averageTurnover": 197446082.59,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 603.55,
+        "stopLoss": 670.64,
+        "target1": 469.37,
+        "target2": 402.28,
+        "riskPct": 11.12,
+        "atr14": 25.95,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 118985416230.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE978A01027",
+      "symbol": "HERITGFOOD",
+      "name": "HERITGFOOD",
+      "exchange": "NSE",
+      "direction": "BEARISH",
+      "tier": "BEARISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BEARISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bearish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BEARISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 sell setup, 0 bars old; original stop untouched",
+          "state": "NEW"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 391.8,
+      "changePct": 0.42,
+      "averageTurnover": 196950509.89,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 391.8,
+        "stopLoss": 419.25,
+        "target1": 336.89,
+        "target2": 309.44,
+        "riskPct": 7.01,
+        "atr14": 14.61,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 36357472800.0,
+      "marketCapAsOf": "2026-10-12"
+    },
+    {
+      "instrumentKey": "NSE_EQ|INE742B01025",
+      "symbol": "GUFICBIO",
+      "name": "GUFICBIO",
+      "exchange": "NSE",
+      "direction": "BEARISH",
+      "tier": "BEARISH",
+      "score": 5,
+      "maxScore": 9,
+      "strategyCount": 2,
+      "strongStrategyCount": 2,
+      "independentFamilies": 2,
+      "reasons": [
+        {
+          "strategyId": "rsi_divergence",
+          "strategy": "RSI Divergence",
+          "direction": "BEARISH",
+          "weight": 3,
+          "family": "momentum",
+          "reason": "Regular Bearish; closing trigger confirmed, invalidation intact",
+          "state": "CONFIRMED"
+        },
+        {
+          "strategyId": "ghost_rider",
+          "strategy": "Ghost Rider",
+          "direction": "BEARISH",
+          "weight": 2,
+          "family": "crossover",
+          "reason": "EMA 9/21 sell setup, 5 bars old; original stop untouched",
+          "state": "WAIT"
+        }
+      ],
+      "conflicts": [],
+      "asOf": "2026-10-11T18:30:00+00:00",
+      "close": 418.55,
+      "changePct": 3.02,
+      "averageTurnover": 35437510.96,
+      "candlesAnalyzed": 500,
+      "plan": {
+        "entry": 418.55,
+        "stopLoss": 456.45,
+        "target1": 342.75,
+        "target2": 304.85,
+        "riskPct": 9.06,
+        "atr14": 17.8,
+        "rewardRisk": [
+          2,
+          3
+        ],
+        "basis": "Latest daily close; stop beyond 10-bar swing with 0.25 ATR buffer, at least 1.5 ATR away; targets at 2R / 3R"
+      },
+      "marketCap": 41973242886.3,
+      "marketCapAsOf": "2026-10-12"
+    }
+  ],
+  "asOf": "2026-10-12",
+  "totalScanned": 2703,
+  "excluded": {
+    "stale": 7,
+    "insufficientHistory": 442,
+    "liquidity": 767,
+    "conflicting": 21,
+    "weakAgreement": 1398,
+    "wideStop": 30
+  },
+  "strategies": [
+    {
+      "id": "ema_sma_alignment",
+      "name": "EMA & SMA Bullish Alignment",
+      "rows": 292,
+      "window": 201
+    },
+    {
+      "id": "golden_death_cross",
+      "name": "Golden Cross / Death Cross",
+      "rows": 907,
+      "window": 500
+    },
+    {
+      "id": "multi_ma_bullish",
+      "name": "Multi-MA Bullish Confirmation",
+      "rows": 2703,
+      "window": 250
+    },
+    {
+      "id": "rsi_reversal",
+      "name": "RSI Oversold Bounce",
+      "rows": 201,
+      "window": 300
+    },
+    {
+      "id": "rsi_divergence",
+      "name": "RSI Divergence",
+      "rows": 214,
+      "window": 341
+    },
+    {
+      "id": "ghost_rider",
+      "name": "Ghost Rider",
+      "rows": 2247,
+      "window": 500
+    }
+  ],
+  "scannedAt": "2026-10-12T18:58:22.336102+00:00",
+  "methodology": "At least two confirmed strategies from two different signal families. Super requires three confirmed strategies, score >= 6 and no opposing evidence. Trend/crossover/momentum scores capped at 3 each. These families can still be correlated; score is not a probability. Unconfirmed warnings cannot qualify a stock alone.",
+  "filters": "Latest stored completed trading date, >=251 candles, close >= Rs 20, 20-day average turnover >= Rs 1 crore, positive latest volume, stop risk <=12%. Up to 500 recent candles per stock; Golden/Death Cross must be <=30 bars old and Ghost Rider <=5 bars old.",
+  "planNote": "Illustrative swing levels from the reference close, not live executable prices or forecasts. Recalculate if entry changes. Bearish setups do not imply overnight cash-market short availability.",
+  "cached": false,
+  "marketCapAsOf": "2026-10-12",
+  "marketCapSource": "NSE PR121026.zip / mcap12102026.csv",
+  "totalBullish": 33,
+  "totalBearish": 5
+}

@@ -7,6 +7,7 @@ import { WatchlistComponent } from './watchlist/watchlist.component';
 import { TradeJournalComponent } from './trade-journal/trade-journal.component';
 import { StockDetailsComponent } from './stock-details/stock-details.component';
 import { EmaScannerComponent } from './scanner/ema-scanner.component';
+import { FocusedComponent } from './focused/focused.component';
 import { MarketApiService, MarketAssetQuote, SelectedStock } from './market-api.service';
 
 interface DashboardAsset extends MarketAssetQuote {
@@ -25,7 +26,7 @@ interface Opportunity {
   tag: string;
 }
 
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
 export class AppComponent implements OnInit, OnDestroy {
   private readonly api = inject(MarketApiService);
   readonly notifications = inject(AlertNotificationsService);
@@ -69,7 +70,7 @@ export class AppComponent implements OnInit, OnDestroy {
   heatGainMax = 0;
   heatLossMax = 0;
   opportunities: Opportunity[] = [];
-  pages = ['Overview', 'Market Scanner', 'Stock Details', 'Watchlist', 'Trade Journal'];
+  pages = ['Overview', 'Market Scanner', 'Focused', 'Stock Details', 'Watchlist', 'Trade Journal'];
 
   ngOnInit(): void {
     this.statusSubscription = timer(0, 15000).subscribe(() => {

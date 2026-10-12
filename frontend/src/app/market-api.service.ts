@@ -88,6 +88,22 @@ export interface EmaScannerResponse {
 export interface ScannerStrategyParameter { name: string; display_name: string; type: 'int' | 'float' | 'bool' | 'str'; default: number | string | boolean; min_value?: number | null; max_value?: number | null; description?: string; }
 export interface ScannerStrategy { id: string; name: string; category: string; description: string; default_timeframe: string; min_candles: number; parameters: ScannerStrategyParameter[]; }
 export interface StrategyScanResponse { coverage?: { symbol: string; candles: number; required: number; sufficient: boolean }[]; errors?: { symbol: string; error: string }[]; strategy_id: string; strategy_name: string; timeframe: string; total_scanned: number; total_matched: number; scanned_at: string; results: Record<string, unknown>[]; cached: boolean; }
+export interface FocusedEvidence { strategyId: string; strategy: string; direction: string; weight: number; family: string; reason: string; state: string; }
+export interface FocusedStock {
+  instrumentKey: string; symbol: string; name: string; exchange: string; direction: string; tier: string;
+  score: number; maxScore: number; strategyCount: number; strongStrategyCount: number; independentFamilies: number;
+  reasons: FocusedEvidence[]; conflicts: FocusedEvidence[]; asOf: string; close: number; changePct: number | null;
+  averageTurnover: number; candlesAnalyzed: number; marketCap: number | null; marketCapAsOf: string | null;
+  plan: { entry: number; stopLoss: number; target1: number; target2: number; riskPct: number; atr14: number; rewardRisk: number[]; basis: string; };
+}
+export interface FocusedResponse {
+  bullish: FocusedStock[]; bearish: FocusedStock[]; totalBullish: number; totalBearish: number;
+  asOf: string | null; totalScanned: number; scannedAt: string; cached: boolean;
+  strategies: { id: string; name: string; rows: number; window: number; }[];
+  excluded: Record<string, number>; methodology: string; filters: string; planNote: string;
+  marketCapAsOf: string | null; marketCapSource: string | null;
+}
+export interface FocusedJob { id: string; status: 'running' | 'complete' | 'failed'; stage: string; result: FocusedResponse | null; error: string; }
 export interface MarketEmaIndicator { instrumentKey: string; symbol: string; name: string; ema9: number | null; ema20: number | null; sma50: number | null; sma200: number | null; close: number; previousClose: number | null; changePct: number | null; volume: number; status: string; historySufficient: boolean; }
 
 export interface CorporateAction {
@@ -117,6 +133,9 @@ export interface NotificationInbox { notifications: AlertNotification[]; unread:
 @Injectable({ providedIn: 'root' })
 export class MarketApiService {
   private readonly http = inject(HttpClient);
+  focused(limit = 5): Observable<FocusedResponse> { return this.http.get<FocusedResponse>('/api/focused', { params: { limit } }); }
+  startFocused(): Observable<{ id: string }> { return this.http.post<{ id: string }>('/api/focused/jobs', {}); }
+  focusedJob(id: string): Observable<FocusedJob> { return this.http.get<FocusedJob>(`/api/focused/jobs/${encodeURIComponent(id)}`); }
   watchlists(): Observable<{ lists: Watchlist[] }> { return this.http.get<{ lists: Watchlist[] }>('/api/watchlists'); }
   createWatchlist(list: Omit<Watchlist, 'id'>): Observable<Watchlist> { return this.http.post<Watchlist>('/api/watchlists', list); }
   saveWatchlist(list: Watchlist): Observable<Watchlist> { return this.http.put<Watchlist>(`/api/watchlists/${list.id}`, list); }

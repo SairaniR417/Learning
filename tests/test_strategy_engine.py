@@ -44,6 +44,24 @@ class StrategyEngineTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(results[0]["close"] > results[0]["ema9"])
         self.assertTrue(results[0]["ema9"] > results[0]["ema20"])
 
+    def test_alignment_bounded_history_preserves_latest_result(self):
+        strat = EmaAlignmentStrategy()
+        closes = [100.0 + i * 0.2 + (i % 7) for i in range(2000)]
+        df = pl.DataFrame({
+            "instrument_key": ["NSE_EQ|TEST"] * len(closes),
+            "timestamp": [datetime.now(timezone.utc)] * len(closes),
+            "close": closes,
+            "volume": [1000] * len(closes),
+        })
+        window = strat.candle_window({})
+        self.assertEqual(window, 201)
+        full = strat.run(df, {}, {})[0]
+        bounded = strat.run(df.tail(window), {}, {})[0]
+        for field in ("status", "close", "ema9", "ema20", "sma50", "sma200"):
+            self.assertEqual(full[field], bounded[field], field)
+        self.assertGreaterEqual(strat.candle_window({"sma2": 500}), 501)
+        self.assertGreaterEqual(strat.candle_window({"ema2": 100}), 1000)
+
     def test_vectorized_rsi_reversal(self):
         strat = RsiStrategy()
         # Series dropping and then bouncing back up

@@ -49,6 +49,8 @@ app.include_router(index_constituents_router)
 app.include_router(watchlists.router)
 from services.trade_journal import router as journal_router
 app.include_router(journal_router)
+from services.focused import router as focused_router
+app.include_router(focused_router)
 openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
 drishti_openai_model = os.getenv("DRISHTI_OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
 client_id = os.getenv("UPSTOX_CLIENT_ID", "")

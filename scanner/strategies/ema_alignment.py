@@ -23,6 +23,17 @@ class EmaAlignmentStrategy(BaseStrategy):
         ],
     )
 
+    def candle_window(self, params: dict[str, Any]) -> int:
+        # SMA needs its full period plus a prior candle for transition detection.
+        # Ten EMA periods retain warm-up without fetching ten SMA 200 periods.
+        return max(
+            self.metadata.min_candles + 1,
+            int(params.get("sma1", 50)) + 1,
+            int(params.get("sma2", 200)) + 1,
+            10 * int(params.get("ema1", 9)),
+            10 * int(params.get("ema2", 20)),
+        )
+
     def run(
         self,
         df: pl.DataFrame,
