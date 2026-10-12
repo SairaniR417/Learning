@@ -1,4 +1,13 @@
 import {
+  BaseComponentWrapper,
+  VanillaFrameworkOverrides,
+  _BOOLEAN_MIXED_GRID_OPTIONS,
+  _combineAttributesAndGridOptions,
+  _processOnChange,
+  _removeFromParent,
+  createGrid
+} from "./chunk-HH6P46IS.js";
+import {
   Component,
   ElementRef,
   EventEmitter,
@@ -23,15 +32,6 @@ import {
   ɵɵinject
 } from "./chunk-BTKOUTQ5.js";
 import "./chunk-RSS3ODKE.js";
-import {
-  BaseComponentWrapper,
-  VanillaFrameworkOverrides,
-  _BOOLEAN_MIXED_GRID_OPTIONS,
-  _combineAttributesAndGridOptions,
-  _processOnChange,
-  _removeFromParent,
-  createGrid
-} from "./chunk-HH6P46IS.js";
 import "./chunk-WDMUDEB6.js";
 
 // node_modules/ag-grid-angular/fesm2022/ag-grid-angular.mjs

@@ -34,6 +34,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Market Desk API", lifespan=lifespan)
+from services.stock_details import router as stock_details_router
+app.include_router(stock_details_router)
+from services.index_constituents import router as index_constituents_router
+app.include_router(index_constituents_router)
 openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
 drishti_openai_model = os.getenv("DRISHTI_OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
 client_id = os.getenv("UPSTOX_CLIENT_ID", "")

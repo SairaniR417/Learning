@@ -42,6 +42,7 @@ export interface MarketSnapshot {
   assets: MarketAssetQuote[];
   receivedAt: number;
 }
+export interface IndexConstituents { id: string; name: string; members: { symbol: string; isin: string }[]; source: string; fetchedAt: string; }
 
 export interface ApiStatus {
   connected: boolean;
@@ -103,9 +104,16 @@ export interface CompanyProfile {
   sector_market_cap_inr?: { formatted?: string };
 }
 
+export interface SelectedStock { key: string; symbol: string; name: string; exchange: string; strategy?: string; timeframe?: string; status?: string; detail?: string; price?: number; metrics?: { label: string; value: number; compareToClose: boolean }[]; checks?: { label: string; passed?: boolean }[]; }
+export interface StockHistory { total: number; page: number; pageSize: number; earliest: string | null; latest: string | null; high: number | null; low: number | null; totalVolume: number; candles: HistoricalCandle[]; chart: HistoricalCandle[]; source: string; }
+export interface StockNews { items: { title: string; url: string; publishedAt: string; source: string }[]; fetchedAt: string; source: string; }
+
 @Injectable({ providedIn: 'root' })
 export class MarketApiService {
   private readonly http = inject(HttpClient);
+  indexConstituents(id: string): Observable<IndexConstituents> { return this.http.get<IndexConstituents>(`/api/market/index-constituents/${encodeURIComponent(id)}`); }
+  stockHistory(key: string, page = 1): Observable<StockHistory> { return this.http.get<StockHistory>('/api/stocks/history', { params: { instrument_key: key, page } }); }
+  stockNews(symbol: string, name: string): Observable<StockNews> { return this.http.get<StockNews>('/api/stocks/news', { params: { symbol, name } }); }
 
   status(): Observable<ApiStatus> {
     return this.http.get<ApiStatus>('/api/status');

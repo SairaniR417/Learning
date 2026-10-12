@@ -2,8 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, timer } from 'rxjs';
+import { StockDetailsComponent } from './stock-details/stock-details.component';
 import { EmaScannerComponent } from './scanner/ema-scanner.component';
-import { MarketApiService, MarketAssetQuote } from './market-api.service';
+import { MarketApiService, MarketAssetQuote, SelectedStock } from './market-api.service';
 
 interface DashboardAsset extends MarketAssetQuote {
   icon: string;
@@ -21,18 +22,21 @@ interface Opportunity {
   tag: string;
 }
 
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent, StockDetailsComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
 export class AppComponent implements OnInit, OnDestroy {
   private readonly api = inject(MarketApiService);
   private statusSubscription?: Subscription;
   private clockSubscription?: Subscription;
   private marketSubscription?: Subscription;
+  private indexSubscription?: Subscription;
   private trendKey = '';
   private readonly numberFormat = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
   connected = false;
   clock = '';
   page = 'Overview';
+  selectedStock: SelectedStock | null = null;
+  openStock(stock: SelectedStock): void { this.selectedStock = stock; this.page = 'Stock Details'; }
   market: 'equities' | 'commodities' = 'equities';
   marketName = 'NSE equities';
   receivedAt = 0;
@@ -48,11 +52,19 @@ export class AppComponent implements OnInit, OnDestroy {
   heatTiles: DashboardAsset[] = [];
   allHeatAssets: DashboardAsset[] = [];
   heatPage = 0;
-  readonly heatPageSize = 48;
-  readonly sectors = ['All sectors', 'Banking & Finance', 'IT & Software', 'Pharmaceuticals', 'Automobile', 'Energy & Oil', 'Metals & Mining', 'FMCG', 'Telecom', 'Infrastructure & Capital Goods', 'Real Estate', 'Other'];
+  readonly heatPageSize = 24;
+  readonly sectors = ['All sectors', 'Nifty 50', 'Bank Nifty', 'Nifty Midcap 100', 'Sensex', 'Banking & Finance', 'IT & Software', 'Pharmaceuticals', 'Automobile', 'Energy & Oil', 'Metals & Mining', 'FMCG', 'Telecom', 'Infrastructure & Capital Goods', 'Real Estate', 'Other'];
   selectedSector = 'All sectors';
+  readonly indexOptions = [{ id: 'all', label: 'All stocks' }, { id: 'nifty50', label: 'Nifty 50' }, { id: 'banknifty', label: 'Bank Nifty' }, { id: 'midcap100', label: 'Nifty Midcap 100' }, { id: 'sensex', label: 'Sensex' }];
+  selectedIndex = 'all';
+  indexLoading = false;
+  indexError = '';
+  private indexIsins = new Set<string>();
+  heatSearch = '';
+  heatGainMax = 0;
+  heatLossMax = 0;
   opportunities: Opportunity[] = [];
-  pages = ['Overview', 'Stock Analysis', 'Market Scanner', 'Watchlist', 'Trade Journal'];
+  pages = ['Overview', 'Market Scanner', 'Stock Details', 'Watchlist', 'Trade Journal'];
 
   ngOnInit(): void {
     this.statusSubscription = timer(0, 15000).subscribe(() => {
@@ -68,6 +80,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.statusSubscription?.unsubscribe();
     this.clockSubscription?.unsubscribe();
     this.marketSubscription?.unsubscribe();
+    this.indexSubscription?.unsubscribe();
   }
 
   selectPage(page: string): void {
@@ -82,6 +95,8 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.market === market) return;
     this.market = market;
     this.selectedSector = 'All sectors';
+    this.indexSubscription?.unsubscribe(); this.selectedIndex = 'all'; this.indexLoading = false; this.indexError = ''; this.indexIsins.clear();
+    this.heatSearch = '';
     this.heatPage = 0;
     this.allHeatAssets = [];
     this.heatTiles = [];
@@ -122,13 +137,48 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
-  get filteredHeatAssets(): DashboardAsset[] { return this.selectedSector === 'All sectors' ? this.allHeatAssets : this.allHeatAssets.filter((asset) => asset.sector === this.selectedSector); }
-  get heatPageCount(): number { return Math.max(1, Math.ceil(this.filteredHeatAssets.length / this.heatPageSize)); }
+  get filteredHeatAssets(): DashboardAsset[] {
+    const query = this.heatSearch.trim().toLowerCase();
+    return this.allHeatAssets.filter(asset =>
+      (this.selectedIndex !== 'all' || this.selectedSector === 'All sectors' || asset.sector === this.selectedSector)
+      && (this.selectedIndex === 'all' || this.indexIsins.has(asset.key.split('|')[1] ?? ''))
+      && (!query || asset.symbol.toLowerCase().includes(query) || asset.name.toLowerCase().includes(query)));
+  }
+  get heatGroups(): { id: string; label: string; assets: DashboardAsset[]; count: number }[] {
+    const all = this.filteredHeatAssets;
+    const groups = [
+      { id: 'up', label: 'Gainers', assets: all.filter(a => a.changePct > 0).sort((a, b) => b.changePct - a.changePct || a.symbol.localeCompare(b.symbol)) },
+      { id: 'down', label: 'Losers', assets: all.filter(a => a.changePct < 0).sort((a, b) => a.changePct - b.changePct || a.symbol.localeCompare(b.symbol)) },
+      { id: 'flat', label: 'Unchanged', assets: all.filter(a => a.changePct === 0).sort((a, b) => a.symbol.localeCompare(b.symbol)) }
+    ];
+    return groups.map(g => ({ ...g, count: g.assets.length }));
+  }
+  get visibleHeatGroups(): { id: string; label: string; assets: DashboardAsset[]; count: number }[] {
+    return this.heatGroups.map(g => ({ ...g, assets: g.assets.slice(this.heatPage * this.heatPageSize, (this.heatPage + 1) * this.heatPageSize) }));
+  }
+  get heatPageCount(): number { return Math.max(1, ...this.heatGroups.map(g => Math.ceil(g.count / this.heatPageSize))); }
   get heatPageStart(): number { return this.filteredHeatAssets.length ? this.heatPage * this.heatPageSize + 1 : 0; }
   get heatPageEnd(): number { return Math.min((this.heatPage + 1) * this.heatPageSize, this.filteredHeatAssets.length); }
-  get hasMultipleHeatPages(): boolean { return this.filteredHeatAssets.length > this.heatPageSize; }
+  get hasMultipleHeatPages(): boolean { return this.heatPageCount > 1; }
 
-  selectSector(sector: string): void { this.selectedSector = sector; this.heatPage = 0; this.showHeatPage(); }
+  selectSector(sector: string): void {
+    this.selectedSector = sector;
+    const index = this.indexOptions.find(option => option.label === sector);
+    this.selectIndex(index?.id ?? 'all');
+  }
+  selectIndex(id: string): void {
+    this.indexSubscription?.unsubscribe();
+    this.selectedIndex = id; this.indexError = ''; this.indexIsins.clear(); this.heatPage = 0;
+    this.indexLoading = id !== 'all'; this.showHeatPage();
+    if (id === 'all') return;
+    this.indexSubscription = this.api.indexConstituents(id).subscribe({ next: data => {
+      this.indexIsins = new Set(data.members.map(member => member.isin));
+      this.indexLoading = false; this.showHeatPage();
+    }, error: (error: HttpErrorResponse) => {
+      this.indexLoading = false; this.indexError = error.error?.detail || 'Index constituents are unavailable. Please retry.'; this.showHeatPage();
+    } });
+  }
+  searchHeatmap(query: string): void { this.heatSearch = query; this.heatPage = 0; this.showHeatPage(); }
 
   prevHeatPage(): void {
     if (this.heatPage > 0) { this.heatPage--; this.showHeatPage(); }
@@ -139,13 +189,22 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private showHeatPage(): void {
-    this.heatTiles = this.filteredHeatAssets
-      .slice(this.heatPage * this.heatPageSize, (this.heatPage + 1) * this.heatPageSize)
-      .map((asset, index) => ({ ...asset, w: index < 3 ? 2 : 1, h: index < 3 ? 2 : 1 }));
+    const assets = this.filteredHeatAssets;
+    this.heatGainMax = assets.reduce((max, asset) => Number.isFinite(asset.changePct) ? Math.max(max, asset.changePct) : max, 0);
+    this.heatLossMax = assets.reduce((max, asset) => Number.isFinite(asset.changePct) ? Math.max(max, -asset.changePct) : max, 0);
+    this.heatPage = Math.min(this.heatPage, this.heatPageCount - 1);
+    this.heatTiles = this.visibleHeatGroups.flatMap(group => group.assets);
+  }
+
+  heatColor(changePct: number): string {
+    if (!Number.isFinite(changePct) || changePct === 0) return '#343b3b';
+    const maximum = changePct > 0 ? this.heatGainMax : this.heatLossMax;
+    const strength = Math.min(Math.abs(changePct) / (maximum || Math.abs(changePct)), 1);
+    return changePct > 0 ? `hsl(153 60% ${38 - strength * 26}%)` : `hsl(354 65% ${44 - strength * 25}%)`;
   }
 
   private toDashboardAsset(asset: MarketAssetQuote, index: number): DashboardAsset {
-    const color = asset.changePct > 0.05 ? 'up' : asset.changePct < -0.05 ? 'down' : 'flat';
+    const color = asset.changePct > 0 ? 'up' : asset.changePct < 0 ? 'down' : 'flat';
     const sign = asset.changePct > 0 ? '+' : '';
     return {
       ...asset,

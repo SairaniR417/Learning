@@ -114,3 +114,17 @@ The API can store Upstox OHLCV history in the PostgreSQL `traders_gita` database
 A full-universe backfill makes many provider requests and can take a long time. The API uses bounded concurrency; provider throttling or per-symbol errors can leave a job `partial`. Repeat the sync to retry from recent stored candles. Daily bars are the recommended first backfill; minute data uses a much shorter provider history window and creates substantially more data. Upstox authorization, data availability, and provider rate limits apply. Background jobs currently run inside the API process and are not durable across a server restart.
 
 
+
+## Stock Details
+
+Click a scanner result row or its company button in any strategy to open the Stock Details tab. Returning to Market Scanner preserves the scan and filters. The tab displays the selected strategy signal and checks, latest available broker quote, interactive daily candlesticks and volume with selectable ranges, daily moving averages, paginated OHLCV, Upstox company profile and corporate actions, and dated news links from Google News RSS.
+
+History uses all locally stored `1d` candles, with explicit earliest/latest coverage dates. Refresh reloads available data; it does not initiate a universe backfill. Import/sync daily candles to extend the range. The database does not record the original instrument-added date, and the first candle must not be interpreted as that date or an IPO date. Prices are displayed as stored without additional corporate-action adjustments. Profile and quote retrieval require a valid Upstox connection and applicable fundamentals access. News is cached for 15 minutes and represents matching recent articles, not an exhaustive archive. Individual source failures are displayed without blocking other sections.
+
+Endpoints: `GET /api/stocks/history?instrument_key=...&page=1&page_size=50` and `GET /api/stocks/news?symbol=...&name=...`.
+
+The stock workspace shows the chart beside a compact tabbed information panel (Overview, Company, News, Actions, History). It starts at one month of daily candles, supports scroll zoom, drag pan, and crosshair OHLCV readouts, and offers a fullscreen chart with Escape to close. Full stored history remains available through ALL and the paginated History tab. Small screens stack the chart and bounded information panel. Restart the API after this update: chart responses now include complete OHLCV instead of only closing prices.
+
+## Heatmap index groups
+
+The existing Sector dropdown includes Nifty 50, Bank Nifty, Nifty Midcap 100, and Sensex alongside the sector options. Choose either an index group or a sector; symbol/company search filters the selected group. Membership is fetched from official NSE Indices CSVs or the BSE Indices Sensex API and cached for 24 hours. Sensex scrip codes are mapped through the Upstox BSE instrument master to ISINs; the existing heatmap uses NSE quotes for those companies. Only constituents with available dashboard quotes appear. Fetch failures show a retry action rather than displaying an estimated or hardcoded list. Restart the API to enable `/api/market/index-constituents/{index_id}`.

@@ -1,23 +1,28 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, EventEmitter, Output, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { AgGridAngular } from 'ag-grid-angular';
 import { CellStyleModule, ClientSideRowModelModule, ColDef, ColumnApiModule, GridApi, GridReadyEvent, ICellRendererParams, ModuleRegistry, NumberFilterModule, PaginationModule, QuickFilterModule, TextFilterModule, colorSchemeDark, themeQuartz } from 'ag-grid-community';
-import { MarketApiService, MarketAssetQuote, ScannerStrategy } from '../market-api.service';
+import { MarketApiService, MarketAssetQuote, ScannerStrategy, SelectedStock } from '../market-api.service';
 
 type FactorField = 'changePct' | 'volume' | 'price';
 interface FactorRule { field: FactorField; min: string; max: string; importance: 'Important' | 'Optional'; }
 interface SavedScreener { name: string; strategyId: string; timeframe: string; factors: FactorRule[]; sector?: string; strategyParams?: Record<string, number>; }
 interface SignalMetric { label: string; value: number; compareToClose: boolean; }
 interface SignalBadge { label: string; passed?: boolean; tone?: 'positive' | 'negative' | 'neutral'; }
-interface ScreenResult { symbol: string; name: string; price: number; changePct: number | null; volume: number; status: string; signal?: string; state?: string; source: 'database' | 'strategy'; detail?: string; signalMetrics?: SignalMetric[]; signalBadges?: SignalBadge[]; sector: string; }
+interface ScreenResult { instrumentKey: string; exchange: string; symbol: string; name: string; price: number; changePct: number | null; volume: number; status: string; signal?: string; state?: string; source: 'database' | 'strategy'; detail?: string; signalMetrics?: SignalMetric[]; signalBadges?: SignalBadge[]; sector: string; }
 interface GridColumnOption { id: string; label: string; visible: boolean; }
 const STORAGE_KEY = 'traders-gita-saved-screeners';
 ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnApiModule, TextFilterModule, NumberFilterModule, QuickFilterModule, PaginationModule, CellStyleModule]);
 
 @Component({ selector: 'app-ema-scanner', standalone: true, imports: [CommonModule, AgGridAngular], templateUrl: './ema-scanner.component.html', styleUrl: './ema-scanner.component.css' })
 export class EmaScannerComponent implements OnInit, OnDestroy {
+  @Output() stockSelected = new EventEmitter<SelectedStock>();
+  openStock(row: ScreenResult | undefined): void {
+    if (!row?.instrumentKey) return;
+    this.stockSelected.emit({ key: row.instrumentKey, symbol: row.symbol, name: row.name, exchange: row.exchange, strategy: this.activeStrategy?.name ?? 'Market Screener', timeframe: this.timeframe, status: row.status, detail: row.detail, price: row.price, metrics: row.signalMetrics, checks: row.signalBadges });
+  }
   private readonly api = inject(MarketApiService);
   private scanSubscription?: Subscription;
   private strategySubscription?: Subscription;
@@ -64,7 +69,11 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
   readonly columnDefs: ColDef<ScreenResult>[] = [
     { headerName: '#', valueGetter: (p) => (p.node?.rowIndex ?? 0) + 1, width: 58, maxWidth: 65, sortable: false, filter: false, floatingFilter: false, pinned: 'left' },
     { field: 'status', headerName: 'Status', width: 195, pinned: 'left', valueFormatter: (p) => p.value === 'NEWLY_ALIGNED' ? 'NEW MATCH' : String(p.value ?? ''), cellStyle: (p) => ['STRONG BULLISH', 'STRONG BULLISH ACTIVE', 'CONFIRMED BULLISH', 'CONFIRMED BULLISH ACTIVE', 'BUY', 'PREVIOUS SIGNAL'].includes(String(p.value)) ? { color: '#55c99f', fontWeight: '700' } : ['BEARISH WARNING', 'SELL', 'WEAKENED'].includes(String(p.value)) ? { color: '#ec8c91', fontWeight: '700' } : ['EARLY BULLISH', 'BULLISH WATCH', 'WATCH', 'NEWLY_ALIGNED'].includes(String(p.value)) ? { color: '#edc74f', fontWeight: '700' } : p.value === 'PREFERRED' ? { color: '#edd36a', fontWeight: '700' } : { color: '#a4a8b2', fontWeight: '700' } },
-    { headerName: 'Symbol / Company', colId: 'symbolCompany', valueGetter: (p) => p.data ? (p.data.name && p.data.name !== p.data.symbol ? `${p.data.symbol} · ${p.data.name}` : p.data.symbol) : '', minWidth: 220, flex: 1, filter: 'agTextColumnFilter', cellClass: 'symbol-company-cell' },
+    { headerName: 'Symbol / Company', colId: 'symbolCompany', valueGetter: (p) => p.data ? (p.data.name && p.data.name !== p.data.symbol ? `${p.data.symbol} · ${p.data.name}` : p.data.symbol) : '', minWidth: 220, flex: 1, filter: 'agTextColumnFilter', cellClass: 'symbol-company-cell', cellRenderer: (p: ICellRendererParams<ScreenResult>) => {
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = String(p.value ?? ''); button.title = 'Open stock details';
+      button.style.cssText = 'background:none;border:0;color:#e0bd43;cursor:pointer;text-align:left;padding:0;font:inherit;';
+      button.addEventListener('click', event => { event.stopPropagation(); this.openStock(p.data); }); return button;
+    } },
     { field: 'changePct', headerName: 'Change %', width: 115, filter: 'agNumberColumnFilter', valueFormatter: (p) => p.value == null ? '—' : `${Number(p.value).toFixed(2)}%`, cellStyle: (p) => Number(p.value) > 0 ? { color: '#45c89c' } : Number(p.value) < 0 ? { color: '#e3737b' } : null },
     { field: 'volume', headerName: 'Volume', width: 115, filter: 'agNumberColumnFilter', valueFormatter: (p) => this.formatVolume(Number(p.value ?? 0)) },
     { field: 'price', headerName: 'Last', width: 140, filter: 'agNumberColumnFilter', valueFormatter: (p) => Number(p.value) ? this.formatPrice(Number(p.value)) : '—' },
@@ -172,7 +181,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
             ].filter((metric): metric is SignalMetric => metric.value !== null && Number.isFinite(metric.value));
             const status = this.preferredFactorsMatch(asset) ? 'PREFERRED' : asset.changePct > 0 ? 'GAINER' : asset.changePct < 0 ? 'DECLINER' : 'FLAT';
             return [{
-              symbol: item.symbol, name: item.name, price: item.close, changePct: item.changePct,
+              instrumentKey: item.instrumentKey, exchange: 'NSE', symbol: item.symbol, name: item.name, price: item.close, changePct: item.changePct,
               volume: asset.volume, status, source: 'database' as const,
               detail: item.historySufficient ? '' : `Limited daily history (${item.historySufficient ? 200 : 'under 200'} candles)`,
               signalMetrics, sector: this.classifySector(item.symbol, item.name)
@@ -188,7 +197,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
         this.totalScanned = response.total_scanned;
         this.results = response.results.map((row) => {
           const numeric = (key: string) => Number(row[key] ?? 0);
-          return { symbol: String(row['symbol'] ?? row['instrumentKey'] ?? '—'), name: String(row['name'] ?? row['symbol'] ?? ''),
+          return { instrumentKey: String(row['instrumentKey'] ?? ''), exchange: String(row['exchange'] ?? 'NSE'), symbol: String(row['symbol'] ?? row['instrumentKey'] ?? '—'), name: String(row['name'] ?? row['symbol'] ?? ''),
             price: numeric('close'), changePct: row['changePct'] == null ? null : numeric('changePct'), volume: numeric('volume'), status: this.getScannerStatus(row), signal: String(row['signal'] ?? ''), state: String(row['state'] ?? ''),
             source: 'strategy', detail: this.describeStrategyResult(row), signalMetrics: this.strategySignalMetrics(row), signalBadges: this.strategySignalBadges(row), sector: this.classifySector(String(row['symbol'] ?? ''), String(row['name'] ?? '')) };
         });
