@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "E:\Gita\Learning\scripts\sync_today_daily.py", line 89, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\venu\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 196, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\venu\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\venu\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 726, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "E:\Gita\Learning\scripts\sync_today_daily.py", line 77, in main
+    save()
+    ~~~~^^
+  File "E:\Gita\Learning\scripts\sync_today_daily.py", line 44, in save
+    temp.replace(report)
+    ~~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\venu\AppData\Local\Programs\Python\Python313\Lib\pathlib\_local.py", line 780, in replace
+    os.replace(self, target)
+    ~~~~~~~~~~^^^^^^^^^^^^^^
+PermissionError: [WinError 5] Access is denied: 'E:\\Gita\\Learning\\data\\daily-sync-2026-10-12.tmp' -> 'E:\\Gita\\Learning\\data\\daily-sync-2026-10-12.json'

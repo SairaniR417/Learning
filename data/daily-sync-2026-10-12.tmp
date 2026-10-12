@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-12",
+  "status": "running",
+  "total": 2703,
+  "processed": 2443,
+  "changed": 2436,
+  "no_candle": 6,
+  "failed": 0,
+  "errors": [],
+  "startedAt": "2026-10-12T12:11:18.605352+00:00",
+  "updatedAt": "2026-10-12T13:34:37.375056+00:00"
+}
