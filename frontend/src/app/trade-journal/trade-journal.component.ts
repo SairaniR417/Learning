@@ -1,3 +1,4 @@
+import { MarketApiService } from '../market-api.service';
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
@@ -9,6 +10,7 @@ interface Field { key: keyof JournalTrade; label: string; type: 'text' | 'number
 @Component({ selector: 'app-trade-journal', standalone: true, imports: [CommonModule], templateUrl: './trade-journal.component.html', styleUrl: './trade-journal.component.css' })
 export class TradeJournalComponent implements OnInit, OnDestroy {
   readonly Math = Math;
+  private readonly marketApi = inject(MarketApiService);
   private readonly api = inject(JournalApiService);
   private readonly subscriptions = new Subscription();
   private readonly cache = new Map<string, {dependencies: unknown[]; value: any}>();
@@ -28,8 +30,9 @@ export class TradeJournalComponent implements OnInit, OnDestroy {
   private readonly textFields = (pairs: [keyof JournalTrade, string][], type: Field['type'] = 'text'): Field[] => pairs.map(([key, label]) => ({ key, label, type }));
   readonly fields: Record<string, Field[]> = {
     Execution: [
-      ...this.textFields([['account','Account'],['symbol','Symbol / instrument']]),
-      {key:'segment',label:'Segment',type:'select',options:['Equity','Futures','Options','Commodity','Other']},
+      ...this.textFields([['account','Account']]),
+      {key:'symbol',label:'F&O underlying stock',type:'select',options:['']},
+      {key:'segment',label:'Segment',type:'select',options:['Equity','Futures','Options']},
       ...this.textFields([['instrumentType','Contract / CE / PE'],['timeframe','Timeframe']]),
       {key:'direction',label:'Direction',type:'select',options:['LONG','SHORT']},
       ...(['entryPrice','exitPrice','quantity','lotSize','charges'] as const).map(key => ({key,label:({entryPrice:'Entry price ₹',exitPrice:'Exit price ₹ (blank = open)',quantity:'Position quantity (units)',lotSize:'Units per lot',charges:'Total charges ₹'} as const)[key],type:'number' as const,min:key==='charges'?0:0.000001})),
@@ -54,6 +57,10 @@ export class TradeJournalComponent implements OnInit, OnDestroy {
   };
   readonly formTabs = ['Execution','Plan & Evidence','Psychology','Review'];
   ngOnInit(): void {
+    this.subscriptions.add(this.marketApi.fnoStocks().subscribe({
+      next: data => { this.fields['Execution'].find(field => field.key === 'symbol')!.options = ['', ...data.stocks.map(stock => stock.symbol)]; },
+      error: () => this.error = 'Could not load the F&O stock list. Refresh to retry.'
+    }));
     try { const s=JSON.parse(localStorage.getItem('tg-journal-settings') || '{}'); this.privacy=!!s.privacy; this.startingBalance=Number(s.balance)||0; } catch {}
     this.load(); this.subscriptions.add(this.api.reference().subscribe({next:r=>this.reference=r}));
   }

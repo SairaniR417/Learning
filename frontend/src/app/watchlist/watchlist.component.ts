@@ -33,7 +33,7 @@ export class WatchlistComponent implements OnInit, OnDestroy {
   menuOpen = false; dialog: '' | 'add' | 'alert' | 'name' | 'confirm' = '';
   nameAction: 'new' | 'rename' | 'copy' | 'section' = 'new'; confirmAction: 'clear' | 'delete' = 'clear'; nameInput = '';
   query = ''; searchResults: Instrument[] = []; searchLoading = false; searchError = ''; searched = false;
-  searchMarket: 'cash' | 'commodities' = 'cash'; addSection = 'Stocks';
+  addSection = 'Stocks';
   condition: PriceAlert['condition'] = 'above'; target = ''; alertEntry: WatchEntry | null = null;
   filter = ''; sort: '' | 'symbol' | 'price' | 'change' | 'changePct' = ''; descending = false;
   collapsed = new Set<string>();
@@ -117,11 +117,10 @@ export class WatchlistComponent implements OnInit, OnDestroy {
     clearTimeout(this.searchTimer); this.searchSubscription?.unsubscribe();
     this.query = query; this.searchResults = []; this.searchError = ''; this.searched = false; this.searchLoading = query.trim().length >= 2;
     if (!this.searchLoading) return;
-    this.searchTimer = setTimeout(() => { this.searchSubscription = this.api.search(query.trim(), this.searchMarket).subscribe({ next: data => {
+    this.searchTimer = setTimeout(() => { this.searchSubscription = this.api.search(query.trim()).subscribe({ next: data => {
       this.searchResults = data.instruments.filter(item => !!item.key); this.searched = true; this.searchLoading = false;
     }, error: error => { this.searchError = this.errorText(error, 'Stock search unavailable.'); this.searchLoading = false; } }); }, 300);
   }
-  setSearchMarket(market: 'cash' | 'commodities'): void { this.searchMarket = market; this.search(this.query); }
   isAdded(key: string): boolean { return !!this.current?.entries.some(entry => entry.key === key); }
   add(instrument: Instrument): void {
     const list = this.current; if (!list || this.saving || this.isAdded(instrument.key)) return;

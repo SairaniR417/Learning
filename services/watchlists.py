@@ -12,6 +12,8 @@ from sqlalchemy import select, update, func
 from database.connection import async_session_factory
 from database.models import UserWatchlist, PriceAlert, AlertNotification
 
+from scanner.universe import fno_keys, get_fno_stocks, require_fno_key
+
 router = APIRouter(prefix="/api/watchlists")
 log = logging.getLogger(__name__)
 quote_fetcher = None
@@ -31,6 +33,14 @@ class WatchEntry(BaseModel):
     exchange: str = Field(min_length=1, max_length=30)
     section: str = Field(default="Stocks", min_length=1, max_length=60)
     flag: Literal["", "red", "green", "yellow", "blue"] = ""
+
+    @model_validator(mode="after")
+    def allowed_stock(self):
+        stock = next((s for s in get_fno_stocks() if s["key"] == self.key), None)
+        if stock is None:
+            raise ValueError("Select a stock from the saved F&O list.")
+        self.symbol, self.name, self.exchange = stock["symbol"], stock["name"], stock["exchange"]
+        return self
 
 
 class WatchlistInput(BaseModel):
@@ -60,9 +70,19 @@ class AlertInput(BaseModel):
     condition: Literal["above", "below", "cross_up", "cross_down"]
     target: float = Field(gt=0, allow_inf_nan=False)
 
+    @model_validator(mode="after")
+    def allowed_stock(self):
+        stock = next((s for s in get_fno_stocks() if s["key"] == self.key), None)
+        if stock is None:
+            raise ValueError("Select a stock from the saved F&O list.")
+        self.symbol, self.name, self.exchange = stock["symbol"], stock["name"], stock["exchange"]
+        return self
+
 
 def serialize_list(row):
-    return {"id": row.id, "name": row.name, **json.loads(row.content_json)}
+    content = json.loads(row.content_json)
+    content["entries"] = [entry for entry in content.get("entries", []) if entry.get("key") in fno_keys()]
+    return {"id": row.id, "name": row.name, **content}
 
 
 def serialize_alert(row):
@@ -118,6 +138,8 @@ async def watch_quotes(keys: str = Query(min_length=1, max_length=20000)):
     values = list(dict.fromkeys(keys.split(',')))
     if len(values) > 100 or any(not re.fullmatch(r"[A-Z0-9_]+\|[A-Za-z0-9 ._-]+", k) for k in values):
         raise HTTPException(400, "Provide between 1 and 100 valid instrument keys.")
+    for key in values:
+        require_fno_key(key)
     if quote_fetcher is None:
         raise HTTPException(503, "Quote service unavailable.")
     return {"quotes": await quote_fetcher(values), "receivedAt": datetime.now(timezone.utc).isoformat()}
@@ -126,14 +148,14 @@ async def watch_quotes(keys: str = Query(min_length=1, max_length=20000)):
 @router.get("/alerts")
 async def get_alerts():
     async with async_session_factory() as session:
-        rows = (await session.scalars(select(PriceAlert).order_by(PriceAlert.active.desc(), PriceAlert.id.desc()).limit(500))).all()
+        rows = (await session.scalars(select(PriceAlert).where(PriceAlert.instrument_key.in_(fno_keys())).order_by(PriceAlert.active.desc(), PriceAlert.id.desc()).limit(500))).all()
         return {"alerts": [serialize_alert(row) for row in rows]}
 
 
 @router.post("/alerts")
 async def create_alert(body: AlertInput):
     async with async_session_factory() as session:
-        if (await session.scalar(select(func.count()).select_from(PriceAlert).where(PriceAlert.active.is_(True)))) >= 100:
+        if (await session.scalar(select(func.count()).select_from(PriceAlert).where(PriceAlert.active.is_(True), PriceAlert.instrument_key.in_(fno_keys())))) >= 100:
             raise HTTPException(400, "A maximum of 100 active alerts is supported.")
         row = PriceAlert(instrument_key=body.key, symbol=body.symbol, name=body.name, exchange=body.exchange, condition=body.condition, target=body.target)
         session.add(row)
@@ -155,8 +177,8 @@ async def cancel_alert(alert_id: int):
 @router.get("/notifications")
 async def notifications():
     async with async_session_factory() as session:
-        rows = (await session.scalars(select(AlertNotification).order_by(AlertNotification.id.desc()).limit(100))).all()
-        unread = await session.scalar(select(func.count()).select_from(AlertNotification).where(AlertNotification.read.is_(False)))
+        rows = (await session.scalars(select(AlertNotification).where(AlertNotification.instrument_key.in_(fno_keys())).order_by(AlertNotification.id.desc()).limit(100))).all()
+        unread = await session.scalar(select(func.count()).select_from(AlertNotification).where(AlertNotification.read.is_(False), AlertNotification.instrument_key.in_(fno_keys())))
         return {"notifications": [{"id": r.id, "key": r.instrument_key, "symbol": r.symbol, "name": r.name, "exchange": r.exchange,
                  "message": r.message, "price": r.price, "createdAt": utc_iso(r.created_at), "read": r.read} for r in rows],
                 "unread": unread, "monitor": {"running": bool(monitor and monitor.task and not monitor.task.done()),
@@ -166,7 +188,7 @@ async def notifications():
 @router.post("/notifications/read")
 async def mark_notifications_read():
     async with async_session_factory() as session:
-        await session.execute(update(AlertNotification).where(AlertNotification.read.is_(False)).values(read=True))
+        await session.execute(update(AlertNotification).where(AlertNotification.read.is_(False), AlertNotification.instrument_key.in_(fno_keys())).values(read=True))
         await session.commit()
     return {"read": True}
 
@@ -224,7 +246,7 @@ class AlertMonitor:
 
     async def check(self):
         async with async_session_factory() as session:
-            alerts = (await session.scalars(select(PriceAlert).where(PriceAlert.active.is_(True)))).all()
+            alerts = (await session.scalars(select(PriceAlert).where(PriceAlert.active.is_(True), PriceAlert.instrument_key.in_(fno_keys())))).all()
         if not alerts:
             return
         prices = await self.fetch_quotes(list({a.instrument_key for a in alerts}))
@@ -241,7 +263,7 @@ class AlertMonitor:
                 values = {"last_price": price}
                 if triggered:
                     values.update(active=False, triggered_at=when)
-                changed = await session.execute(update(PriceAlert).where(PriceAlert.id == alert.id, PriceAlert.active.is_(True)).values(**values))
+                changed = await session.execute(update(PriceAlert).where(PriceAlert.id == alert.id, PriceAlert.active.is_(True), PriceAlert.instrument_key.in_(fno_keys())).values(**values))
                 if triggered and changed.rowcount:
                     session.add(AlertNotification(alert_id=alert.id, instrument_key=alert.instrument_key, symbol=alert.symbol, name=alert.name,
                         exchange=alert.exchange, message=f"{alert.symbol} {CONDITIONS[alert.condition]} {alert.target:,.2f}. Observed price: {price:,.2f}.", price=price, created_at=when))

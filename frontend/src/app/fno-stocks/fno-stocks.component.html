@@ -1,0 +1,31 @@
+<section class="fno-page">
+  <header>
+    <span class="eyebrow">NSE EQUITIES</span>
+    <h1>F&O Stocks</h1>
+    <p>Saved list of F&O underlying stocks. Select a symbol to open Stock Details.</p>
+  </header>
+  <div class="stock-panel">
+    <div class="toolbar">
+      <input type="search" aria-label="Search F&O stocks by symbol or company"
+        placeholder="Search symbol or company" [value]="query"
+        (input)="query = $any($event.target).value">
+      <span *ngIf="!loading && !error" role="status">{{ filteredStocks.length }} of {{ stocks.length }} stocks</span>
+    </div>
+    <p class="message" *ngIf="loading" role="status">Loading F&O stocks…</p>
+    <div class="message error" *ngIf="error" role="alert">
+      {{ error }} <button type="button" (click)="load()">Retry</button>
+    </div>
+    <div class="table-scroll" *ngIf="!loading && !error">
+      <table>
+        <thead><tr><th scope="col">Symbol</th><th scope="col">Company</th><th scope="col">Exchange</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let stock of filteredStocks">
+            <td><button class="symbol" type="button" (click)="stockSelected.emit(stock)">{{ stock.symbol }}</button></td>
+            <td>{{ stock.name }}</td><td>{{ stock.exchange }}</td>
+          </tr>
+          <tr *ngIf="!filteredStocks.length"><td colspan="3" class="message">{{ stocks.length ? 'No stocks match your search.' : 'The saved F&O stock list is empty.' }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

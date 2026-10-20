@@ -1,5 +1,35 @@
 ﻿# Market Desk
 
+## F&O stock scope
+
+Every tab uses `data/fno/current_fno_stocks.csv` as the shared stock list (currently
+213 NSE F&O underlying stocks). Searches work without broker login. Overview
+quotes, Market Scanner, Focused, Stock Details, Watchlist, alerts, and journal
+stock selection are limited to that list. Commodity and index instruments are
+excluded. Index membership filters show only matching stocks within this list.
+Journal Futures/Options entries use an eligible underlying symbol; contract details
+belong in the Contract / CE / PE field.
+
+The configured PostgreSQL database contains 322,544 daily candles for these stocks,
+through 16 October 2026. Individual histories have different start dates. These are
+underlying stock OHLCV candles, not futures/options contract price histories.
+Live quotes and provider history still require an Upstox connection; stored scans
+and stored daily history do not.
+
+To preview a database cleanup and daily CSV import:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\restrict_to_fno.py
+```
+
+Add `--apply` to back up every configured database table under `data/backups/`,
+remove excluded instruments and related candles, coverage, jobs, watchlist entries,
+alerts, notifications and journal trades, clear scan caches, and import the saved
+F&O daily CSV. The obsolete SQLite database is archived when PostgreSQL is active.
+Backups are excluded from Git. Routine imports reject stocks outside the saved list;
+`sync_fno_data.py` reuses the saved list instead of replacing it from the exchange.
+
+
 A personal market dashboard built with Angular and FastAPI. Upstox supplies live LTP quotes and historical NSE candles. API secrets and access tokens stay on the Python server.
 
 ## Requirements
@@ -28,38 +58,39 @@ A personal market dashboard built with Angular and FastAPI. Upstox supplies live
    npm start
    ```
 
-4. Open `http://localhost:4200` and connect Upstox to load Nifty 50 by default, then search for other instruments and intervals.
+4. Open `http://localhost:4200` and connect Upstox to load F&O stock quotes, then search the saved stock list.
 
-Upstox V3 historical data provides minute/hour candles from January 2022 and daily/weekly/monthly candles from January 2000, subject to interval-specific maximum query ranges. Charts currently fetch history from Upstox directly. Strategy scans can reuse candles stored in the local database. Upstox access tokens stay on the API server and expire daily. A token in `.env` is loaded at API startup; replace it when it expires. A public deployment needs HTTPS, per-user sessions, and deployment-specific redirect URI configuration; this starter is for a single local user.
+Stock Details reads daily charts from PostgreSQL. The Overview chart and live
+quotes use Upstox. Provider credentials stay on the Python server. The application
+is intended for a single local user.
 
 ## Instrument analysis
 
-Choose a cash equity or MCX futures market, search an instrument after connecting Upstox, and its history opens in a focused full-screen chart. The chart starts with EMA 9, 20, 50, and 200 overlays. The status panel checks `close > EMA 9 > EMA 20 > EMA 50 > EMA 200`, marks a newly aligned bullish entry, and reports bearish, mixed, or insufficient-history states. Use at least 200 candles for a complete EMA 200 setup. The default instrument is Nifty 50, loaded from Upstox after connection.
+Select a saved F&O stock to open its stored daily chart and paginated history.
+Company information, corporate actions and live prices use Upstox; news is loaded
+separately. A failure in one source does not block the stored chart.
 
-Use the NSE scanner's **Scan NSE equities** button to scan the full NSE cash-equity universe for the latest candle close above EMA 9, EMA 20, SMA 50, and SMA 200. The scan displays matching symbols, each moving-average value, the close, and when the condition first appeared in the selected history. This scanner rule does not require the averages to be in bullish order.
+Market Scanner runs the selected registered strategy against stored candles.
+The EMA/SMA strategy checks whether the close is above EMA 9, EMA 20, SMA 50 and
+SMA 200; it does not require those averages to be in bullish order. Available
+strategies also include Golden/Death Cross, multi-MA alignment, RSI, RSI divergence
+and Ghost Rider. Focused combines evidence from these strategies.
 
-DRISHTI chat answers general questions through OpenAI's Responses API and can search the web for current information. Asking to analyze the selected instrument continues to use the deterministic EMA endpoint.
-
-
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-uvicorn main:app --reload --port 8000 
-
-.venv/Scripts/uvicorn main:app --reload --port 8000
-
-
+The DRISHTI chat and deterministic EMA-analysis APIs remain available through
+`/api/drishti/chat` and `/api/drishti/ema-alignment`. They are not a visible tab.
+The unused dashboard component and legacy `/api/scanner/ema` endpoint have been
+removed; scanners use `/api/strategies/scan`.
 
 ## Incremental candle storage
 
-Restart the API after upgrading to create the candle revision table. SQLite stores
-candles in `data/market_desk.db`, keyed by instrument, timeframe, and timestamp.
+Restart the API after upgrading to create the candle revision table. The configured database stores
+candles keyed by instrument, timeframe, and timestamp.
 Repeated imports skip identical values; corrected OHLCV values replace the old row.
 Changed data advances a timeframe revision so future scans cannot reuse old results.
 
 After connecting Upstox, open `http://localhost:8000/docs`:
 
-1. Call `POST /api/sync/universe` to load the NSE equity master.
+1. Call `POST /api/sync/universe` to load the saved F&O stock list.
 2. Call `POST /api/sync/candles` with
    `{"unit":"minutes","interval":1,"lookback_days":30,"concurrency":5}`.
    For hourly or daily candles, use `hours` or `days` with interval `1`.
@@ -70,28 +101,22 @@ After connecting Upstox, open `http://localhost:8000/docs`:
 
 Backfills use bounded date windows; today's minute/hour candles use the intraday
 endpoint. Open intraday candles are excluded using their duration plus a five-second
-buffer. Daily candles are imported on the following Indian calendar date. No exchange
-calendar or session-close finalization is implemented yet.
+buffer. NSE daily candles can include today after 16:00 IST when supplied by the provider.
+The sync uses time-based completion checks, not an exchange holiday calendar.
 
 Storage keeps one OHLCV row per candle and does not duplicate it per user or strategy.
-Scans load only the latest bounded window per instrument, with ten times the largest
-configured period/minimum history for indicator warm-up. EMA/RSI values may differ
-slightly from calculations seeded at the beginning of all stored history. SQL still
-ranks stored history; this bounds application memory, not total database work.
+Scans load a bounded recent window per instrument, sized for the selected strategy.
+PostgreSQL uses an indexed per-instrument query; SQLite uses a ranked query for
+local testing. Indicator values may differ from calculations seeded with all history.
 
-Current limits: sync is manually triggered and runs in the API process; there is no
-recurring scheduler, durable queue, distributed lock, automatic retry, or job-status
-endpoint. Failed chunks resume on a later sync, but older gaps/corrections outside
-the overlap require a separate reconciliation. Increasing lookback does not backfill
-older history for an already populated instrument. Each requested timeframe is stored
-independently; aggregation and archival retention are not implemented. No existing
-candles are automatically deleted. The universe sync currently covers NSE equities.
-Historical charts still use the provider directly. This is not a 1,000-user deployment.
+Sync is manually triggered and runs in the API process. Follow a returned job ID
+with `GET /api/sync/jobs/{job_id}`. There is no recurring scheduler, durable worker
+queue, or distributed lock. Older gaps outside the correction overlap need separate
+reconciliation. Each timeframe is stored independently; daily candles do not
+populate intraday history automatically.
 
-For production, move to PostgreSQL, durable ingestion workers and rate limiting,
-then add time partitions and an explicit archive/retention policy after measuring
-actual data growth. Keep long-term daily bars and archive older minute bars according
-to backtesting needs. Do not discard minute history before defining that requirement.
+For a production deployment, add durable ingestion workers, authentication and
+rate limiting. The current configured database is already PostgreSQL.
 
 Provider references: [historical limits](https://upstox.com/developer/api-documentation/v3/get-historical-candle-data/)
 and [intraday candles](https://upstox.com/developer/api-documentation/v3/get-intra-day-candle-data/).
@@ -131,7 +156,7 @@ The existing Sector dropdown includes Nifty 50, Bank Nifty, Nifty Midcap 100, an
 
 ## Watchlists and price alerts
 
-Watchlist now stores named lists, sections, ordered symbols and coloured flags in the database. Use **+** to search Upstox stocks/indices or MCX commodity contracts. Symbols can be removed or reordered; lists can be created, copied, renamed, cleared, deleted, exported and imported as JSON. The table shows Last, Chg and Chg%, supports sorting/filtering, and refreshes selected-list quotes every 15 seconds. Selecting a row opens a compact quote/news preview with links to Stock Details. A list supports up to 100 symbols; the local app supports up to 30 lists.
+Watchlist now stores named lists, sections, ordered symbols and coloured flags in the database. Use **+** to search the saved F&O stock list. Imported lists and new alerts are validated against the same list. Symbols can be removed or reordered; lists can be created, copied, renamed, cleared, deleted, exported and imported as JSON. The table shows Last, Chg and Chg%, supports sorting/filtering, and refreshes selected-list quotes every 15 seconds. Selecting a row opens a compact quote/news preview with links to Stock Details. A list supports up to 100 symbols; the local app supports up to 30 lists.
 
 Price alerts support at-or-above, at-or-below, crossing-above and crossing-below thresholds. Each alert is one-shot. The API lifespan starts a 30-second monitor, which persists its baseline prices, trigger time, and notifications. Crossing alerts require a baseline sample before they can trigger. Conditions are evaluated against sampled last prices, not every exchange tick; transient crossings between checks can be missed. Level conditions already met may trigger on the next check. Removing a symbol or clearing/deleting a list does not cancel independent alerts; cancel them in the alert panel.
 
@@ -151,7 +176,7 @@ The Trade Journal tab contains a dashboard, calendar, trade log, reflections, gr
 
 Fields combine `Trading_Journal(1).xlsx` and `reflecttion journal.xlsx`: execution, quantity/lot size, risk budget, stop/target, setup evidence, RSI/divergence, emotions before/during/after, confidence, rule adherence, mistakes, strengths, lessons, rating and chart links. Calculations use direction-aware price differences times total units, less entered charges. Percentage risk uses percentage points: 1 means 1%. Open trades are excluded from realised analytics; break-even trades remain in the closed-trade win-rate denominator. Equity is plotted in exit order. Daily P&L uses exit dates; hourly/session reports use entry time in Asia/Kolkata. No unrealised P&L, broker sync or automatic order placement is implied.
 
-Settings offers a reviewable import of the one filled reflection trade. The numbered blank template rows are not trades. The template's self-referencing net-P&L formula is corrected in the app. The reflection row records SELL, 37 entry, 80 exit, quantity 100, but has a cached 3,225 profit based on a hard-coded multiplier and reversed sign. The app preserves those recorded inputs, computes -4,300 before unrecorded charges, retains the warning in notes and leaves missing contract details uninferred. Verify direction, contract, quantity, actual lot size and charges after import. Re-imports are idempotent.
+Settings imports only workbook trades whose underlying symbol belongs to the saved F&O list. Excluded source rows remain in the reference workbook but cannot be imported. Re-imports are idempotent; recorded inputs and source warnings are retained for eligible trades.
 
 Trades can be edited/deleted with confirmation for deletion and exported as filtered CSV. Chart links accept only HTTP(S). The scaling simulator is a linear historical replay, not a forecast: fills, margin, liquidity and non-linear charges are not simulated. Quick re-entry flags mean a same-account entry within five minutes of a completed loss; they do not diagnose revenge trading. Starting balance and hidden-price settings are local to the browser and do not alter records.
 

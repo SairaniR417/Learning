@@ -26,11 +26,11 @@ class StorageTests(unittest.IsolatedAsyncioTestCase):
         await self.engine.dispose()
 
     async def test_duplicates_corrections_and_bounded_reads(self):
-        await repo.upsert_instruments([{'key': key, 'symbol': key, 'exchange': 'NSE'} for key in ('A', 'B')])
+        await repo.upsert_instruments([{'key': key, 'symbol': key, 'exchange': 'NSE'} for key in ('NSE_EQ|INE002A01018', 'NSE_EQ|INE062A01020')])
         records = [{"instrument_key": key, "timeframe": "1m",
                     "timestamp": datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(minutes=i),
                     "open": 10., "high": 12., "low": 9., "close": 11., "volume": 100}
-                   for key in ("A", "B") for i in range(120)]
+                   for key in ("NSE_EQ|INE002A01018", "NSE_EQ|INE062A01020") for i in range(120)]
         self.assertEqual(await repo.upsert_candles(records), 240)
         revision = await repo.get_candle_revision("1m")
         await repo.save_strategy_result_cache(
@@ -57,10 +57,10 @@ class StorageTests(unittest.IsolatedAsyncioTestCase):
             return httpx.Response(200, json={"status": "success", "data": {"candles": rows}})
         client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
         with patch("services.market_sync.httpx.AsyncClient", return_value=client), \
-             patch("services.market_sync.get_latest_candle_timestamps", AsyncMock(return_value={"A": now})), \
+             patch("services.market_sync.get_latest_candle_timestamps", AsyncMock(return_value={"NSE_EQ|INE002A01018": now})), \
              patch("services.market_sync.upsert_candles", AsyncMock(return_value=1)) as save:
             result = await MarketSyncService(lambda: "test").sync_candles_for_universe(
-                unit="minutes", target_instruments=[{"key": "A"}])
+                unit="minutes", target_instruments=[{"key": "NSE_EQ|INE002A01018"}])
         self.assertEqual(result["stats"]["failed"], 0)
         self.assertTrue(any("/intraday/" in url for url in urls))
         self.assertTrue(all(len(call.args[0]) == 1 for call in save.await_args_list))

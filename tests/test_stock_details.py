@@ -18,7 +18,7 @@ class StockDetailsTests(unittest.IsolatedAsyncioTestCase):
         self.patch = patch('services.stock_details.async_session_factory', self.factory)
         self.patch.start()
         async with self.factory() as session:
-            instrument = Instrument(symbol='TEST', exchange='NSE', instrument_key='NSE_EQ|TEST')
+            instrument = Instrument(symbol='RELIANCE', exchange='NSE', instrument_key='NSE_EQ|INE002A01018')
             session.add(instrument)
             await session.flush()
             start = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -31,8 +31,8 @@ class StockDetailsTests(unittest.IsolatedAsyncioTestCase):
         await self.engine.dispose()
 
     async def test_complete_coverage_and_non_overlapping_pages(self):
-        first = await stock_history('NSE_EQ|TEST', page=1, page_size=50)
-        second = await stock_history('NSE_EQ|TEST', page=2, page_size=50)
+        first = await stock_history('NSE_EQ|INE002A01018', page=1, page_size=50)
+        second = await stock_history('NSE_EQ|INE002A01018', page=2, page_size=50)
         self.assertEqual(first['total'], 55)
         self.assertEqual(len(first['chart']), 55)
         self.assertEqual(first['chart'][0]['close'], 101)
@@ -51,7 +51,7 @@ class StockDetailsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_unknown_instrument_reports_missing_import(self):
         with self.assertRaises(HTTPException) as error:
-            await stock_history('missing', page=1, page_size=50)
+            await stock_history('NSE_EQ|INE062A01020', page=1, page_size=50)
         self.assertEqual(error.exception.status_code, 404)
 
     def test_news_preserves_dates_and_rejects_unsafe_links(self):

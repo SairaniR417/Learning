@@ -1,4 +1,4 @@
-﻿"""Centralized Market Data Ingestion and Delta Synchronization Engine."""
+"""Centralized Market Data Ingestion and Delta Synchronization Engine."""
 
 import asyncio
 import time
@@ -15,7 +15,7 @@ from database.candle_repo import (
     upsert_data_coverage,
     update_ingestion_job,
 )
-from scanner.universe import get_nse_equity_universe
+from scanner.universe import get_nse_equity_universe, fno_keys
 
 
 def map_timeframe(unit: str, interval: int) -> str:
@@ -49,8 +49,7 @@ def candle_closed(ts, unit, interval, now, exchange=None):
 def nse_daily_closed(ts, now=None):
     """NSE equity bars: accept today after 16:00 IST, with a post-close buffer.
 
-    A provider candle must exist; this does not infer holiday trading or MCX
-    session completion. Future dates and today's in-session bars are excluded.
+    A provider candle must exist; this does not infer holiday trading. Future dates and today's in-session bars are excluded.
     """
     now = (now or datetime.now(timezone.utc)).astimezone(INDIA)
     if ts.tzinfo is None:
@@ -78,7 +77,7 @@ class MarketSyncService:
             self._last_request_at = time.monotonic()
             return response
     async def sync_universe(self) -> int:
-        """Fetch daily master and synchronize instruments table."""
+        """Synchronize instruments from the saved F&O stock list."""
         universe = await get_nse_equity_universe()
         records = [
             {
@@ -125,6 +124,8 @@ class MarketSyncService:
                 await self.sync_universe()
                 instruments = await get_all_active_instruments()
 
+            if any(i["key"] not in fno_keys() for i in instruments):
+                raise ValueError("Only saved F&O stocks can be synced.")
             latest_map = await get_latest_candle_timestamps(timeframe)
             semaphore = asyncio.Semaphore(concurrency)
             stats = {"total": len(instruments), "synced": 0, "failed": 0, "candles_changed": 0}

@@ -16,12 +16,14 @@ from database.connection import async_session_factory, engine
 from database.models import Instrument, MarketCandle
 from database.candle_repo import upsert_candles
 from sqlalchemy import select
+from scanner.universe import fno_keys, fno_symbols
 from services.market_cap import parse_market_caps, SNAPSHOT
 
 async def main():
     archive = Path(sys.argv[1])
     apply = '--apply' in sys.argv
     market_caps = parse_market_caps(archive)
+    market_caps["values"] = {k: v for k, v in market_caps["values"].items() if k in fno_symbols()}
     with zipfile.ZipFile(archive) as z:
         names = [n for n in z.namelist() if Path(n).name.lower().startswith('pd') and n.lower().endswith('.csv')]
         if len(names) != 1:
@@ -34,7 +36,7 @@ async def main():
         if dates != {date}:
             raise ValueError('Archive trading dates disagree')
     async with async_session_factory() as s:
-        instruments = (await s.execute(select(Instrument).where(Instrument.exchange == 'NSE', Instrument.is_active.is_(True)))).scalars().all()
+        instruments = (await s.execute(select(Instrument).where(Instrument.exchange == 'NSE', Instrument.is_active.is_(True), Instrument.provider_instrument_key.in_(fno_keys())))).scalars().all()
         lookup = {}
         for i in instruments:
             lookup.setdefault(i.symbol, []).append(i)

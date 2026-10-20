@@ -15,6 +15,8 @@ from sqlalchemy.exc import IntegrityError
 from database.connection import async_session_factory
 from database.models import JournalTrade
 
+from scanner.universe import fno_symbols
+
 router = APIRouter(prefix='/api/journal')
 IST = ZoneInfo('Asia/Kolkata')
 
@@ -22,7 +24,7 @@ IST = ZoneInfo('Asia/Kolkata')
 class TradeInput(BaseModel):
     account: str = Field(default='Main account', min_length=1, max_length=80)
     symbol: str = Field(min_length=1, max_length=100)
-    segment: Literal['Equity', 'Futures', 'Options', 'Commodity', 'Other'] = 'Equity'
+    segment: Literal['Equity', 'Futures', 'Options'] = 'Equity'
     instrumentType: str = Field(default='', max_length=40)
     timeframe: str = Field(default='Daily', max_length=40)
     direction: Literal['LONG', 'SHORT']
@@ -70,6 +72,14 @@ class TradeInput(BaseModel):
         value = value.strip()
         if not value:
             raise ValueError('Symbol and account cannot be blank')
+        return value
+
+    @field_validator('symbol')
+    @classmethod
+    def allowed_symbol(cls, value):
+        value = value.strip().upper()
+        if value not in fno_symbols():
+            raise ValueError('Select an underlying stock from the saved F&O list.')
         return value
 
     @field_validator('entryAt', 'exitAt')
@@ -138,7 +148,7 @@ def serialize(row):
 async def trades():
     async with async_session_factory() as session:
         rows = (await session.scalars(select(JournalTrade).order_by(JournalTrade.id.desc()))).all()
-        return {'trades': [serialize(row) for row in rows]}
+        return {'trades': [serialize(row) for row in rows if json.loads(row.content_json).get('symbol') in fno_symbols()]}
 
 
 @router.post('/trades')
@@ -176,7 +186,9 @@ async def delete_trade(trade_id: int):
 
 @router.get('/provided-workbooks')
 async def provided_workbooks():
-    return json.loads((Path(__file__).parent.parent / 'data' / 'journal-workbook-reference.json').read_text(encoding='utf-8'))
+    reference = json.loads((Path(__file__).parent.parent / 'data' / 'journal-workbook-reference.json').read_text(encoding='utf-8'))
+    reference['trades'] = [t for t in reference.get('trades', []) if t.get('symbol') in fno_symbols()]
+    return reference
 
 
 @router.post('/import-provided')

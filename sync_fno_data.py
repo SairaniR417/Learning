@@ -275,133 +275,6 @@ def parse_expiry(value):
 # BUILD CURRENT F&O STOCK UNIVERSE
 # ============================================================
 
-def build_current_fno_universe(
-    instruments,
-):
-
-    stocks = {}
-
-
-    for item in instruments:
-
-
-        if item.get("segment") != "NSE_FO":
-
-            continue
-
-
-        if (
-            str(
-                item.get(
-                    "underlying_type",
-                    "",
-                )
-            ).upper()
-            != "EQUITY"
-        ):
-
-            continue
-
-
-        if item.get("instrument_type") not in {
-
-            "FUT",
-            "CE",
-            "PE",
-
-        }:
-
-            continue
-
-
-        symbol = str(
-
-            item.get(
-                "underlying_symbol",
-                "",
-            )
-
-        ).strip().upper()
-
-
-        if not symbol:
-
-            continue
-
-
-        stocks[symbol] = {
-
-            "symbol":
-                symbol,
-
-            "underlying_key":
-                item.get(
-                    "underlying_key"
-                ),
-
-            "name":
-                item.get(
-                    "name"
-                ),
-
-        }
-
-
-    if not stocks:
-
-        raise RuntimeError(
-            "No NSE F&O stocks found."
-        )
-
-
-    df = pd.DataFrame(
-        stocks.values()
-    )
-
-
-    df = df.sort_values(
-        "symbol"
-    ).reset_index(
-        drop=True
-    )
-
-
-    output = (
-
-        UNIVERSE_DIR
-        / "current_fno_stocks.csv"
-
-    )
-
-
-    df.to_csv(
-
-        output,
-
-        index=False,
-
-    )
-
-
-    print()
-
-    print(
-        f"Current F&O stocks: "
-        f"{len(df):,}"
-    )
-
-    print(
-        f"Saved: {output}"
-    )
-
-
-    return df
-
-
-# ============================================================
-# CURRENT FUTURES + OPTIONS
-# ============================================================
-
 def build_current_derivatives(
 
     instruments,
@@ -2556,12 +2429,12 @@ def main():
     # CURRENT F&O UNIVERSE
     # ========================================================
 
-    universe_df = (
-        build_current_fno_universe(
-            instruments
-        )
-    )
-
+    # Keep the application's saved universe stable across routine downloads.
+    from scanner.universe import get_fno_stocks
+    universe_df = pd.DataFrame([
+        {"symbol": stock["symbol"], "underlying_key": stock["key"], "name": stock["name"]}
+        for stock in get_fno_stocks()
+    ])
 
     universe = set(
 

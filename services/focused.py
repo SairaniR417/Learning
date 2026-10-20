@@ -1,4 +1,5 @@
 """Daily NSE confluence from every registered strategy, sharing one DB snapshot."""
+from scanner.universe import universe_version
 import asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -194,7 +195,7 @@ def analyze_snapshot(df: pl.DataFrame, instruments: dict[str, dict[str, Any]], p
 async def focused_scan(limit: int | None = 5, progress=None) -> dict[str, Any]:
     async with _scan_lock:
         revision = await get_candle_revision("1d")
-        key = f"{CACHE_VERSION}:{revision}"
+        key = f"{CACHE_VERSION}:{universe_version()}:{revision}"
         cached = await get_cached_strategy_result(key)
         if cached and cached["results"]:
             result = dict(cached["results"][0], cached=True)

@@ -27,7 +27,7 @@ class JournalTests(unittest.IsolatedAsyncioTestCase):
         await self.engine.dispose()
 
     def body(self, **values):
-        return {'symbol':'TEST','direction':'LONG','entryAt':'2026-05-05T09:30:00+05:30','exitAt':'2026-05-05T10:30:00+05:30','entryPrice':100,'exitPrice':110,'quantity':100,'charges':30,'stopPrice':95,'targetPrice':110,'capital':100000,'riskPercent':1,'lotSize':25,**values}
+        return {'symbol':'RELIANCE','direction':'LONG','entryAt':'2026-05-05T09:30:00+05:30','exitAt':'2026-05-05T10:30:00+05:30','entryPrice':100,'exitPrice':110,'quantity':100,'charges':30,'stopPrice':95,'targetPrice':110,'capital':100000,'riskPercent':1,'lotSize':25,**values}
 
     def test_long_and_short_pnl_costs_and_risk(self):
         long=service.calculated(service.TradeInput(**self.body()))
@@ -71,8 +71,14 @@ class JournalTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await service.trades())['trades'],[])
 
     async def test_provided_workbook_import_is_idempotent_and_corrected(self):
-        first=await service.import_provided()
-        second=await service.import_provided()
+        reference=json.loads((Path(__file__).resolve().parents[1]/'data/journal-workbook-reference.json').read_text(encoding='utf-8'))
+        # Exercise import arithmetic with an eligible underlying stock.
+        reference['trades'][0]['symbol']='RELIANCE'
+        reference['trades'][0]['segment']='Options'
+        from unittest.mock import AsyncMock
+        with patch.object(service, 'provided_workbooks', AsyncMock(return_value=reference)):
+            first=await service.import_provided()
+            second=await service.import_provided()
         self.assertEqual(first['added'],1)
         self.assertEqual(second['added'],0)
         self.assertEqual(second['duplicates'],1)

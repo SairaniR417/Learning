@@ -26,7 +26,7 @@ class WatchlistTests(unittest.IsolatedAsyncioTestCase):
         await self.engine.dispose()
 
     def entry(self):
-        return {'key': 'NSE_EQ|INE123A01012', 'symbol': 'TEST', 'name': 'Test Ltd', 'exchange': 'NSE', 'section': 'Stocks'}
+        return {'key': 'NSE_EQ|INE002A01018', 'symbol': 'RELIANCE', 'name': 'Test Ltd', 'exchange': 'NSE', 'section': 'Stocks'}
 
     async def add_alert(self, condition='above', target=100):
         entry = self.entry()

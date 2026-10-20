@@ -9,12 +9,15 @@ from fastapi import APIRouter, Query, HTTPException
 from database.connection import async_session_factory
 from database.models import Instrument, MarketCandle
 
+from scanner.universe import require_fno_key, fno_symbols
+
 router = APIRouter(prefix="/api/stocks")
 _news_cache = {}
 
 
 @router.get("/history")
 async def stock_history(instrument_key: str, page: int = Query(1, ge=1), page_size: int = Query(50, ge=1, le=200)):
+    require_fno_key(instrument_key)
     async with async_session_factory() as session:
         instrument = await session.scalar(select(Instrument).where(Instrument.instrument_key == instrument_key))
         if instrument is None:
@@ -52,6 +55,8 @@ def parse_news(payload: bytes):
 
 @router.get("/news")
 async def stock_news(symbol: str = Query(min_length=1, max_length=100), name: str = Query("", max_length=200)):
+    if symbol not in fno_symbols():
+        raise HTTPException(400, "Select a stock from the saved F&O list.")
     query = f'"{name or symbol}" "{symbol}" stock India'
     now = datetime.now(timezone.utc)
     cached = _news_cache.get(query)

@@ -8,6 +8,7 @@ import { TradeJournalComponent } from './trade-journal/trade-journal.component';
 import { StockDetailsComponent } from './stock-details/stock-details.component';
 import { EmaScannerComponent } from './scanner/ema-scanner.component';
 import { FocusedComponent } from './focused/focused.component';
+import { FnoStocksComponent } from './fno-stocks/fno-stocks.component';
 import { MarketApiService, MarketAssetQuote, SelectedStock } from './market-api.service';
 
 interface DashboardAsset extends MarketAssetQuote {
@@ -26,7 +27,7 @@ interface Opportunity {
   tag: string;
 }
 
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent, FnoStocksComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
 export class AppComponent implements OnInit, OnDestroy {
   private readonly api = inject(MarketApiService);
   readonly notifications = inject(AlertNotificationsService);
@@ -43,14 +44,14 @@ export class AppComponent implements OnInit, OnDestroy {
   page = 'Overview';
   selectedStock: SelectedStock | null = null;
   openStock(stock: SelectedStock): void { this.selectedStock = stock; this.page = 'Stock Details'; }
-  market: 'equities' | 'commodities' = 'equities';
-  marketName = 'NSE equities';
+  readonly market = 'equities' as const;
+  marketName = 'NSE F&O stocks';
   receivedAt = 0;
   loadingMarket = true;
   marketError = '';
   trendLoading = false;
   trendError = '';
-  chartSymbol = 'NIFTY 50';
+  chartSymbol = 'RELIANCE';
   chartPath = '';
   chartAreaPath = '';
   chartLabels: string[] = [];
@@ -70,7 +71,7 @@ export class AppComponent implements OnInit, OnDestroy {
   heatGainMax = 0;
   heatLossMax = 0;
   opportunities: Opportunity[] = [];
-  pages = ['Overview', 'Market Scanner', 'Focused', 'Stock Details', 'Watchlist', 'Trade Journal'];
+  pages = ['Overview', 'Market Scanner', 'Focused', 'F&O Stocks', 'Stock Details', 'Watchlist', 'Trade Journal'];
 
   ngOnInit(): void {
     this.statusSubscription = timer(0, 15000).subscribe(() => {
@@ -95,22 +96,6 @@ export class AppComponent implements OnInit, OnDestroy {
       this.api.status().subscribe({ next: (status) => this.connected = status.connected });
       if (!this.receivedAt || Date.now() - this.receivedAt >= 300000) this.refreshMarket();
     }
-  }
-
-  selectMarket(market: 'equities' | 'commodities'): void {
-    if (this.market === market) return;
-    this.market = market;
-    this.selectedSector = 'All sectors';
-    this.indexSubscription?.unsubscribe(); this.selectedIndex = 'all'; this.indexLoading = false; this.indexError = ''; this.indexIsins.clear();
-    this.heatSearch = '';
-    this.heatPage = 0;
-    this.allHeatAssets = [];
-    this.heatTiles = [];
-    this.trendKey = '';
-    this.chartPath = '';
-    this.chartAreaPath = '';
-    this.chartLabels = [];
-    this.refreshMarket();
   }
 
   refreshMarket(): void { // Poll live quotes for the selected Indian market.
@@ -218,7 +203,7 @@ export class AppComponent implements OnInit, OnDestroy {
       priceLabel: this.numberFormat.format(asset.price),
       changeLabel: `${sign}${asset.changePct.toFixed(2)}%`,
       color,
-      sector: this.market === 'commodities' ? 'Commodities' : this.classifySector(asset.symbol, asset.name),
+      sector: this.classifySector(asset.symbol, asset.name),
       w: index < 3 ? 2 : 1,
       h: index < 3 ? 2 : 1,
     };

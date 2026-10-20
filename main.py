@@ -18,10 +18,8 @@ from pydantic import BaseModel, Field
 from database.connection import init_db
 from drishti.assistant import AssistantError, DEFAULT_MODEL, answer_question
 from drishti.ema_alignment import EmaAlignmentResponse, analyze_ema_alignment
-from scanner.ema_scanner import scan_ema_universe
 from scanner.strategies import strategy_registry
-from scanner.universe import get_nse_equity_universe
-from scanner.commodity_universe import get_mcx_front_month_universe
+from scanner.universe import get_nse_equity_universe, get_fno_stocks, require_fno_key
 from services.market_sync import MarketSyncService, map_timeframe
 from database.candle_repo import create_ingestion_job, get_ingestion_job, get_all_active_instruments, load_recent_candles_polars
 from services import watchlists
@@ -42,6 +40,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Market Desk API", lifespan=lifespan)
+from services.fno_stocks import router as fno_stocks_router
+app.include_router(fno_stocks_router)
 from services.stock_details import router as stock_details_router
 app.include_router(stock_details_router)
 from services.index_constituents import router as index_constituents_router
@@ -134,6 +134,8 @@ async def api_json_request(url: str, *, method: str = "GET", headers: dict | Non
 
 
 async def fetch_watchlist_quotes(keys: list[str]):
+    for key in keys:
+        require_fno_key(key)
     token = require_token()
     quotes_by_key = {}
     for offset in range(0, len(keys), 50):
@@ -200,40 +202,16 @@ async def oauth_callback(code: str | None = None, state: str | None = None, erro
 
 @app.get("/api/instruments")
 async def search_instruments(q: str = Query(default="", max_length=50), market: str = Query(default="cash")):
-    token = require_token()
-    query = q.strip()
-    if len(query) < 2:
-        return {"instruments": []}
-    if market == "cash":
-        filters = {"exchanges": "NSE,BSE", "segments": "EQ,INDEX"}
-    elif market == "commodities":
-        filters = {"exchanges": "MCX", "segments": "COMM,FO", "instrument_types": "FUT"}
-    else:
-        raise HTTPException(status_code=400, detail="Market must be cash or commodities.")
-    result = await api_json_request(
-        "https://api.upstox.com/v2/instruments/search",
-        headers={"Authorization": f"Bearer {token}"},
-        params={"query": query, **filters, "page_number": 1, "records": 10},
-    )
-    instruments = [
-        {
-            "key": item.get("instrument_key"),
-            "symbol": item.get("trading_symbol") or item.get("short_name") or item.get("name"),
-            "name": item.get("name") or item.get("short_name") or item.get("trading_symbol"),
-            "exchange": item.get("exchange") or item.get("segment"),
-            "segment": item.get("segment"),
-            "isin": item.get("isin"),
-            "lot_size": item.get("lot_size"),
-            "tick_size": item.get("tick_size"),
-            "instrument_type": item.get("instrument_type"),
-        }
-        for item in result.get("data", [])
-    ]
-    return {"instruments": instruments}
+    if market != "cash":
+        raise HTTPException(400, "Only saved F&O stocks are supported.")
+    query = q.strip().casefold()
+    stocks = get_fno_stocks()
+    return {"instruments": [s for s in stocks if not query or query in s["symbol"].casefold() or query in s["name"].casefold()]}
 
 
 @app.get("/api/fundamentals/{isin}/corporate-actions")
 async def corporate_actions(isin: str):
+    require_fno_key("NSE_EQ|" + isin)
     token = require_token()
     if not re.fullmatch(r"IN[A-Z0-9]{10}", isin):
         raise HTTPException(status_code=400, detail="Provide a valid equity ISIN.")
@@ -246,6 +224,7 @@ async def corporate_actions(isin: str):
 
 @app.get("/api/fundamentals/{isin}/profile")
 async def company_profile(isin: str):
+    require_fno_key("NSE_EQ|" + isin)
     token = require_token()
     if not re.fullmatch(r"IN[A-Z0-9]{10}", isin):
         raise HTTPException(status_code=400, detail="Provide a valid equity ISIN.")
@@ -262,6 +241,8 @@ async def quotes(keys: str = Query(min_length=1)):
     instrument_keys = [key for key in keys.split(",") if key]
     if len(instrument_keys) > 50 or any(not instrument_key_pattern.fullmatch(key) for key in instrument_keys):
         raise HTTPException(status_code=400, detail="Provide between 1 and 50 valid Upstox instrument keys.")
+    for key in instrument_keys:
+        require_fno_key(key)
     result = await api_json_request(
         "https://api.upstox.com/v3/market-quote/ltp",
         headers={"Authorization": f"Bearer {token}"},
@@ -271,20 +252,13 @@ async def quotes(keys: str = Query(min_length=1)):
 
 
 @app.get("/api/market/snapshot")
-async def market_snapshot(market: Literal["equities", "commodities"] = Query(default="equities")):
-    """Return live NSE equity or MCX commodity quotes for the dashboard."""
+async def market_snapshot(market: Literal["equities"] = Query(default="equities")):
+    """Return live quotes for the saved F&O underlying stocks."""
     token = require_token()
-    if market == "equities":
-        instruments = sorted(await get_nse_equity_universe(), key=lambda item: item["symbol"])
-        chart_key = "NSE_INDEX|Nifty 50"
-        chart_symbol = "NIFTY 50"
-        market_name = "NSE equities"
-    else:
-        instruments = await get_mcx_front_month_universe()
-        chart_instrument = next((item for item in instruments if item["symbol"] == "GOLD"), instruments[0])
-        chart_key = chart_instrument["key"]
-        chart_symbol = chart_instrument["symbol"]
-        market_name = "MCX commodities"
+    instruments = get_fno_stocks()
+    chart = next((s for s in instruments if s["symbol"] == "RELIANCE"), instruments[0])
+    chart_key, chart_symbol = chart["key"], chart["symbol"]
+    market_name = "NSE F&O stocks"
 
     if not instruments:
         return {"market": market, "name": market_name, "assets": [], "receivedAt": int(datetime.now(timezone.utc).timestamp() * 1000)}
@@ -375,6 +349,7 @@ async def historical_candles(
     from_date: date = Query(alias="from"),
     to_date: date = Query(alias="to"),
 ):
+    require_fno_key(instrument_key)
     token = require_token()
     if not instrument_key_pattern.fullmatch(instrument_key):
         raise HTTPException(status_code=400, detail="Provide a valid Upstox instrument key.")
@@ -460,7 +435,7 @@ market_sync_service = MarketSyncService(require_token)
 
 class StrategyScanRequest(BaseModel):
     strategy_id: str
-    market: Literal['equities', 'commodities'] = 'equities'
+    market: Literal['equities'] = 'equities'
     timeframe: str = "1d"
     params: dict[str, Any] = Field(default_factory=dict)
     bypass_cache: bool = False
@@ -482,7 +457,6 @@ async def get_available_strategies():
 @app.get("/api/market/ema-indicators")
 async def market_ema_indicators(timeframe: str = Query(default="1d")):
     """Return EMA 9/20 and SMA 50/200 for every NSE instrument with enough stored candles."""
-    require_token()
     if timeframe != "1d":
         raise HTTPException(status_code=400, detail="EMA indicators are currently available for daily candles only.")
     strategy = strategy_registry.get("ema_sma_alignment")
@@ -501,14 +475,7 @@ async def market_ema_indicators(timeframe: str = Query(default="1d")):
 @app.post("/api/strategies/scan")
 async def scan_strategy(request: StrategyScanRequest):
     """Execute any strategy against the centralized multi-timeframe database with shared result caching."""
-    token = require_token()
     try:
-        if request.market == 'commodities':
-            from services.commodity_scanner import scan_commodities
-            strategy = strategy_registry.get(request.strategy_id)
-            if not strategy:
-                raise ValueError('Unknown scanner strategy')
-            return await scan_commodities(strategy, request.timeframe, request.params, token)
         return await strategy_registry.execute_scan(
             request.strategy_id,
             timeframe=request.timeframe,
@@ -521,7 +488,7 @@ async def scan_strategy(request: StrategyScanRequest):
 
 @app.post("/api/sync/universe")
 async def sync_universe():
-    """Sync NSE cash equity universe master into central database."""
+    """Sync the saved F&O stock list into the database."""
     require_token()
     count = await market_sync_service.sync_universe()
     return {"status": "success", "instruments_synced": count}
@@ -554,64 +521,7 @@ async def sync_job_status(job_id: int):
 
 @app.get("/api/scanner/universe")
 async def scanner_universe():
-    """Return the NSE cash-equity list from the cached Upstox instrument master."""
+    """Return the shared saved F&O stock list."""
     instruments = await get_nse_equity_universe()
     stocks = sorted(instruments, key=lambda item: item["symbol"])
     return {"count": len(stocks), "stocks": stocks}
-
-
-@app.get("/api/scanner/ema")
-async def scanner_ema_alignment(
-    unit: str = Query(default="days"),
-    interval: int = Query(default=1, gt=0),
-    from_date: date = Query(alias="from"),
-    to_date: date = Query(alias="to"),
-):
-    """Scan NSE cash equities for bullish EMA 9/20/50/200 alignment with instant cached DB execution."""
-    require_token()
-    timeframe = map_timeframe(unit, interval)
-
-    # Fast path: Vectorized scan from local/shared database with caching
-    try:
-        scan_output = await strategy_registry.execute_scan(
-            "ema_sma_alignment",
-            timeframe=timeframe,
-            bypass_cache=False,
-        )
-        if scan_output.get("results") or scan_output.get("total_scanned", 0) > 0:
-            return {
-                "strategy": "CLOSE_ABOVE_EMA9_EMA20_SMA50_SMA200",
-                "timeframe": timeframe,
-                "scanned": scan_output.get("total_scanned", 0),
-                "matched": scan_output.get("total_matched", 0),
-                "results": scan_output.get("results", []),
-                "cached": scan_output.get("cached", False),
-                "errors": [],
-            }
-    except Exception as exc:
-        print(f"Fast vectorized scan skipped to fallback: {exc}")
-
-    # Fallback to direct Upstox scan if database has not been seeded yet
-    instruments = await get_nse_equity_universe()
-
-    async def fetch_history(key: str, candle_unit: str, candle_interval: int, start: date, end: date):
-        return await historical_candles(
-            instrument_key=key,
-            unit=candle_unit,
-            interval=candle_interval,
-            from_date=start,
-            to_date=end,
-        )
-
-    return await scan_ema_universe(
-        instruments,
-        fetch_history,
-        unit=unit,
-        interval=interval,
-        from_date=from_date,
-        to_date=to_date,
-        concurrency=10,
-    )
-
-
-

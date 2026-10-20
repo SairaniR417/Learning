@@ -21,8 +21,8 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
     const term = query.trim(); this.searchLoading = term.length >= 2;
     if (!this.searchLoading) return;
     this.searchTimer = setTimeout(() => {
-      this.searchSubscription = this.api.search(term, 'cash').subscribe({ next: data => {
-        this.searchResults = data.instruments.filter(item => item.key && !item.key.includes('INDEX|'));
+      this.searchSubscription = this.api.search(term).subscribe({ next: data => {
+        this.searchResults = data.instruments;
         this.searchLoading = false; this.searchFinished = true;
       }, error: error => { this.searchError = error.error?.detail || 'Unable to search stocks. Please try again.'; this.searchLoading = false; this.searchFinished = true; } });
     }, 300);

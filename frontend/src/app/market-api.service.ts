@@ -25,7 +25,7 @@ export interface MarketAssetQuote {
   key: string;
   symbol: string;
   name: string;
-  exchange: 'NSE' | 'MCX';
+  exchange: 'NSE';
   expiry?: string;
   price: number;
   previousClose: number;
@@ -35,7 +35,7 @@ export interface MarketAssetQuote {
 }
 
 export interface MarketSnapshot {
-  market: 'equities' | 'commodities';
+  market: 'equities';
   name: string;
   chartKey: string;
   chartSymbol: string;
@@ -56,33 +56,6 @@ export interface HistoricalCandle {
   low: number;
   close: number;
   volume: number;
-}
-
-export type DrishtiAlignmentStatus = 'ALIGNED' | 'NEWLY_ALIGNED' | 'NOT_ALIGNED' | 'INSUFFICIENT_HISTORY';
-
-export interface DrishtiEmaAlignment {
-  symbol: string; exchange: string; timeframe: string; asOf: string | null; close: number | null;
-  ema: { ema9: number | null; ema20: number | null; ema50: number | null; ema200: number | null };
-  conditions: { priceAboveEma9: boolean; priceAboveEma20: boolean; priceAboveEma50: boolean; priceAboveEma200: boolean; ema9AboveEma20: boolean; ema20AboveEma50: boolean; ema50AboveEma200: boolean };
-  bullishAlignment: boolean; status: DrishtiAlignmentStatus; alignedSince: string | null;
-  transitionIndex: number | null; transitionTimestamp: string | null; candlesAnalyzed: number;
-  minimumHistory: number; recommendedHistory: number; historyStatus: 'SUFFICIENT' | 'MINIMUM_ONLY' | 'INSUFFICIENT';
-}
-
-export interface DrishtiChatSource { title: string; url: string; }
-export interface DrishtiChatMessage { role: 'user' | 'assistant'; content: string; }
-export interface DrishtiChatResponse { answer: string; sources: DrishtiChatSource[]; }
-
-export interface EmaScannerResult {
-  symbol: string; instrumentKey: string; exchange: string; timeframe: string;
-  close: number; ema9: number; ema20: number; sma50: number; sma200: number;
-  status: 'ALIGNED' | 'NEWLY_ALIGNED'; matches: boolean; matchedSince: string;
-  candlesAnalyzed: number;
-}
-
-export interface EmaScannerResponse {
-  strategy: string; timeframe: string; scanned: number; matched: number;
-  results: EmaScannerResult[]; errors: { symbol: string; error: string }[];
 }
 
 export interface ScannerStrategyParameter { name: string; display_name: string; type: 'int' | 'float' | 'bool' | 'str'; default: number | string | boolean; min_value?: number | null; max_value?: number | null; description?: string; }
@@ -133,7 +106,9 @@ export interface NotificationInbox { notifications: AlertNotification[]; unread:
 @Injectable({ providedIn: 'root' })
 export class MarketApiService {
   private readonly http = inject(HttpClient);
-  focused(limit = 5): Observable<FocusedResponse> { return this.http.get<FocusedResponse>('/api/focused', { params: { limit } }); }
+  fnoStocks(): Observable<{ stocks: SelectedStock[]; total: number }> {
+    return this.http.get<{ stocks: SelectedStock[]; total: number }>('/api/market/fno-stocks');
+  }
   startFocused(): Observable<{ id: string }> { return this.http.post<{ id: string }>('/api/focused/jobs', {}); }
   focusedJob(id: string): Observable<FocusedJob> { return this.http.get<FocusedJob>(`/api/focused/jobs/${encodeURIComponent(id)}`); }
   watchlists(): Observable<{ lists: Watchlist[] }> { return this.http.get<{ lists: Watchlist[] }>('/api/watchlists'); }
@@ -161,7 +136,7 @@ export class MarketApiService {
     });
   }
 
-  marketSnapshot(market: 'equities' | 'commodities'): Observable<MarketSnapshot> {
+  marketSnapshot(market: 'equities'): Observable<MarketSnapshot> {
     return this.http.get<MarketSnapshot>('/api/market/snapshot', { params: { market } });
   }
 
@@ -169,8 +144,8 @@ export class MarketApiService {
     return this.http.get<{ timeframe: string; scanned: number; indicators: MarketEmaIndicator[] }>('/api/market/ema-indicators', { params: { timeframe } });
   }
 
-  search(query: string, market: 'cash' | 'commodities' = 'cash'): Observable<{ instruments: Instrument[] }> {
-    return this.http.get<{ instruments: Instrument[] }>('/api/instruments', { params: { q: query, market } });
+  search(query: string): Observable<{ instruments: Instrument[] }> {
+    return this.http.get<{ instruments: Instrument[] }>('/api/instruments', { params: { q: query } });
   }
 
   logout(): Observable<{ connected: boolean }> {
@@ -183,33 +158,12 @@ export class MarketApiService {
     });
   }
 
-  drishtiEmaAlignment(params: { symbol: string; instrumentKey?: string; exchange?: string; unit: string; interval: number; from: string; to: string }): Observable<DrishtiEmaAlignment> {
-    const query: Record<string, string | number> = { symbol: params.symbol, unit: params.unit, interval: params.interval, from: params.from, to: params.to };
-    if (params.instrumentKey) query['instrument_key'] = params.instrumentKey;
-    if (params.exchange) query['exchange'] = params.exchange;
-    return this.http.get<DrishtiEmaAlignment>('/api/drishti/ema-alignment', { params: query });
-  }
-
-  scanEmaUniverse(unit: string, interval: number, from: string, to: string): Observable<EmaScannerResponse> {
-    return this.http.get<EmaScannerResponse>('/api/scanner/ema', {
-      params: { unit, interval, from, to }
-    });
-  }
-
   scannerStrategies(): Observable<{ strategies: ScannerStrategy[] }> {
     return this.http.get<{ strategies: ScannerStrategy[] }>('/api/strategies');
   }
 
-  scanStrategy(strategyId: string, timeframe: string, params: Record<string, number | string | boolean> = {}, bypassCache = false, market: 'equities' | 'commodities' = 'equities'): Observable<StrategyScanResponse> {
+  scanStrategy(strategyId: string, timeframe: string, params: Record<string, number | string | boolean> = {}, bypassCache = false, market: 'equities' = 'equities'): Observable<StrategyScanResponse> {
     return this.http.post<StrategyScanResponse>('/api/strategies/scan', { strategy_id: strategyId, timeframe, params, bypass_cache: bypassCache, market });
-  }
-
-  nseEquityUniverse(): Observable<{ count: number; stocks: Instrument[] }> {
-    return this.http.get<{ count: number; stocks: Instrument[] }>('/api/scanner/universe');
-  }
-
-  drishtiChat(messages: DrishtiChatMessage[]): Observable<DrishtiChatResponse> {
-    return this.http.post<DrishtiChatResponse>('/api/drishti/chat', { messages });
   }
 
   corporateActions(isin: string): Observable<{ actions: CorporateAction[] }> {

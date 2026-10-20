@@ -1,4 +1,4 @@
-﻿"""Repositories for instrument metadata, OHLCV history, and strategy caching."""
+"""Repositories for instrument metadata, OHLCV history, and strategy caching."""
 from datetime import datetime, timezone
 import json
 from typing import Any, Sequence
@@ -6,9 +6,9 @@ import polars as pl
 from sqlalchemy import delete, func, select, or_, true
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession
 from database.connection import async_session_factory, engine
 from database.models import Instrument, MarketCandle, StrategyCache, CandleRevision
+from scanner.universe import fno_keys, get_fno_stocks
 
 
 def _insert_fn():
@@ -18,6 +18,9 @@ def _insert_fn():
 async def upsert_instruments(instruments: Sequence[dict[str, Any]]) -> int:
     if not instruments:
         return 0
+    allowed = fno_keys()
+    if any((i.get("provider_instrument_key") or i.get("instrument_key") or i.get("key")) not in allowed for i in instruments):
+        raise ValueError("Only saved F&O stocks can be imported.")
     prepared = [{
         "symbol": item["symbol"], "exchange": item.get("exchange", "NSE"),
         "instrument_type": item.get("instrument_type", "EQ"),
@@ -41,6 +44,9 @@ async def upsert_instruments(instruments: Sequence[dict[str, Any]]) -> int:
 async def upsert_candles(candles: Sequence[dict[str, Any]]) -> int:
     if not candles:
         return 0
+    allowed = fno_keys()
+    if any(c["instrument_key"] not in allowed for c in candles):
+        raise ValueError("Only saved F&O candles can be imported.")
     unique = list({(c["instrument_key"], c["timeframe"], c["timestamp"]): c for c in candles}.values())
     async with async_session_factory() as session:
         keys = list({c["instrument_key"] for c in unique})
@@ -92,10 +98,10 @@ async def get_latest_candle_timestamps(timeframe: str) -> dict[str, datetime]:
 
 async def get_all_active_instruments() -> list[dict[str, Any]]:
     async with async_session_factory() as session:
-        stmt = select(Instrument).where(Instrument.is_active.is_(True)).order_by(Instrument.symbol)
+        stmt = select(Instrument).where(Instrument.is_active.is_(True), Instrument.provider_instrument_key.in_(fno_keys())).order_by(Instrument.symbol)
         rows = (await session.execute(stmt)).scalars().all()
-        return [{"key": row.provider_instrument_key, "symbol": row.symbol, "name": row.symbol,
-                 "exchange": row.exchange, "segment": row.exchange, "isin": None} for row in rows]
+        metadata = {stock["key"]: stock for stock in get_fno_stocks()}
+        return [metadata[row.provider_instrument_key] for row in rows]
 
 
 async def load_candles_polars(timeframe: str, min_candles: int = 200) -> pl.DataFrame:
@@ -108,7 +114,7 @@ async def load_candles_polars(timeframe: str, min_candles: int = 200) -> pl.Data
             func.row_number().over(partition_by=MarketCandle.instrument_id,
                 order_by=MarketCandle.candle_time.desc()).label("position")
         ).join(Instrument, Instrument.id == MarketCandle.instrument_id).where(
-            MarketCandle.timeframe == timeframe).subquery()
+            MarketCandle.timeframe == timeframe, Instrument.provider_instrument_key.in_(fno_keys())).subquery()
         stmt = select(ranked.c.instrument_key, ranked.c.timestamp, ranked.c.open, ranked.c.high,
                       ranked.c.low, ranked.c.close, ranked.c.volume).where(
             ranked.c.position <= min_candles).order_by(ranked.c.instrument_key, ranked.c.timestamp.asc())
@@ -126,6 +132,8 @@ async def load_recent_candles_polars(timeframe: str, per_instrument: int = 250) 
     """Load only each active instrument's newest candles using the lookup index."""
     if not 1 <= per_instrument <= 10000:
         raise ValueError("Candle window must be between 1 and 10000")
+    if engine.dialect.name == "sqlite":
+        return await load_candles_polars(timeframe, per_instrument)
     recent = (select(MarketCandle.candle_time.label("timestamp"), MarketCandle.open, MarketCandle.high,
                      MarketCandle.low, MarketCandle.close, MarketCandle.volume)
               .where(MarketCandle.instrument_id == Instrument.id, MarketCandle.timeframe == timeframe)
@@ -133,7 +141,7 @@ async def load_recent_candles_polars(timeframe: str, per_instrument: int = 250) 
     stmt = (select(Instrument.provider_instrument_key, recent.c.timestamp, recent.c.open, recent.c.high,
                    recent.c.low, recent.c.close, recent.c.volume)
             .select_from(Instrument).join(recent, true())
-            .where(Instrument.is_active.is_(True))
+            .where(Instrument.is_active.is_(True), Instrument.provider_instrument_key.in_(fno_keys()))
             .order_by(Instrument.provider_instrument_key, recent.c.timestamp.asc()))
     async with async_session_factory() as session:
         rows = (await session.execute(stmt)).all()

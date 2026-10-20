@@ -8,7 +8,7 @@ import { MarketApiService, MarketAssetQuote, ScannerStrategy, SelectedStock } fr
 
 type FactorField = 'changePct' | 'volume' | 'price';
 interface FactorRule { field: FactorField; min: string; max: string; importance: 'Important' | 'Optional'; }
-interface SavedScreener { name: string; strategyId: string; timeframe: string; factors: FactorRule[]; sector?: string; strategyParams?: Record<string, number>; market?: 'equities' | 'commodities'; }
+interface SavedScreener { name: string; strategyId: string; timeframe: string; factors: FactorRule[]; sector?: string; strategyParams?: Record<string, number>; market?: string; }
 interface SignalMetric { label: string; value: number; compareToClose: boolean; }
 interface SignalBadge { label: string; passed?: boolean; tone?: 'positive' | 'negative' | 'neutral'; }
 interface ScreenResult { entry?: number; stopLoss?: number; tp1?: number; tp2?: number; tp3?: number; tp4?: number; tp5?: number; setupState?: string; instrumentKey: string; exchange: string; symbol: string; name: string; price: number; changePct: number | null; volume: number; status: string; signal?: string; state?: string; divergenceType?: string; source: 'database' | 'strategy'; detail?: string; signalMetrics?: SignalMetric[]; signalBadges?: SignalBadge[]; sector: string; }
@@ -34,18 +34,6 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
   rules: FactorRule[] = [{ field: 'changePct', min: '', max: '', importance: 'Important' }];
   strategies: ScannerStrategy[] = [];
   selectedStrategy = 'market_screener';
-  market: 'equities' | 'commodities' = 'equities';
-  get isCommodities(): boolean { return this.market === 'commodities'; }
-  selectMarket(market: 'equities' | 'commodities'): void {
-    this.scanSubscription?.unsubscribe(); this.loading = false;
-    this.market = market; this.timeframe = market === 'commodities' ? '15m' : '1d'; this.selectedSaved = ''; this.selectedSector = 'All sectors';
-    this.clearRightFilters(); this.selectStrategy('market_screener'); this.totalScanned = 0;
-    for (const id of ['changePct', 'volume']) {
-      const column = this.gridColumns.find(column => column.id === id);
-      if (column) column.visible = this.isCommodities;
-      this.gridApi?.setColumnsVisible([id], this.isCommodities);
-    }
-  }
   timeframe = '1d';
   strategyParams: Record<string, number> = {};
   loading = false;
@@ -54,6 +42,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
   coverageNote = '';
   results: ScreenResult[] = [];
   totalScanned = 0;
+  universeCount = 0;
   hasScanned = false;
   readonly sectors = ['All sectors', 'Banking & Finance', 'IT & Software', 'Pharmaceuticals', 'Automobile', 'Energy & Oil', 'Metals & Mining', 'FMCG', 'Telecom', 'Infrastructure & Capital Goods', 'Real Estate', 'Other'];
   selectedSector = 'All sectors';
@@ -98,6 +87,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
+    this.api.fnoStocks().subscribe({ next: data => this.universeCount = data.total });
     this.strategySubscription = this.api.scannerStrategies().subscribe({
       next: ({ strategies }) => { this.strategies = strategies; this.loadingStrategies = false; },
       error: () => { this.loadingStrategies = false; }
@@ -161,7 +151,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
     this.scanSubscription?.unsubscribe(); this.loading = false; this.totalScanned = 0;
     this.selectedStrategy = value; this.results = []; this.hasScanned = false; this.error = '';
     for (const column of this.gridColumns.filter(c => ['setupState', 'entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5'].includes(c.id))) { column.visible = value === 'ghost_rider'; this.gridApi?.setColumnsVisible([column.id], column.visible); }
-    if (!this.isCommodities && (value === 'rsi_divergence' || value === 'ghost_rider')) this.timeframe = '1d';
+    if ((value === 'rsi_divergence' || value === 'ghost_rider')) this.timeframe = '1d';
     this.strategyParams = Object.fromEntries((this.activeStrategy?.parameters ?? []).filter((item) => typeof item.default === 'number').map((item) => [item.name, item.default as number]));
   }
   updateStrategyParam(key: string, value: string): void { this.strategyParams[key] = Number(value); }
@@ -181,22 +171,6 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
   scan(): void {
     if (this.loading) return;
     this.loading = true; this.error = ''; this.coverageNote = '';  this.results = []; this.clearRightFilters(); this.hasScanned = true;
-    if (this.isCommodities && this.isMarketScreener) {
-      this.scanSubscription = this.api.marketSnapshot('commodities').subscribe({
-        next: ({ assets }) => {
-          this.totalScanned = assets.length;
-          this.results = assets.filter(asset => this.matchesFactors(asset)).map(asset => ({
-            instrumentKey: asset.key, exchange: asset.exchange, symbol: asset.symbol, name: asset.name,
-            price: asset.price, changePct: asset.changePct, volume: asset.volume,
-            status: this.preferredFactorsMatch(asset) ? 'PREFERRED' : asset.changePct > 0 ? 'GAINER' : asset.changePct < 0 ? 'DECLINER' : 'FLAT',
-            source: 'database' as const, sector: 'Commodities',
-            detail: `MCX futures${asset.expiry ? ' · Expiry ' + asset.expiry : ''}`,
-          }));
-          this.loading = false;
-        }, error: (error: HttpErrorResponse) => this.fail(error)
-      });
-      return;
-    }
     if (this.isMarketScreener) {
       this.scanSubscription = this.api.marketEmaIndicators(this.timeframe).subscribe({
         next: ({ indicators, scanned }) => {
@@ -228,7 +202,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
       });
       return;
     }
-    this.scanSubscription = this.api.scanStrategy(this.selectedStrategy, this.timeframe, this.strategyParams, false, this.market).subscribe({
+    this.scanSubscription = this.api.scanStrategy(this.selectedStrategy, this.timeframe, this.strategyParams, false).subscribe({
       next: (response) => {
         this.totalScanned = response.total_scanned;
         const short = (response.coverage ?? []).filter(c => !c.sufficient);
@@ -441,7 +415,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
   saveScreener(): void {
     const name = this.saveName.trim();
     if (!name) return;
-    const item = { name, market: this.market, strategyId: this.selectedStrategy, timeframe: this.timeframe, factors: this.rules.map((rule) => ({ ...rule })), sector: this.selectedSector, strategyParams: { ...this.strategyParams } };
+    const item = { name, strategyId: this.selectedStrategy, timeframe: this.timeframe, factors: this.rules.map((rule) => ({ ...rule })), sector: this.selectedSector, strategyParams: { ...this.strategyParams } };
     this.savedScreeners = [...this.savedScreeners.filter((saved) => saved.name !== name), item];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.savedScreeners));
     this.saveName = '';
@@ -451,8 +425,8 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
   loadScreener(name: string): void {
     const item = this.savedScreeners.find((saved) => saved.name === name);
     if (!item) return;
-    this.selectMarket(item.market ?? 'equities');
-    this.selectedSaved = name; this.selectStrategy(item.strategyId); this.timeframe = !this.isCommodities && ['rsi_divergence', 'ghost_rider'].includes(item.strategyId) ? '1d' : item.timeframe;
+    this.scanSubscription?.unsubscribe(); this.loading = false; this.clearRightFilters();
+    this.selectedSaved = name; this.selectStrategy(item.strategyId); this.timeframe = ['rsi_divergence', 'ghost_rider'].includes(item.strategyId) ? '1d' : item.timeframe;
     this.strategyParams = item.strategyParams ?? Object.fromEntries((this.activeStrategy?.parameters ?? []).filter((parameter) => typeof parameter.default === 'number').map((parameter) => [parameter.name, parameter.default as number]));
     this.rules = item.factors.map((rule) => ({ ...rule })); this.selectedSector = item.sector ?? 'All sectors'; this.results = []; this.hasScanned = false;
   }
@@ -465,5 +439,5 @@ export class EmaScannerComponent implements OnInit, OnDestroy {
   formatPrice(value: number): string { return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value); }
   private signalDate(value: unknown): string { return new Date(String(value)).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }); }
   formatVolume(value: number): string { return new Intl.NumberFormat('en-IN', { notation: 'compact', maximumFractionDigits: 1 }).format(value); }
-  private readSaved(): SavedScreener[] { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as SavedScreener[]; } catch { return []; } }
+  private readSaved(): SavedScreener[] { try { return (JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as SavedScreener[]).filter(item => !item.market || item.market === 'equities'); } catch { return []; } }
 }

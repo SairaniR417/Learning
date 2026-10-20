@@ -1,4 +1,5 @@
 """Strategy Registry and Execution Orchestrator with Enterprise Result Caching."""
+from scanner.universe import universe_version
 
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -50,7 +51,7 @@ class StrategyRegistry:
         serialized = json.dumps(params, sort_keys=True)
         # Bump the result schema version when strategy outputs change so cached
         # rows created before changePct was added are not served to the UI.
-        digest = hashlib.sha256(f"v3:{strategy_id}:{timeframe}:{serialized}".encode("utf-8")).hexdigest()[:16]
+        digest = hashlib.sha256(f"fno-{universe_version()}:{strategy_id}:{timeframe}:{serialized}".encode("utf-8")).hexdigest()[:16]
         return f"{strategy_id}:{timeframe}:{digest}"
 
     async def execute_scan(

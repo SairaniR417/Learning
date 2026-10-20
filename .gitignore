@@ -5,3 +5,5 @@ frontend/dist/
 __pycache__/
 *.py[cod]
 .venv/
+data/backups/
+frontend/.angular/
