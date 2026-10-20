@@ -4,6 +4,7 @@ import secrets
 import base64
 import json
 import math
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode
 from urllib.parse import quote as url_quote
@@ -41,6 +42,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Market Desk API", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://traders-gita.pages.dev",
+        "http://localhost:4200",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 from services.fno_stocks import router as fno_stocks_router
 app.include_router(fno_stocks_router)
 from services.stock_details import router as stock_details_router
