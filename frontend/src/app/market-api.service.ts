@@ -143,7 +143,8 @@ export class MarketApiService {
   stockNews(symbol: string, name: string): Observable<StockNews> { return this.http.get<StockNews>('/api/stocks/news', { params: { symbol, name } }); }
 
   status(): Observable<ApiStatus> {
-    return this.http.get<ApiStatus>('/api/status');
+    // return this.http.get<ApiStatus>('/api/status');
+    return this.http.get<ApiStatus>('https://traders-gita-api.onrender.com/api/status');
   }
 
   quotes(keys: string[]): Observable<{ data: Record<string, LtpQuote> }> {
