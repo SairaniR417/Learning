@@ -1,10 +1,11 @@
+import { OptionChainComponent } from './option-chain.component';
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnChanges, OnDestroy, Output, ViewChild, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { CandlestickSeries, HistogramSeries, ColorType, CrosshairMode, createChart, IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { MarketApiService, SelectedStock, StockHistory, StockNews, CompanyProfile, CorporateAction, HistoricalCandle, Instrument } from '../market-api.service';
 
-@Component({ selector: 'app-stock-details', standalone: true, imports: [CommonModule], templateUrl: './stock-details.component.html', styleUrl: './stock-details.component.css' })
+@Component({ selector: 'app-stock-details', standalone: true, imports: [CommonModule, OptionChainComponent], templateUrl: './stock-details.component.html', styleUrl: './stock-details.component.css' })
 export class StockDetailsComponent implements OnChanges, OnDestroy {
   @Input() stock: SelectedStock | null = null;
   @Output() stockSelected = new EventEmitter<SelectedStock>();
@@ -39,7 +40,7 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
   expanded = false;
   private previousOverflow = '';
   activeTab = 'overview';
-  readonly tabs = [{ id: 'overview', label: 'Overview' }, { id: 'company', label: 'Company' }, { id: 'news', label: 'News' }, { id: 'actions', label: 'Actions' }, { id: 'history', label: 'History' }];
+  readonly tabs = [{ id: 'overview', label: 'Overview' }, { id: 'company', label: 'Company' }, { id: 'news', label: 'News' }, { id: 'actions', label: 'Actions' }, { id: 'history', label: 'History' }, { id: 'options', label: 'Option Chain' }];
   hoveredCandle: HistoricalCandle | null = null;
   @ViewChild('chartHost') set chartHost(ref: ElementRef<HTMLElement> | undefined) {
     this.chartApi?.remove(); this.chartApi = undefined;

@@ -1,0 +1,28 @@
+<section aria-label="Selected stock option chain">
+  <div class="toolbar">
+    <label>Expiry <select [value]="expiry" (change)="selectExpiry($any($event.target).value)" [disabled]="loadingExpiries || !expiries.length">
+      <option *ngFor="let date of expiries" [value]="date">{{ date }}</option>
+    </select></label>
+    <label><input type="checkbox" [checked]="showGreeks" (change)="showGreeks = $any($event.target).checked"> Show Greeks</label>
+    <button type="button" (click)="refresh()" [disabled]="loading || loadingExpiries">Refresh</button>
+  </div>
+  <p *ngIf="loading || loadingExpiries" role="status">Loading {{ loadingExpiries ? 'available expiries' : 'option chain' }}…</p>
+  <p *ngIf="error" role="alert">{{ error }} <a *ngIf="needsConnection" href="/auth/upstox">Connect Upstox</a> <button type="button" (click)="refresh()">Retry</button></p>
+  <p *ngIf="!loadingExpiries && !error && !expiries.length">No current option expiries are available for this stock.</p>
+  <ng-container *ngIf="data as chain">
+    <div class="summary"><span>Underlying: <b>{{ chain.spot == null ? '—' : (chain.spot | currency:'INR') }}</b></span><span *ngIf="chain.atmStrike != null">ATM strike: {{ chain.atmStrike | number:'1.0-2' }}</span><small>Retrieved {{ chain.receivedAt | date:'dd MMM, HH:mm:ss':'+0530' }} IST</small></div>
+    <p *ngIf="!chain.rows.length">No option-chain quotes are available for this expiry.</p>
+    <div class="chain-scroll" *ngIf="chain.rows.length" tabindex="0" aria-label="Option chain; scroll horizontally for all columns">
+      <table>
+        <thead><tr><th [attr.colspan]="columns.length" class="calls">CALLS (CE)</th><th rowspan="2" scope="col" class="strike">Strike ₹</th><th [attr.colspan]="columns.length" class="puts">PUTS (PE)</th></tr>
+          <tr><th *ngFor="let col of columns" scope="col">{{ col.label }}</th><th *ngFor="let col of columns" scope="col">{{ col.label }}</th></tr></thead>
+        <tbody><tr *ngFor="let row of chain.rows" [class.atm]="row.strike === chain.atmStrike">
+          <td *ngFor="let col of columns">{{ format(row.call[col.key], col.key) }}</td>
+          <th scope="row" class="strike">{{ row.strike | number:'1.0-2' }}<small *ngIf="row.strike === chain.atmStrike">ATM</small></th>
+          <td *ngFor="let col of columns">{{ format(row.put[col.key], col.key) }}</td>
+        </tr></tbody>
+      </table>
+    </div>
+  </ng-container>
+  <p class="note">Upstox snapshot · Refresh to update. Retrieval time is not an exchange tick timestamp. OI and volume are shown as supplied; “—” means unavailable. ATM is the listed strike nearest the supplied underlying price.</p>
+</section>

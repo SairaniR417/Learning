@@ -1,0 +1,12 @@
+:host{display:block;min-width:0;padding:16px;color:#d8dfe6;font-size:12px}
+.toolbar,.summary{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.toolbar label{display:flex;align-items:center;gap:8px}.summary small{margin-left:auto}
+button,select{font:inherit;color:#d8dfe6;background:#15231e;border:1px solid #3b554a;border-radius:5px;padding:7px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}button:focus-visible,select:focus-visible,.chain-scroll:focus-visible{outline:2px solid #69d9ad;outline-offset:2px}
+a{color:#69d9ad}.chain-scroll{overflow:auto;max-height:60vh;border:1px solid #29333a}
+table{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums;white-space:nowrap}
+th,td{padding:10px 12px;text-align:right;border-bottom:1px solid #29333a}
+thead{position:sticky;top:0;z-index:2;background:#18201e}thead th{text-align:center}
+.calls{color:#69d9ad}.puts{color:#ef9ca6}.strike{background:#202924;text-align:center;border-left:1px solid #3b554a;border-right:1px solid #3b554a}
+.atm td,.atm th{background:#293d30!important;color:#d1f5d9!important}.strike small{display:block;color:#9be8b6;font-size:9px}
+.note{color:#97a59d;font-size:11px;line-height:1.6}tbody tr:hover td{background:#19241f}

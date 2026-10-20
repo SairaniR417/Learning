@@ -103,9 +103,25 @@ export interface PriceAlert { id: number; key: string; symbol: string; name: str
 export interface AlertNotification { id: number; key: string; symbol: string; name: string; exchange: string; message: string; price: number; createdAt: string; read: boolean; }
 export interface NotificationInbox { notifications: AlertNotification[]; unread: number; monitor: { running: boolean; lastCheck: string | null; error: string; }; }
 
+export interface OptionLeg {
+  ltp: number | null; oi: number | null; volume: number | null;
+  bid_price: number | null; ask_price: number | null; iv: number | null;
+  delta: number | null; gamma: number | null; theta: number | null; vega: number | null;
+}
+export interface OptionChain {
+  rows: { strike: number; call: OptionLeg; put: OptionLeg }[];
+  spot: number | null; atmStrike: number | null; expiry: string; receivedAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MarketApiService {
   private readonly http = inject(HttpClient);
+  optionExpiries(key: string): Observable<{ expiries: string[] }> {
+    return this.http.get<{ expiries: string[] }>('/api/stocks/option-expiries', { params: { instrument_key: key } });
+  }
+  optionChain(key: string, expiry: string): Observable<OptionChain> {
+    return this.http.get<OptionChain>('/api/stocks/option-chain', { params: { instrument_key: key, expiry } });
+  }
   fnoStocks(): Observable<{ stocks: SelectedStock[]; total: number }> {
     return this.http.get<{ stocks: SelectedStock[]; total: number }>('/api/market/fno-stocks');
   }

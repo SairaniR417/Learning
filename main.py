@@ -23,6 +23,7 @@ from scanner.universe import get_nse_equity_universe, get_fno_stocks, require_fn
 from services.market_sync import MarketSyncService, map_timeframe
 from database.candle_repo import create_ingestion_job, get_ingestion_job, get_all_active_instruments, load_recent_candles_polars
 from services import watchlists
+from services import option_chain
 
 load_dotenv()
 
@@ -249,6 +250,18 @@ async def quotes(keys: str = Query(min_length=1)):
         params={"instrument_key": ",".join(instrument_keys)},
     )
     return {"data": result.get("data", {}), "receivedAt": int(datetime.now(timezone.utc).timestamp() * 1000)}
+
+
+@app.get("/api/stocks/option-expiries")
+async def stock_option_expiries(instrument_key: str):
+    require_fno_key(instrument_key)
+    return await option_chain.expiries(api_json_request, require_token(), instrument_key)
+
+
+@app.get("/api/stocks/option-chain")
+async def stock_option_chain(instrument_key: str, expiry: date):
+    require_fno_key(instrument_key)
+    return await option_chain.chain(api_json_request, require_token(), instrument_key, expiry)
 
 
 @app.get("/api/market/snapshot")

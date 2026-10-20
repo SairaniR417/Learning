@@ -196,3 +196,20 @@ Reference entry is the latest completed close. A new SL is placed beyond the lat
 Default UI ranking uses company market capitalization (largest first), then traded value and signal score. Other sorts use traded value, signal score or share price. Price and market-cap filters are optional; neither company size nor share price is presented as a business-quality rating. The NSE PR archive market-cap report is imported into `data/nse-market-cap.json`; import_nse_bhavcopy updates it on each applied daily import. Metadata is attached to cached scanner results only when its trading date matches. Missing caps remain unknown and sort last.
 
 API: `GET /api/focused?limit=5` (limit 1?200); background scan jobs return the complete list. Tests: `.venv/Scripts/python -m unittest tests.test_focused`.
+
+## Option chain
+
+Select a stock in Stock Details and open **Option Chain**. The tab loads current
+expiries from Upstox and selects the nearest available expiry. Calls and puts appear
+by strike with LTP, OI, volume, IV and bid/ask prices; **Show Greeks** adds delta,
+gamma, theta and vega. The nearest strike to the supplied underlying price is marked
+ATM. **Refresh** reloads expiries and the selected snapshot. Switching stocks clears
+previous results. Empty, missing and failed responses are shown explicitly.
+
+This requires an active Upstox connection and is a snapshot, not a streaming feed.
+The displayed retrieval time is not an exchange tick timestamp. Option contracts
+are not inserted into the stock database. The underlying must belong to the saved
+F&O list.
+
+Provider references: [Option contracts](https://upstox.com/developer/api-documentation/get-option-contracts/)
+and [Put/call option chain](https://upstox.com/developer/api-documentation/get-pc-option-chain/).
