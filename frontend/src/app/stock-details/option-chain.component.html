@@ -7,7 +7,7 @@
     <button type="button" (click)="refresh()" [disabled]="loading || loadingExpiries">Refresh</button>
   </div>
   <p *ngIf="loading || loadingExpiries" role="status">Loading {{ loadingExpiries ? 'available expiries' : 'option chain' }}…</p>
-  <p *ngIf="error" role="alert">{{ error }} <a *ngIf="needsConnection" href="/auth/upstox">Connect Upstox</a> <button type="button" (click)="refresh()">Retry</button></p>
+  <p *ngIf="error" role="alert">{{ error }} <a *ngIf="needsConnection" [href]="loginUrl">Connect Upstox</a> <button type="button" (click)="refresh()">Retry</button></p>
   <p *ngIf="!loadingExpiries && !error && !expiries.length">No current option expiries are available for this stock.</p>
   <ng-container *ngIf="data as chain">
     <div class="summary"><span>Underlying: <b>{{ chain.spot == null ? '—' : (chain.spot | currency:'INR') }}</b></span><span *ngIf="chain.atmStrike != null">ATM strike: {{ chain.atmStrike | number:'1.0-2' }}</span><small>Retrieved {{ chain.receivedAt | date:'dd MMM, HH:mm:ss':'+0530' }} IST</small></div>

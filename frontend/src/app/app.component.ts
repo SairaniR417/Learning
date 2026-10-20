@@ -1,3 +1,4 @@
+import { backendUrl } from './backend-url';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -29,6 +30,7 @@ interface Opportunity {
 
 @Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent, FnoStocksComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
 export class AppComponent implements OnInit, OnDestroy {
+  readonly loginUrl = backendUrl('/auth/upstox');
   private readonly api = inject(MarketApiService);
   readonly notifications = inject(AlertNotificationsService);
   notificationMenu = false;

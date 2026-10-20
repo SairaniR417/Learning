@@ -1,3 +1,4 @@
+import { backendUrl } from '../backend-url';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, EventEmitter, Output, inject } from '@angular/core';
@@ -18,6 +19,7 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnApiModule, TextF
 
 @Component({ selector: 'app-ema-scanner', standalone: true, imports: [CommonModule, AgGridAngular], templateUrl: './ema-scanner.component.html', styleUrl: './ema-scanner.component.css' })
 export class EmaScannerComponent implements OnInit, OnDestroy {
+  readonly loginUrl = backendUrl('/auth/upstox');
   @Output() stockSelected = new EventEmitter<SelectedStock>();
   openStock(row: ScreenResult | undefined): void {
     if (!row?.instrumentKey) return;

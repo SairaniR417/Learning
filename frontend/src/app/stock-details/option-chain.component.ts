@@ -1,3 +1,4 @@
+import { backendUrl } from '../backend-url';
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnDestroy, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
@@ -8,6 +9,7 @@ import { MarketApiService, OptionChain, OptionLeg } from '../market-api.service'
   templateUrl: './option-chain.component.html', styleUrl: './option-chain.component.css'
 })
 export class OptionChainComponent implements OnChanges, OnDestroy {
+  readonly loginUrl = backendUrl('/auth/upstox');
   @Input({ required: true }) stockKey = '';
   private readonly api = inject(MarketApiService);
   private expiryRequest?: Subscription;

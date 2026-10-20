@@ -67,7 +67,7 @@
       <div class="results-meta" *ngIf="hasScanned"><span>Displaying <strong>{{ filteredResults.length | number }}</strong> matches of <strong>{{ totalScanned | number }}</strong> scanned</span><span>{{ isMarketScreener ? 'Generated from live Upstox quotes' : selectedTimeframe + ' · strategy results' }}</span></div>
       <p class="strategy-description" *ngIf="coverageNote">Insufficient or unavailable contract history: {{ coverageNote }}</p>
       <div class="progress-line" *ngIf="loading"><span></span></div>
-      <div class="scanner-error" *ngIf="error" role="alert"><strong>Scan could not finish</strong><span>{{ error }}</span><a *ngIf="error.toLowerCase().includes('connect')" href="/auth/upstox">Connect Upstox</a></div>
+      <div class="scanner-error" *ngIf="error" role="alert"><strong>Scan could not finish</strong><span>{{ error }}</span><a *ngIf="error.toLowerCase().includes('connect')" [href]="loginUrl">Connect Upstox</a></div>
 
       <div class="table-tools" *ngIf="results.length"><span>{{ selectedSector }}</span><span class="color-rank"><small>More Preferred</small><i></i><small>Less Preferred</small></span><span class="right-panel-hint">Use the right toolbar to choose columns or filter results.</span></div>
       <div class="grid-tools-wrap" *ngIf="results.length; else emptyResults">

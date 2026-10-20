@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "ng serve --proxy-config proxy.conf.json",
-    "build": "ng build"
+    "build": "ng build",
+    "test:api-routing": "node --test tests/backend-routing.test.mjs"
   },
   "dependencies": {
     "@angular/common": "^20.3.0",

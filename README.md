@@ -41,13 +41,19 @@ A personal market dashboard built with Angular and FastAPI. Upstox supplies live
 ## Run locally
 
 1. Copy `.env.example` to `.env` and fill in `UPSTOX_ACCESS_TOKEN` with your daily Upstox access token, plus `OPENAI_API_KEY` for general DRISHTI chat. For OAuth sign-in instead, set `UPSTOX_CLIENT_ID` and `UPSTOX_CLIENT_SECRET`. Register `http://localhost:4200/oauth/callback` as the redirect URL in that app. The OpenAI key stays on the FastAPI server. `DRISHTI_OPENAI_MODEL` can override the configured default model.
-2. In a terminal, install and run the API:
+2. First-time setup only (do not recreate an active `.venv`):
 
    ```powershell
    python -m venv .venv
    .venv\Scripts\Activate.ps1
    pip install -r requirements.txt
-   uvicorn main:app --reload --port 8000
+   ```
+
+   For normal startup, activate the existing environment and run the API:
+
+   ```powershell
+   .\.venv\Scripts\Activate.ps1
+   python -m uvicorn main:app --reload --port 8000
    ```
 
 3. In a second terminal, install and run Angular:
@@ -213,3 +219,33 @@ F&O list.
 
 Provider references: [Option contracts](https://upstox.com/developer/api-documentation/get-option-contracts/)
 and [Put/call option chain](https://upstox.com/developer/api-documentation/get-pc-option-chain/).
+
+## Frontend API routing in local and production builds
+
+`src/environments/environment.ts` uses an empty backend base URL. `npm start`
+therefore keeps API and login requests on the Angular origin and forwards them
+through the existing `proxy.conf.json` to `http://localhost:8000`.
+
+Production builds replace that environment with `environment.production.ts`, whose
+backend is `https://traders-gita-api.onrender.com`. The root HTTP interceptor rewrites
+relative backend requests for every HttpClient service, including the journal.
+The shared `backendUrl()` helper also resolves login links, since browser navigation
+does not pass through an HTTP interceptor. External URLs and static assets remain
+unchanged. Future direct fetch/EventSource calls should use the same helper.
+
+Cloudflare Pages should build with `npm run build -- --configuration production`
+from `frontend` and publish `dist/market-desk/browser`. Deploy the new build for
+these routing changes to take effect; the source changes do not update hosting.
+FastAPI already allows `https://traders-gita.pages.dev` and `http://localhost:4200`
+through CORS. Render's existing `FRONTEND_ORIGIN` controls the OAuth return location;
+its production value should be `https://traders-gita.pages.dev`.
+
+Validation: `npm run test:api-routing` in `frontend`, and
+`.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_cors.py` at the
+repository root. The production build can require network access to inline Google
+Fonts. Its current initial-bundle warning threshold is 500 kB (error threshold 1 MB).
+
+If local startup fails with `socket.gaierror`, check the database hostname and URL
+encoding. Special characters inside the password must be percent-encoded in a
+connection URL (`@` becomes `%40`); do not encode the entire URL or double-encode an
+already encoded password. Never paste a complete credential-bearing URL into logs.
