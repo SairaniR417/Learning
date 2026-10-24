@@ -6,7 +6,7 @@ from unittest.mock import patch
 import polars as pl
 
 from scanner.strategies.golden_death_cross import GoldenDeathCrossStrategy
-from scanner.strategies.rsi_divergence import DivergenceConfig, RsiDivergenceStrategy, detect_events, valid_segments
+from scanner.rsi_divergence_legacy import DivergenceConfig, RsiDivergenceStrategy, detect_events, valid_segments
 from scanner.backtest_rsi_divergence import simulate
 
 
@@ -134,8 +134,9 @@ class RsiDivergenceTests(unittest.TestCase):
         import asyncio
         from scanner.strategies.registry import StrategyRegistry
         registry = StrategyRegistry()
-        self.assertIsInstance(registry.get('rsi_divergence'), RsiDivergenceStrategy)
-        with self.assertRaisesRegex(ValueError, 'daily'):
+        from scanner.strategies.rsi_divergence import RsiDivergenceStrategy as PineStrategy
+        self.assertIsInstance(registry.get('rsi_divergence'), PineStrategy)
+        with self.assertRaisesRegex(ValueError, 'stored'):
             asyncio.run(registry.execute_scan('rsi_divergence', timeframe='1w'))
 
     def test_backtest_next_open_cost_and_ambiguous_stop_first(self):

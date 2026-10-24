@@ -2,11 +2,12 @@
 
 ## F&O stock scope
 
-Every tab uses `data/fno/current_fno_stocks.csv` as the shared stock list (currently
+Stock views use `data/fno/current_fno_stocks.csv` as the shared stock list (currently
 213 NSE F&O underlying stocks). Searches work without broker login. Overview
 quotes, Market Scanner, Focused, Stock Details, Watchlist, alerts, and journal
 stock selection are limited to that list. Commodity and index instruments are
-excluded. Index membership filters show only matching stocks within this list.
+excluded from stored stock scans. The Option Chains view separately supports
+indices and MCX commodity option underlyings. Index membership filters show only matching stocks within this list.
 Journal Futures/Options entries use an eligible underlying symbol; contract details
 belong in the Contract / CE / PE field.
 
@@ -31,6 +32,110 @@ Backups are excluded from Git. Routine imports reject stocks outside the saved l
 
 
 A personal market dashboard built with Angular and FastAPI. Upstox supplies live LTP quotes and historical NSE candles. API secrets and access tokens stay on the Python server.
+
+## On-demand option chains
+
+Open **Option Chains**, select Indices, F&O stocks or Commodities, then choose
+an underlying. Nifty 50, Bank Nifty and Sensex are available alongside the saved
+F&O stocks. Commodity choices come from Upstox's current MCX instrument master;
+each choice identifies an underlying futures contract, not a commodity spot price.
+Only the selected chain is fetched. Stock Details' Options tab uses the same flow.
+
+The chain refreshes every 60 seconds while the view is visible. Leaving the view
+cancels polling and browser requests; hiding the browser tab pauses polling and
+returning fetches again. An already-started shared backend fetch can finish for
+other viewers. Backend responses are cached for 55 seconds per credential,
+underlying and expiry, and concurrent requests share a single fetch. Expiry lists
+are cached for 15 minutes; the MCX master for up to an hour. Option provider calls
+are serialized with at least one second between starts. Other app API calls have
+their existing behavior. Cache and pacing apply per backend process; use one
+worker or introduce a shared cache/limiter before scaling to multiple workers.
+
+Upstox's native option-chain endpoint does not support MCX. Commodity chains are
+assembled from listed CE/PE contracts and full market quotes in batches of 500.
+Greeks/IV remain unavailable for these assembled chains. Missing quotes are
+reported rather than filled with zero. A valid Upstox token and appropriate
+market-data access are required. Retrieval time is not the exchange tick time.
+
+Set `OPTION_CHAIN_SAVE_SNAPSHOTS=true` in `.env` to retain successful fetched
+responses in the `option_chain_snapshots` database table (default: false).
+Restart the backend to create the table and apply configuration. Only requested
+chains are captured; this does not produce continuous history. Snapshots have no
+automatic retention deletion; plan storage cleanup if enabling long term.
+
+Validation: `python -m unittest discover -s tests -p "test_option*.py"` and,
+from `frontend`, `npm run test:option-chain` and `npm run build`.
+
+## Selected option analysis
+
+Choose **Analyze CE** or **Analyze PE** at a strike to replace the chain with
+Option Analysis. The backend resolves the exact underlying/expiry/strike/side
+against listed provider contracts, including MCX, before requesting any history.
+Choose 5m, 15m, 1 hour, 1 day or 1 week. Minute history covers 28 calendar days,
+hourly history 89 days, and daily/weekly history up to three years, subject to
+the contract's listing date and a 1,000-candle cap. Weekly OHLCV combines daily
+candles in Monday-to-Sunday IST weeks; the current week remains provisional
+until the next Monday. Newer contracts may lack enough bars for a strategy.
+Historical and today's intraday candles are combined by timestamp; unfinished
+candles are excluded with a five-second buffer for intraday frames. Daily NSE/BSE
+candles close after 16:00 IST; MCX daily candles close at the next local date.
+Invalid OHLCV breaks history so
+signals do not bridge invalid bars. Derivative candles stay outside the stock DB.
+
+The six directional strategies run on the selected option premium using defaults.
+Sutradhar daily-open reference levels load on selection for intraday charts.
+The desktop layout gives 40% to the chart and 60% to strategy details. Choose a
+strategy in the dropdown to show its conditions, signal times, and defined levels
+alongside its chart evidence. **Fullscreen** expands the chart; Escape returns to
+the split view. Narrow screens stack the panels. Short histories report insufficient
+candles. RSI Divergence uses the supplied Pine RSI-pivot engine and a separate
+black oscillator pane. Ghost Rider and RSI Divergence stock scans support stored
+daily, 1h, 15m and 5m candles. Option analysis also supports weekly candles.
+There is no invented forecast or combined probability score.
+
+The underlying's close relative to EMA 20 provides separate context: an uptrend
+supports CE premium direction, a downtrend supports PE direction, before
+volatility/time-decay effects. Option bullish/bearish labels always refer to the
+premium itself. Underlying history failure does not hide available option results.
+Analysis refreshes every minute while visible, shares history/results for 55
+seconds, and cancels browser requests on exit, timeframe changes or tab hiding.
+Chain polling pauses during analysis. **Back to option chain** resumes it.
+
+## Ghost rider v.2 chart
+
+The supplied source is preserved verbatim in `docs/ghost-rider-v2.pine`. The option
+Ghost Rider view ports its EMA 9/21 crossover state, Wilder ATR 14 risk, entry/SL,
+all five R-multiple targets, same-candle target detection and latched hit flags.
+Only an opposite crossover replaces the setup: a touched stop does not cancel it.
+Negative targets are retained. There is no additional 250-bar entry gate in this
+overlay. Market Scanner now uses this same engine and history policy.
+
+The chart renders both EMAs and their direction-colored ribbon, daily-session
+HLC3 volume-weighted VWAP, all BUY/SELL plotshapes, signal candle body colors and
+orange retest bodies. Rays start at the most recent crossover; TP1–TP3 are dashed,
+TP4/TP5 use the source widths and dark greens, hits turn turquoise, and the six
+right-offset entry/target labels use the supplied icons. The source has no SL
+label, so SL is a line only. All levels participate in chart autoscaling.
+
+The middle-right dashboard uses the source's seven independent votes, fixed
+denominator, exact bias thresholds, MACD 12/26/9, DMI/ADX 14/14, RSI 14, volume
+SMA 20 and a separately requested 5-minute RSI. Historical 15-minute bars use the
+last 5-minute intrabar without lookahead; no 15-minute RSI is substituted for it.
+Missing 5-minute data remains n/a. Votes do not filter the crossover signals.
+
+Settings reproduce the source input names/defaults: dashboard/trade sizes small,
+ribbon opacity 75, label offset 12, ATR multiplier 1.5. Style switches control
+plots, candle colors, shapes, labels, rays, table and output precision. Minute,
+hour, day and week visibility settings apply to the corresponding chart frames. Settings
+have Defaults, Cancel and Ok; ATR changes reuse cached candles and recompute risk.
+
+Ghost Rider alone includes a developing candle when supplied by the intraday API;
+it recalculates from confirmed history on each minute refresh, so provisional
+crosses/hits can disappear before close, as with the Pine indicator. Other
+strategies continue using completed candles. VWAP resets by exchange-local India
+calendar session. Our 28-day/1,000-bar window, Upstox candles and minute sampling
+can differ from TradingView's warm-up, feed and tick-by-tick execution. Numerical
+parity is not asserted without matching exported input candles from TradingView.
 
 ## Requirements
 
@@ -172,9 +277,17 @@ Restart the API after this update to create `user_watchlists`, `price_alerts`, a
 
 ## RSI divergence scanner
 
-Choose **Market Scanner > RSI Divergence** for completed daily NSE candles. Filter regular bullish, regular bearish, hidden bullish or hidden bearish using the grid's Filters panel. WATCH identifies a confirmed pair of price swings; BULLISH/BEARISH CONFIRMED identifies a closing breakout. Each stock appears once with pivot prices/dates, RSI comparisons, trigger, invalidation and stored-data date. Clicking it preserves this evidence in Stock Details. Restart the API to load the new strategy registration.
+Choose **Market Scanner > RSI Divergence** for the supplied Pine regular bullish
+and bearish RSI-pivot rules. Choose daily, 1h, 15m or 5m stored candles. The recent
+signal window filters scanner results by confirmation age; it does not change
+which divergences the indicator detects. Click a result for the shared dark RSI
+pane and Inputs/Style/Visibility settings. Option Analysis uses the same engine.
+Focused confluence uses the same confirmed RSI-pivot events.
 
-Research and signal conventions: [docs/rsi-divergence.md](docs/rsi-divergence.md). Results: [docs/rsi-divergence-backtest.md](docs/rsi-divergence-backtest.md). Reproducible read-only study: `.venv/Scripts/python.exe -m scanner.backtest_rsi_divergence`. The October 12, 2026 run evaluated 2,701 stocks; all held-out scenarios had negative mean trade returns after costs. This is a divergence identification tool, not a validated standalone trading system.
+See [current Pine specification](docs/rsi-divergence.md) and the preserved
+[source script](docs/rsi-divergence.pine). The former price-pivot/hidden-divergence
+study is archived separately; its backtest does not validate this supplied script.
+Restart the API and refresh the frontend to load the new implementation.
 
 ## Trade journal
 
@@ -249,3 +362,14 @@ If local startup fails with `socket.gaierror`, check the database hostname and U
 encoding. Special characters inside the password must be percent-encoded in a
 connection URL (`@` becomes `%40`); do not encode the entire URL or double-encode an
 already encoded password. Never paste a complete credential-bearing URL into logs.
+
+## Sutradhar
+
+Select **Sutradhar** in Option Analysis or Market Scanner for the supplied
+intraday daily-open levels: Flow, Crest, Crown, Value, Base, Origin, Mid and O.
+The dark chart includes the original colours, four fills, circles, labels and
+Inputs/Style/Visibility settings. SMA periods default to 14/7/5; EMA is optional.
+Daily option history loads only when this strategy is selected. Stock scans use
+stored intraday and daily candles. These are reference levels, with no source
+entry, stop-loss, target or holding-time rules. See [Sutradhar](docs/sutradhar.md)
+and its [MPL-2.0 source](docs/sutradhar.pine).

@@ -4,6 +4,7 @@ from scanner.universe import universe_version
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+from math import isfinite
 from typing import Any
 
 from database.candle_repo import (
@@ -20,6 +21,7 @@ from scanner.strategies.multi_ma_bullish import MultiMovingAverageBullishStrateg
 from scanner.strategies.rsi_reversal import RsiStrategy
 from scanner.strategies.rsi_divergence import RsiDivergenceStrategy
 from scanner.strategies.ghost_rider import GhostRiderStrategy
+from scanner.strategies.sutradhar import SutradharStrategy
 
 
 class StrategyRegistry:
@@ -34,6 +36,7 @@ class StrategyRegistry:
         self.register(RsiStrategy())
         self.register(RsiDivergenceStrategy())
         self.register(GhostRiderStrategy())
+        self.register(SutradharStrategy())
 
     def register(self, strategy: BaseStrategy):
         """Register a new strategy instance."""
@@ -70,10 +73,12 @@ class StrategyRegistry:
         strategy = self.get(strategy_id)
         if not strategy:
             raise ValueError(f"Strategy '{strategy_id}' is not registered.")
-        if strategy_id == 'rsi_divergence' and timeframe != '1d':
-            raise ValueError('RSI Divergence currently supports completed daily candles only.')
-        if strategy_id == 'ghost_rider' and timeframe != '1d':
-            raise ValueError('Ghost Rider currently supports completed daily candles only.')
+        if strategy_id == 'rsi_divergence' and timeframe not in {'1d','1h','15m','5m'}:
+            raise ValueError('RSI Divergence supports stored daily, 1h, 15m and 5m candles.')
+        if strategy_id == 'ghost_rider' and timeframe not in {'1d','1h','15m','5m'}:
+            raise ValueError('Ghost Rider supports stored daily, 1h, 15m and 5m candles.')
+        if strategy_id == 'sutradhar' and timeframe not in {'1h','15m','5m'}:
+            raise ValueError('Sutradhar: Intraday charts only (stored 1h, 15m or 5m).')
 
         resolved_params = {}
         # Fill defaults
@@ -84,16 +89,24 @@ class StrategyRegistry:
 
         for parameter in strategy.metadata.parameters:
             value = resolved_params[parameter.name]
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
+            if parameter.type=='bool':
+                if type(value) is not bool: raise ValueError(f'Expected boolean: {parameter.name}')
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value):
                 raise ValueError(f"Invalid parameter: {parameter.name}")
             if parameter.type == "int" and not isinstance(value, int):
                 raise ValueError(f"Expected integer: {parameter.name}")
-            if not (parameter.min_value <= value <= parameter.max_value):
+            if (parameter.min_value is not None and value < parameter.min_value) or (parameter.max_value is not None and value > parameter.max_value):
                 raise ValueError(f"Parameter outside allowed range: {parameter.name}")
         if set(resolved_params) - {p.name for p in strategy.metadata.parameters}:
             raise ValueError("Unknown strategy parameter")
         revision = await get_candle_revision(timeframe)
         cache_key = self._generate_cache_key(strategy_id, timeframe, resolved_params) + f":v{revision}"
+        if strategy_id == 'rsi_divergence': cache_key += ':pine-rsi-v1'
+        if strategy_id == 'sutradhar':
+            cache_key += f":sutradhar-v1:daily-v{await get_candle_revision('1d')}"
+        if strategy_id == 'ghost_rider':
+            cache_key += f":pine-v2:5m-v{await get_candle_revision('5m')}"
 
 
         # 1. Check shared cache
@@ -115,7 +128,18 @@ class StrategyRegistry:
             df = df.filter(df['instrument_key'].is_in(list(instruments_map)))
 
         # 4. Run strategy calculation in memory
-        results = strategy.run(df, instruments_map, resolved_params)
+        run_params = dict(resolved_params)
+        run_params['_timeframe'] = timeframe
+        if strategy_id=='sutradhar':
+            daily=await load_recent_candles_polars('1d',per_instrument=1000)
+            run_params['_daily_rows']=({str(group['instrument_key'][0]):group.sort('timestamp').to_dicts()
+                for group in daily.partition_by('instrument_key')} if not daily.is_empty() else {})
+        if strategy_id == 'ghost_rider':
+            five = df if timeframe=='5m' else await load_recent_candles_polars('5m',per_instrument=1000)
+            run_params['_timeframe'] = timeframe
+            run_params['_five_minute_rows'] = ({str(group['instrument_key'][0]):group.sort('timestamp').to_dicts()
+                for group in five.partition_by('instrument_key')} if not five.is_empty() else {})
+        results = strategy.run(df, instruments_map, run_params)
 
         # 5. Compute distinct symbols analyzed
         total_scanned = df["instrument_key"].n_unique() if not df.is_empty() else 0

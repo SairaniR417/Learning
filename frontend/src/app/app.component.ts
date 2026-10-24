@@ -1,5 +1,6 @@
 import { backendUrl } from './backend-url';
 import { CommonModule } from '@angular/common';
+import { OptionMarketComponent } from './option-market/option-market.component';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, timer } from 'rxjs';
@@ -28,7 +29,7 @@ interface Opportunity {
   tag: string;
 }
 
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent, FnoStocksComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, OptionMarketComponent, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent, FnoStocksComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
 export class AppComponent implements OnInit, OnDestroy {
   readonly loginUrl = backendUrl('/auth/upstox');
   private readonly api = inject(MarketApiService);
@@ -73,7 +74,7 @@ export class AppComponent implements OnInit, OnDestroy {
   heatGainMax = 0;
   heatLossMax = 0;
   opportunities: Opportunity[] = [];
-  pages = ['Overview', 'Market Scanner', 'Focused', 'F&O Stocks', 'Stock Details', 'Watchlist', 'Trade Journal'];
+  pages = ['Overview', 'Market Scanner', 'Focused', 'F&O Stocks', 'Stock Details', 'Option Chains', 'Watchlist', 'Trade Journal'];
 
   ngOnInit(): void {
     this.statusSubscription = timer(0, 15000).subscribe(() => {

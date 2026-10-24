@@ -15,17 +15,27 @@ fixed until an opposite cross resets the setup and target flags. NEW means
 the latest completed candle crossed; WAIT retains the last setup. Stop
 touches are shown separately and do not retire the setup, matching the script.
 
-This release supports completed daily candles from the existing database
+This release supports completed daily, hourly, 15-minute and 5-minute candles from the existing database
 (today's NSE candle is eligible after 16:00 IST),
-using the latest 1,000 per instrument and requiring at least 250. EMA is
+using the latest 1,000 per instrument. Crossovers need at least two bars; ATR-based
+levels remain unavailable if the signal occurs before ATR warms up. EMA is
 seeded at the first loaded close; ATR is seeded with the first 14 true ranges.
 Older TradingView history, provider adjustments, timestamps, or a different
 chart timeframe can produce different results. No setup means no result row.
 There is no candle-history request to TradingView.
 
-The separate Pullers/Draggers bias dashboard is not implemented: it needs
-session VWAP and synchronized 5-minute RSI. Neither is used by the original
-BUY/SELL or target calculation. Daily RSI is not substituted for 5-minute RSI.
+The shared Pine v2 engine also calculates the Pullers/Draggers dashboard, session
+VWAP, RSI, MACD and ADX. The 5-minute vote uses matching stored 5m history;
+missing 5m history stays n/a. Neither dashboard scores nor stop touches filter
+the original BUY/SELL entries. Daily RSI is never substituted for 5-minute RSI.
+
+Click a Ghost Rider result to open the dark 40/60 chart view inside Market Scanner,
+including the EMA ribbon, BUY/SELL labels, VWAP, ENTRY/SL/TP1–TP5 rays, dashboard,
+settings and fullscreen. Back restores the scan results. Leaving Market Scanner
+closes the chart and stops its refresh. The chart reads only the selected stock's
+stored history, without broker login or live history downloads. Import/sync
+intraday candles before choosing an intraday scan. Cache keys include both the
+selected timeframe's candle revision and the 5m revision.
 
 Validation: tests cover Wilder ATR seeding, new BUY, fixed levels while
 waiting, target persistence, opposite SELL/reset, and signal-candle hits.

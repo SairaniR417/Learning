@@ -4,6 +4,8 @@ import secrets
 import base64
 import json
 import math
+import logging
+from sqlalchemy.exc import DBAPIError
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode
@@ -25,6 +27,8 @@ from services.market_sync import MarketSyncService, map_timeframe
 from database.candle_repo import create_ingestion_job, get_ingestion_job, get_all_active_instruments, load_recent_candles_polars
 from services import watchlists
 from services import option_chain
+from services import option_market
+from services import option_analysis
 
 load_dotenv()
 
@@ -265,14 +269,73 @@ async def quotes(keys: str = Query(min_length=1)):
 
 @app.get("/api/stocks/option-expiries")
 async def stock_option_expiries(instrument_key: str):
-    require_fno_key(instrument_key)
-    return await option_chain.expiries(api_json_request, require_token(), instrument_key)
+    await option_market.require_key(instrument_key)
+    return await option_market.expiries(api_json_request, require_token(), instrument_key)
 
 
 @app.get("/api/stocks/option-chain")
 async def stock_option_chain(instrument_key: str, expiry: date):
-    require_fno_key(instrument_key)
-    return await option_chain.chain(api_json_request, require_token(), instrument_key, expiry)
+    await option_market.require_key(instrument_key)
+    return await option_market.chain(api_json_request, require_token(), instrument_key, expiry)
+
+
+@app.get('/api/options/underlyings')
+async def option_underlyings(commodities: bool = False):
+    return await option_market.underlyings(commodities)
+
+
+@app.get('/api/options/analysis')
+async def analyze_option(instrument_key: str, expiry: date, strike: float = Query(gt=0),
+                         side: Literal['CE', 'PE'] = 'CE', interval: int = Query(default=5),
+                         atr_multiplier: float = Query(default=1.5, ge=0.1), rsi_settings: str | None = None, sutradhar_settings: str | None = None):
+    settings = parse_rsi_settings(rsi_settings)
+    if sutradhar_settings is not None:
+        return await option_analysis.analyze(api_json_request, require_token(), instrument_key, expiry, strike, side, interval, atr_multiplier, settings,parse_sutradhar_settings(sutradhar_settings))
+    if settings is None:
+        return await option_analysis.analyze(api_json_request, require_token(), instrument_key, expiry, strike, side, interval, atr_multiplier)
+    return await option_analysis.analyze(api_json_request, require_token(), instrument_key, expiry, strike, side, interval, atr_multiplier, settings)
+
+
+def parse_rsi_settings(value):
+    if value is None: return None
+    from services.rsi_overlay import RsiConfig
+    try:
+        settings=json.loads(value)
+        if not isinstance(settings,dict): raise ValueError('RSI settings must be an object.')
+        RsiConfig.resolve(settings)
+        return settings
+    except (ValueError,TypeError) as exc: raise HTTPException(400,str(exc)) from exc
+
+
+def parse_sutradhar_settings(value):
+    if value is None: return None
+    from services.sutradhar import SutradharConfig
+    try:
+        settings=json.loads(value)
+        if not isinstance(settings,dict): raise ValueError('Sutradhar settings must be an object.')
+        SutradharConfig.resolve(settings)
+        return settings
+    except (ValueError,TypeError) as exc: raise HTTPException(400,str(exc)) from exc
+
+
+@app.get('/api/stocks/sutradhar')
+async def stock_sutradhar(instrument_key: str,timeframe: str='15m',sutradhar_settings: str | None=None):
+    from services.sutradhar_scanner import stock_chart
+    return await stock_chart(instrument_key,timeframe,parse_sutradhar_settings(sutradhar_settings))
+
+
+@app.get('/api/stocks/rsi-divergence')
+async def stock_rsi_divergence(instrument_key: str,timeframe: str='1d',rsi_settings: str | None=None):
+    from services.rsi_scanner import stock_chart
+    return await stock_chart(instrument_key,timeframe,parse_rsi_settings(rsi_settings))
+
+
+@app.get('/api/stocks/ghost-rider')
+async def stock_ghost_rider(instrument_key: str, timeframe: str = '1d', atr_multiplier: float = Query(default=1.5,ge=0.1)):
+    from services.ghost_scanner import stock_chart
+    if not math.isfinite(atr_multiplier):
+        raise HTTPException(400,'SL ATR Multiplier must be finite.')
+    return await stock_chart(instrument_key,timeframe,atr_multiplier)
 
 
 @app.get("/api/market/snapshot")
@@ -508,6 +571,15 @@ async def scan_strategy(request: StrategyScanRequest):
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DBAPIError as exc:
+        logging.getLogger(__name__).exception('Strategy scan could not read stored database data')
+        database_error=str(exc.orig).lower()
+        damaged=(getattr(exc.orig,'sqlstate',None) in {'XX001','XX002'}
+                 or any(message in database_error for message in ('invalid page in block','invalid page header','checksum verification failed')))
+        detail=('PostgreSQL reported a damaged data page while reading stored candle history. '
+                'The candle database needs recovery before this scan can run. No scan results were produced.' if damaged else
+                'Stored strategy data could not be read. Check the database connection and server logs, then retry.')
+        raise HTTPException(status_code=503,detail=detail) from exc
 
 
 @app.post("/api/sync/universe")

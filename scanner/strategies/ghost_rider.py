@@ -35,64 +35,38 @@ def atr14(rows):
 
 class GhostRiderStrategy(BaseStrategy):
     metadata = StrategyMetadata(
-        id='ghost_rider', name='Ghost Rider', min_candles=250,
-        description='Ghost rider v.2: EMA 9/21 crossover, signal-close entry, ATR 14 stop and TP1–TP5 at 1–5R. Latest setup remains until the opposite cross; NEW means a cross on the latest completed candle. Target hits include the signal candle. Uses up to 1,000 stored candles; the separate 5-minute score dashboard is unavailable.',
-        parameters=[StrategyParameter(name='atr_multiplier', display_name='SL ATR multiplier', type='float', default=1.5, min_value=0.1, max_value=20)],
+        id='ghost_rider', name='Ghost rider v.2', min_candles=2,
+        description='Ghost rider v.2: EMA 9/21 crossover, signal-close entry, ATR 14 stop and TP1–TP5 at 1–5R. Latest setup remains until the opposite cross; NEW means a cross on the latest completed candle. Target hits include the signal candle. Uses the shared Pine v2 calculations on stored daily, hourly, 15m or 5m candles. Dashboard 5m RSI is available when matching stored 5m history exists.',
+        parameters=[StrategyParameter(name='atr_multiplier', display_name='SL ATR Multiplier', type='float', default=1.5, min_value=0.1)],
     )
 
     def candle_window(self, params):
         return 1000
 
     def run(self, df, instruments_map, params):
+        from services.ghost_scanner import completed_rows, scan_row, TIMEFRAMES
         if df.is_empty():
             return []
         multiplier = params.get('atr_multiplier', 1.5)
-        if not isinstance(multiplier, (int, float)) or not isfinite(multiplier) or multiplier <= 0:
-            raise ValueError('ATR multiplier must be positive and finite')
-        now = datetime.now(timezone.utc)
-        india = ZoneInfo('Asia/Kolkata')
+        timeframe = params.get('_timeframe', '1d')
+        if timeframe not in TIMEFRAMES:
+            raise ValueError('Unsupported Ghost Rider timeframe')
+        if isinstance(multiplier, bool) or not isinstance(multiplier, (int, float)) or not isfinite(multiplier) or multiplier < .1:
+            raise ValueError('SL ATR Multiplier must be at least 0.1 and finite')
         results = []
         for group in df.sort(['instrument_key', 'timestamp']).partition_by('instrument_key', maintain_order=True):
-            raw = group.to_dicts()
-            key = raw[0]['instrument_key']
-            instrument = instruments_map.get(key)
-            if not instrument:
+            key = group['instrument_key'][0]
+            metadata = instruments_map.get(key)
+            if not metadata:
                 continue
-            # Daily only: today's bar is eligible after the NSE close buffer.
-            rows = [r for r in raw if params.get('_timeframe', '1d') != '1d' or
-                    (nse_daily_closed(r['timestamp'], now) if instrument.get('exchange') == 'NSE' else r['timestamp'].astimezone(india).date() < now.astimezone(india).date())]
-            if len(rows) < self.metadata.min_candles:
+            rows = completed_rows(group.to_dicts(), timeframe)
+            if len(rows) < 2:
                 continue
-            if any(not all(isinstance(r[k], (int, float)) and isfinite(r[k]) and r[k] > 0 for k in ('open', 'high', 'low', 'close')) or not r['low'] <= min(r['open'], r['close']) <= max(r['open'], r['close']) <= r['high'] for r in rows):
+            if any(not all(isinstance(r[k],(int,float)) and isfinite(r[k]) and r[k]>0 for k in ('open','high','low','close'))
+                   or not r['low']<=min(r['open'],r['close'])<=max(r['open'],r['close'])<=r['high'] for r in rows):
                 continue
-            closes = [r['close'] for r in rows]
-            fast, slow, atr = ema(closes, 9), ema(closes, 21), atr14(rows)
-            setup, state = None, 0
-            for i in range(1, len(rows)):
-                buy = fast[i] > slow[i] and fast[i-1] <= slow[i-1] and state <= 0
-                sell = fast[i] < slow[i] and fast[i-1] >= slow[i-1] and state >= 0
-                if buy or sell:
-                    state = 1 if buy else -1
-                    if atr[i] is None:
-                        setup = None
-                        continue
-                    risk = atr[i] * multiplier
-                    setup = dict(entry=closes[i], stopLoss=closes[i] - state * risk, risk=risk,
-                                 signal='BUY' if buy else 'SELL', signalAt=rows[i]['timestamp'].isoformat(),
-                                 signal_index=i, atrAtSignal=atr[i], stopTouched=False)
-                    for n in range(1, 6):
-                        setup[f'tp{n}'] = closes[i] + state * risk * n
-                        setup[f'tp{n}Hit'] = False
-                if setup:
-                    setup['stopTouched'] |= rows[i]['low'] <= setup['stopLoss'] if state == 1 else rows[i]['high'] >= setup['stopLoss']
-                    for n in range(1, 6):
-                        setup[f'tp{n}Hit'] |= rows[i]['high'] >= setup[f'tp{n}'] if state == 1 else rows[i]['low'] <= setup[f'tp{n}']
-            if not setup:
-                continue
-            age = len(rows) - 1 - setup.pop('signal_index')
-            results.append(dict(**setup, instrumentKey=key, symbol=instrument.get('symbol', key), name=instrument.get('name', ''),
-                                exchange=instrument.get('exchange', 'NSE'), close=closes[-1], volume=rows[-1].get('volume', 0),
-                                changePct=(closes[-1] / closes[-2] - 1) * 100, status=setup['signal'], state='NEW' if age == 0 else 'WAIT',
-                                ageBars=age, asOf=rows[-1]['timestamp'].isoformat(), ema9=fast[-1], ema21=slow[-1], atr=atr[-1],
-                                strategyId='ghost_rider', candlesAnalyzed=len(rows)))
-        return sorted(results, key=lambda r: (r['ageBars'], r['symbol']))
+            five = completed_rows(params.get('_five_minute_rows', {}).get(key, []), '5m')
+            row = scan_row(rows, five, metadata, timeframe, multiplier)
+            if row:
+                results.append(row)
+        return sorted(results, key=lambda r:(r['ageBars'],r['symbol']))

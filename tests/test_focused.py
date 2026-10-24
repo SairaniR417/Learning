@@ -65,7 +65,7 @@ class FocusedTests(unittest.TestCase):
         result = combine(df, meta, outputs, names)
         self.assertEqual(result["bullish"][0]["tier"], "BULLISH")
         self.assertEqual(result["bullish"][0]["score"], 5)  # related trend votes cap at 3
-        outputs["rsi_divergence"] = [dict(instrumentKey="A", state="CONFIRMED", direction="BULLISH")]
+        outputs["rsi_divergence"] = [dict(instrumentKey="A", state="DETECTED", direction="BULLISH")]
         names["rsi_divergence"] = "RSI"
         self.assertEqual(combine(df, meta, outputs, names)["bullish"][0]["tier"], "SUPER BULLISH")
 
@@ -76,7 +76,7 @@ class FocusedTests(unittest.TestCase):
 
     def test_opposing_confirmed_evidence_excludes_stock(self):
         df, meta, outputs, names = self.fixture()
-        outputs["rsi_divergence"] = [dict(instrumentKey="A", state="CONFIRMED", direction="BEARISH")]
+        outputs["rsi_divergence"] = [dict(instrumentKey="A", state="DETECTED", direction="BEARISH")]
         names["rsi_divergence"] = "RSI"
         result = combine(df, meta, outputs, names)
         self.assertEqual(result["bullish"], [])
@@ -92,7 +92,7 @@ class FocusedTests(unittest.TestCase):
 
     def test_bearish_confirmed_confluence(self):
         outputs = {"golden_death_cross": [dict(instrumentKey="A", state="CONFIRMED_ACTIVE", signal="SELL", barsSinceCross=2)],
-                   "rsi_divergence": [dict(instrumentKey="A", state="CONFIRMED", direction="BEARISH")]}
+                   "rsi_divergence": [dict(instrumentKey="A", state="DETECTED", direction="BEARISH")]}
         result = combine(pl.DataFrame(candles(bearish=True)), {"A": dict(symbol="BEAR")}, outputs, {k:k for k in outputs})
         self.assertEqual(len(result["bearish"]), 1)
         self.assertEqual(result["bearish"][0]["direction"], "BEARISH")

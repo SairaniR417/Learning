@@ -32,7 +32,7 @@
     <h2 class="section-title">Today’s F&amp;O stock movers</h2><div class="opportunities panel"><div *ngFor="let opp of opportunities"><span><strong>{{ opp.title }}</strong><small>{{ opp.detail }}</small></span><b>{{ opp.tag }}</b></div><p *ngIf="!opportunities.length" class="empty-opportunities">{{ marketError || 'Waiting for live market quotes.' }}</p></div><button type="button" class="scanner-cta" (click)="selectPage('Market Scanner')">Open Market Scanner <span>→</span></button>
   </section>
   @defer (when page === 'Market Scanner') {
-    <div [hidden]="page !== 'Market Scanner'"><app-ema-scanner (stockSelected)="openStock($event)" /></div>
+    <div [hidden]="page !== 'Market Scanner'"><app-ema-scanner [active]="page === 'Market Scanner'" (stockSelected)="openStock($event)" /></div>
   } @placeholder {
     <section class="terminal-placeholder page-shell" *ngIf="page === 'Market Scanner'"><span class="eyebrow">NSE EQUITY UNIVERSE</span><h1>Loading Market Scanner…</h1><p>Preparing the stock grid and filters.</p></section>
   }
@@ -43,6 +43,7 @@
   <app-watchlist *ngIf="page === 'Watchlist'" (stockSelected)="openStock($event)" />
   <app-fno-stocks *ngIf="page === 'F&O Stocks'" (stockSelected)="openStock($event)" />
   <app-trade-journal *ngIf="page === 'Trade Journal'" />
+  <app-option-market *ngIf="page === 'Option Chains'" />
 </main>
 
 <aside class="notification-inbox" *ngIf="notificationMenu" aria-label="Price alert notifications"><header><strong>Alert notifications <span>{{ notifications.inbox.unread }} unread</span></strong><button type="button" (click)="notificationMenu = false" aria-label="Close notifications">&times;</button></header><p class="notification-warning" *ngIf="notifications.error || notifications.inbox.monitor.error">{{ notifications.error || notifications.inbox.monitor.error }}</p><p *ngIf="!notifications.inbox.notifications.length" class="notification-empty">No triggered alerts yet. Create a price alert from your Watchlist.</p><div class="notification-rows"><button class="notification-item" type="button" *ngFor="let item of notifications.inbox.notifications" [class.unread]="!item.read" (click)="openStock(item); notifications.markOne(item.id); notificationMenu = false"><b>{{ item.symbol }}</b><span>{{ item.message }}</span><small>{{ item.createdAt | date:'medium' }}</small></button></div><footer><button type="button" (click)="notifications.markRead()" [disabled]="!notifications.inbox.unread">Mark all read</button><button type="button" (click)="notifications.enableDesktop()" [disabled]="notifications.desktopStatus === 'granted' || notifications.desktopStatus === 'unsupported'">{{ notifications.desktopStatus === 'granted' ? 'Desktop enabled' : 'Enable desktop' }}</button></footer></aside>

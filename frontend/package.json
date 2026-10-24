@@ -5,7 +5,8 @@
   "scripts": {
     "start": "ng serve --proxy-config proxy.conf.json",
     "build": "ng build",
-    "test:api-routing": "node --test tests/backend-routing.test.mjs"
+    "test:api-routing": "node --test tests/backend-routing.test.mjs",
+    "test:option-chain": "node --test tests/option-chain-lifecycle.test.cjs tests/option-analysis-lifecycle.test.cjs"
   },
   "dependencies": {
     "@angular/common": "^20.3.0",

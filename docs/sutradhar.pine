@@ -1,0 +1,79 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sairanir23
+
+//@version=6
+//@version=5
+indicator("Sutradhar", shorttitle="Sutradhar", overlay=true)
+
+// ─── Inputs ───────────────────────────────────────────────────────────────────
+lbl    = input.bool(true,  "Show Labels")
+pHist  = input.bool(true,  "Show Fills")
+useEMA = input.bool(false, "Use EMA instead of SMA")
+p1 = input.int(14, "Period 1 (Flow/Value)", minval=1)
+p2 = input.int(7,  "Period 2 (Crest/Base)", minval=1)
+p3 = input.int(5,  "Period 3 (Crown/Origin)", minval=1)
+
+// ─── Colors ───────────────────────────────────────────────────────────────────
+cFlow   = input.color(color.new(#FF8000, 0),  "Flow")
+cCrest  = input.color(color.new(#FF4000, 0),  "Crest")
+cCrown  = input.color(color.new(#FF0000, 0),  "Crown")
+cValue  = input.color(color.new(#80FF00, 0),  "Value")
+cBase   = input.color(color.new(#00FF00, 0),  "Base")
+cOrigin = input.color(color.new(#00FF80, 0),  "Origin")
+cO      = input.color(color.new(#808080, 0),  "Open")
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+sym() =>
+    syminfo.type == "futures" ? syminfo.root + "1!" : syminfo.tickerid
+
+lvl(len, hi) =>
+    o  = request.security(sym(), "D", open,                 lookahead=barmerge.lookahead_on)
+    hs = request.security(sym(), "D", ta.sma(high[1], len), lookahead=barmerge.lookahead_on)
+    ls = request.security(sym(), "D", ta.sma(low[1],  len), lookahead=barmerge.lookahead_on)
+    he = request.security(sym(), "D", ta.ema(high[1], len), lookahead=barmerge.lookahead_on)
+    le = request.security(sym(), "D", ta.ema(low[1],  len), lookahead=barmerge.lookahead_on)
+    r  = useEMA ? (he - le) : (hs - ls)
+    hi ? o + r / 2 : o - r / 2
+
+// ─── Level Calculations ───────────────────────────────────────────────────────
+o = request.security(sym(), "D", open, lookahead=barmerge.lookahead_on)
+Flow   = lvl(p1, true)
+Value  = lvl(p1, false)
+Crest  = lvl(p2, true)
+Base   = lvl(p2, false)
+Crown  = lvl(p3, true)
+Origin = lvl(p3, false)
+Mid = (Flow + Value) / 2
+
+// ─── Intraday Guard ───────────────────────────────────────────────────────────
+if not timeframe.isintraday
+    runtime.error("Sutradhar: Intraday charts only")
+
+// ─── Plots ────────────────────────────────────────────────────────────────────
+f1 = plot(Flow,   "Flow",   cFlow,   1)
+f2 = plot(Crest,  "Crest",  cCrest,  1)
+f3 = plot(Crown,  "Crown",  cCrown,  1, style=plot.style_circles)
+f4 = plot(Value,  "Value",  cValue,  1)
+f5 = plot(Base,   "Base",   cBase,   1)
+f6 = plot(Origin, "Origin", cOrigin, 1, style=plot.style_circles)
+plot(Mid, "Mid", color.new(cO, 60), 1, style=plot.style_stepline)
+plot(o,   "O",   cO,              2)
+
+// ─── Fills ────────────────────────────────────────────────────────────────────
+fill(f1, f2, pHist ? color.new(#FF4000, 88) : na, "Resistance Zone")
+fill(f4, f5, pHist ? color.new(#00FF00, 88) : na, "Support Zone")
+fill(f2, f3, pHist ? color.new(#FF6000, 94) : na, "Inner Bear")
+fill(f5, f6, pHist ? color.new(#00FF60, 94) : na, "Inner Bull")
+
+// ─── Labels ───────────────────────────────────────────────────────────────────
+if lbl and barstate.islast
+    lblStyle = label.style_label_left
+    sz = size.small
+    label.new(bar_index + 1, Flow,   "Flow",   style=lblStyle, color=cFlow,                 textcolor=color.black, size=sz)
+    label.new(bar_index + 1, Crest,  "Crest",  style=lblStyle, color=cCrest,                textcolor=color.black, size=sz)
+    label.new(bar_index + 1, Crown,  "Crown",  style=lblStyle, color=cCrown,                textcolor=color.white, size=sz)
+    label.new(bar_index + 1, Value,  "Value",  style=lblStyle, color=cValue,                textcolor=color.black, size=sz)
+    label.new(bar_index + 1, Base,   "Base",   style=lblStyle, color=cBase,                 textcolor=color.black, size=sz)
+    label.new(bar_index + 1, Origin, "Origin", style=lblStyle, color=cOrigin,               textcolor=color.black, size=sz)
+    label.new(bar_index + 1, o,      "O",      style=lblStyle, color=cO,                    textcolor=color.white, size=sz)
+    label.new(bar_index + 1, Mid,    "Mid",    style=lblStyle, color=color.new(cO, 40),       textcolor=color.white, size=sz)

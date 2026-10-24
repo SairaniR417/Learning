@@ -1,19 +1,36 @@
 import { backendUrl } from '../backend-url';
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnChanges, OnDestroy, inject } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { AfterViewChecked, Component, ElementRef, HostListener, Input, OnChanges, OnDestroy, ViewChild, inject } from '@angular/core';
+import { Subscription, interval } from 'rxjs';
 import { MarketApiService, OptionChain, OptionLeg } from '../market-api.service';
+import { OptionAnalysisComponent } from '../option-market/option-analysis.component';
 
 @Component({
-  selector: 'app-option-chain', standalone: true, imports: [CommonModule],
+  selector: 'app-option-chain', standalone: true, imports: [CommonModule, OptionAnalysisComponent],
   templateUrl: './option-chain.component.html', styleUrl: './option-chain.component.css'
 })
-export class OptionChainComponent implements OnChanges, OnDestroy {
+export class OptionChainComponent implements OnChanges, OnDestroy, AfterViewChecked {
+  @ViewChild('chainScroll') chainScroll?: ElementRef<HTMLElement>;
+  private focusAtm = false;
+  ngAfterViewChecked(): void {
+    if (this.focusAtm && this.chainScroll) {
+      this.focusAtm = false;
+      this.jumpToAtm();
+    }
+  }
+  jumpToAtm(): void {
+    const container = this.chainScroll?.nativeElement;
+    const row = container?.querySelector<HTMLElement>('tbody tr.atm');
+    if (!container || !row) return;
+    const headerHeight = container.querySelector('thead')?.getBoundingClientRect().height ?? 0;
+    container.scrollTop += row.getBoundingClientRect().top - container.getBoundingClientRect().top - headerHeight - container.clientTop;
+  }
   readonly loginUrl = backendUrl('/auth/upstox');
   @Input({ required: true }) stockKey = '';
   private readonly api = inject(MarketApiService);
   private expiryRequest?: Subscription;
   private chainRequest?: Subscription;
+  private refreshTimer?: Subscription;
   expiries: string[] = [];
   expiry = '';
   loading = false;
@@ -22,6 +39,18 @@ export class OptionChainComponent implements OnChanges, OnDestroy {
   needsConnection = false;
   data?: OptionChain;
   showGreeks = false;
+  selectedContract?: { strike: number; side: 'CE' | 'PE'; expiry: string };
+  selectContract(strike: number, side: 'CE' | 'PE'): void {
+    this.expiryRequest?.unsubscribe(); this.chainRequest?.unsubscribe(); this.loading = this.loadingExpiries = false;
+    this.selectedContract = { strike, side, expiry: this.expiry };
+  }
+  closeAnalysis(): void { this.selectedContract = undefined; if (!document.hidden) this.fetchChain(); }
+  get selectedLeg(): OptionLeg | undefined {
+    const selection = this.selectedContract;
+    if (!selection || this.data?.expiry !== selection.expiry) return undefined;
+    const row = this.data.rows.find(row => row.strike === selection.strike);
+    return selection.side === 'CE' ? row?.call : row?.put;
+  }
   readonly marketColumns: { key: keyof OptionLeg; label: string }[] = [
     {key: 'oi', label: 'OI'}, {key: 'volume', label: 'Volume'},
     {key: 'iv', label: 'IV'}, {key: 'bid_price', label: 'Bid ₹'},
@@ -32,8 +61,28 @@ export class OptionChainComponent implements OnChanges, OnDestroy {
     {key: 'theta', label: 'Theta'}, {key: 'vega', label: 'Vega'}
   ];
   get columns() { return this.showGreeks ? [...this.greekColumns, ...this.marketColumns] : this.marketColumns; }
-  ngOnChanges(): void { this.expiry = ''; this.expiries = []; this.refresh(); }
-  ngOnDestroy(): void { this.expiryRequest?.unsubscribe(); this.chainRequest?.unsubscribe(); }
+  ngOnChanges(): void {
+    this.selectedContract = undefined;
+    this.refreshTimer?.unsubscribe();
+    this.expiryRequest?.unsubscribe(); this.chainRequest?.unsubscribe();
+    this.expiry = ''; this.expiries = []; this.data = undefined;
+    this.loading = this.loadingExpiries = false;
+    if (!document.hidden) this.refresh();
+    this.refreshTimer = interval(60000).subscribe(() => {
+      if (!document.hidden && !this.selectedContract && !this.loading && !this.loadingExpiries) {
+        if (this.expiry) this.fetchChain(); else this.refresh();
+      }
+    });
+  }
+  @HostListener('document:visibilitychange') visibilityChanged(): void {
+    if (document.hidden) {
+      this.expiryRequest?.unsubscribe(); this.chainRequest?.unsubscribe();
+      this.loading = this.loadingExpiries = false;
+    } else if (!this.selectedContract && !this.loading && !this.loadingExpiries) {
+      if (this.expiry) this.fetchChain(); else this.refresh();
+    }
+  }
+  ngOnDestroy(): void { this.refreshTimer?.unsubscribe(); this.expiryRequest?.unsubscribe(); this.chainRequest?.unsubscribe(); }
   refresh(): void {
     this.expiryRequest?.unsubscribe(); this.chainRequest?.unsubscribe();
     this.data = undefined; this.error = ''; this.needsConnection = false;
@@ -49,16 +98,26 @@ export class OptionChainComponent implements OnChanges, OnDestroy {
     });
   }
   selectExpiry(expiry: string): void {
+    if (expiry !== this.expiry) this.selectedContract = undefined;
     this.chainRequest?.unsubscribe();
     this.expiry = expiry; this.data = undefined; this.error = ''; this.needsConnection = false;
     if (!expiry) return;
+    this.fetchChain();
+  }
+  private fetchChain(): void {
+    this.chainRequest?.unsubscribe();
+    this.error = ''; this.needsConnection = false;
     this.loading = true;
-    this.chainRequest = this.api.optionChain(this.stockKey, expiry).subscribe({
-      next: data => { this.data = data; this.loading = false; },
+    this.chainRequest = this.api.optionChain(this.stockKey, this.expiry).subscribe({
+      next: data => {
+        this.data = data; this.loading = false; this.focusAtm = data.atmStrike != null;
+        if (this.selectedContract && !this.selectedLeg) this.selectedContract = undefined;
+      },
       error: error => this.fail(error)
     });
   }
   private fail(error: { status?: number; error?: { detail?: unknown } }): void {
+    if (error.status === 400) this.expiry = '';
     this.loading = this.loadingExpiries = false;
     this.needsConnection = error.status === 401;
     this.error = typeof error.error?.detail === 'string' ? error.error.detail : 'Could not load the option chain. Please retry.';

@@ -109,13 +109,49 @@ export interface OptionLeg {
   delta: number | null; gamma: number | null; theta: number | null; vega: number | null;
 }
 export interface OptionChain {
+  warning?: string;
   rows: { strike: number; call: OptionLeg; put: OptionLeg }[];
   spot: number | null; atmStrike: number | null; expiry: string; receivedAt: string;
 }
 
+export interface OptionUnderlying {
+  key: string; symbol: string; name: string; group: 'Indices' | 'F&O stocks' | 'Commodities';
+}
+
+export interface OptionStrategyResult {
+  id: string; name: string; status: string; bias: string; minimumCandles: number; availableCandles: number;
+  metrics: { label: string; value: number }[]; checks: { label: string; passed: boolean }[];
+  markers: { timestamp: string; label: string; bias: string }[]; levels: { label: string; price: number }[];
+  scenario: string; signalAt: string | null;
+}
+export interface OptionAnalysis {
+  sutradhar?: import('./option-market/sutradhar.types').SutradharOverlay;
+  rsiDivergence?: import('./option-market/rsi.types').RsiOverlay;
+  ghostRider?: import('./option-market/ghost-rider.types').GhostRiderOverlay;
+  contract: { key: string; name: string; underlyingKey: string; expiry: string; strike: number; side: 'CE' | 'PE' };
+  interval: number; candles: HistoricalCandle[]; strategies: OptionStrategyResult[];
+  underlying: { trend: string; supportsPremium: boolean | null; asOf: string | null; description: string; close?: number; ema20?: number };
+  warnings: string[]; historyMessage: string; asOf: string | null; receivedAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MarketApiService {
+  analyzeStockSutradhar(key:string,timeframe:string,settings:import('./option-market/sutradhar.types').SutradharInputs):Observable<OptionAnalysis> {
+    return this.http.get<OptionAnalysis>('/api/stocks/sutradhar',{params:{instrument_key:key,timeframe,sutradhar_settings:JSON.stringify(settings)}});
+  }
+  analyzeStockRsi(key:string,timeframe:string,settings:import('./option-market/rsi.types').RsiInputs):Observable<OptionAnalysis> {
+    return this.http.get<OptionAnalysis>('/api/stocks/rsi-divergence',{params:{instrument_key:key,timeframe,rsi_settings:JSON.stringify(settings)}});
+  }
   private readonly http = inject(HttpClient);
+  analyzeStockGhost(key: string, timeframe: string, atrMultiplier = 1.5): Observable<OptionAnalysis> {
+    return this.http.get<OptionAnalysis>('/api/stocks/ghost-rider', { params: { instrument_key:key, timeframe, atr_multiplier:atrMultiplier } });
+  }
+  analyzeOption(key: string, expiry: string, strike: number, side: 'CE' | 'PE', interval: number, atrMultiplier = 1.5, rsiSettings?: import('./option-market/rsi.types').RsiInputs, sutradharSettings?:import('./option-market/sutradhar.types').SutradharInputs): Observable<OptionAnalysis> {
+    return this.http.get<OptionAnalysis>('/api/options/analysis', { params: { instrument_key: key, expiry, strike, side, interval, atr_multiplier: atrMultiplier, ...(rsiSettings?{rsi_settings:JSON.stringify(rsiSettings)}:{}), ...(sutradharSettings?{sutradhar_settings:JSON.stringify(sutradharSettings)}:{}) } });
+  }
+  optionUnderlyings(commodities = false): Observable<{ underlyings: OptionUnderlying[] }> {
+    return this.http.get<{ underlyings: OptionUnderlying[] }>('/api/options/underlyings', { params: { commodities } });
+  }
   optionExpiries(key: string): Observable<{ expiries: string[] }> {
     return this.http.get<{ expiries: string[] }>('/api/stocks/option-expiries', { params: { instrument_key: key } });
   }

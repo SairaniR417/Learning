@@ -9,6 +9,16 @@ from database.connection import Base
 
 BIGINT_PK = BigInteger().with_variant(Integer, "sqlite")
 
+
+class OptionChainSnapshot(Base):
+    __tablename__ = 'option_chain_snapshots'
+    id = Column(BIGINT_PK, primary_key=True, autoincrement=True)
+    instrument_key = Column(String(150), nullable=False)
+    expiry = Column(Date, nullable=False)
+    received_at = Column(DateTime(timezone=True), nullable=False)
+    content_json = Column(Text, nullable=False)
+    __table_args__ = (Index('idx_option_snapshot_lookup', 'instrument_key', 'expiry', 'received_at'),)
+
 class Instrument(Base):
     __tablename__ = "instruments"
     id = Column(BIGINT_PK, primary_key=True, autoincrement=True)

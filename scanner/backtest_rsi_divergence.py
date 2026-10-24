@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 from database.connection import engine
-from scanner.strategies.rsi_divergence import DivergenceConfig, detect_events
+from scanner.rsi_divergence_legacy import DivergenceConfig, detect_events
 
 
 def simulate(rows, event, index, horizon=10, cost_pct=.2):

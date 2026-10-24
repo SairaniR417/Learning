@@ -23,7 +23,7 @@ _scan_lock = asyncio.Lock()
 _jobs: dict[str, dict[str, Any]] = {}
 _active_job: str | None = None
 _active_task: asyncio.Task | None = None
-CACHE_VERSION = "focused:v2"
+CACHE_VERSION = "focused:v3-pine-rsi"
 FAMILY_CAPS = {"trend": 3, "crossover": 3, "momentum": 3}
 
 
@@ -67,10 +67,10 @@ def evidence(strategy_id: str, row: dict[str, Any], name: str) -> dict[str, Any]
     elif strategy_id == "rsi_reversal" and status == "OVERSOLD_REVERSAL":
         direction, weight, family = "BULLISH", 2, "momentum"
         reason = f"RSI recovered from below 30 to {row['rsi']:.1f}"
-    elif strategy_id == "rsi_divergence" and state == "CONFIRMED":
+    elif strategy_id == "rsi_divergence" and state == "DETECTED":
         if row.get("direction") in {"BULLISH", "BEARISH"}:
             direction, weight, family = row["direction"], 3, "momentum"
-            reason = row.get("divergenceType", "RSI divergence").replace("_", " ").title() + "; closing trigger confirmed, invalidation intact"
+            reason = row.get("divergenceType", "RSI divergence").replace("_", " ").title() + "; RSI pivot confirmed after five right-side bars"
     if direction is None:
         return None
     return dict(strategyId=strategy_id, strategy=name, direction=direction, weight=weight,
@@ -171,7 +171,8 @@ def analyze_snapshot(df: pl.DataFrame, instruments: dict[str, dict[str, Any]], p
     now = datetime.now(timezone.utc)
     df = df.filter(pl.col("timestamp").map_elements(lambda ts: nse_daily_closed(ts, now), return_dtype=pl.Boolean)).sort(["instrument_key", "timestamp"])
     outputs, names, coverage = {}, {}, []
-    strategies = strategy_registry.list_strategies()
+    # Sutradhar supplies intraday reference levels, not a directional signal.
+    strategies = [s for s in strategy_registry.list_strategies() if s['id']!='sutradhar']
     for index, metadata in enumerate(strategies):
         if progress:
             progress(f"Checking {metadata['name']} ({index + 1}/{len(strategies)})")

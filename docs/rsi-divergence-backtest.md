@@ -1,4 +1,6 @@
-# RSI divergence backtest results
+# Archived price-pivot RSI divergence backtest results
+
+These results describe the previous detector, not the supplied Pine RSI-pivot script now used in the application.
 
 Run: October 12, 2026. Universe: 2,701 currently active NSE instruments with stored daily history. Last available session: October 9, 2026 (India time). Up to 1,500 bars per instrument; start dates vary. Fixed holdout boundary: January 1, 2024. Runtime: 97.85 seconds.
 

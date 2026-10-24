@@ -1,46 +1,55 @@
-# RSI divergence: research and specification
+# Supplied Pine RSI Divergence
 
-RSI is Wilder's momentum oscillator, ranging from 0 to 100. Default period: 14 closes. Seed average gains/losses with the first 14 price changes, then smooth each with `(previous_average * 13 + current_change) / 14`. Compute `100 - 100 / (1 + average_gain / average_loss)`. No losses gives 100; no gains gives 0; a completely flat series uses 50. Warm up for at least 250 bars before identifying swings.
+`docs/rsi-divergence.pine` preserves the identical scripts supplied on October 25,
+2026. Live scanner, option analysis, stock RSI charts and Focused evidence use
+`services/rsi_overlay.py`. Ghost Rider retains its own source-script RSI logic.
 
-30 and 70 are traditional oversold/overbought reference levels, not automatic buy/sell instructions. RSI can stay extreme in strong trends. The 50 line provides momentum context. Failure swings, centerline crossings and an oversold bounce are different patterns from divergence.
+RSI uses Wilder RMA, first seeded with `length` changes. The script tests zero
+losses before zero gains: a warmed-up flat series is 100. Source choices are
+close/open/high/low/hl2/hlc3/ohlc4/hlcc4. Smoothing supports None, SMA, SMA + Bollinger
+Bands, EMA, SMMA (RMA), WMA and volume-weighted MA. Bollinger deviation is the
+population standard deviation, with the source multiplier default of 2.
 
-| Pattern | Price swings | RSI at those swings | Interpretation |
-| --- | --- | --- | --- |
-| Regular bullish | Lower low | Higher low | Potential upward reversal |
-| Regular bearish | Higher high | Lower high | Potential downward reversal |
-| Hidden bullish | Higher low | Lower low | Potential uptrend continuation |
-| Hidden bearish | Lower high | Higher high | Potential downtrend continuation |
+Divergence uses RSI extrema with five bars to the left and five to the right.
+A regular bullish event has a higher RSI low and a lower price low; bearish is
+the converse. Compare consecutive same-kind RSI pivots. The source's
+`barssince(found[1])` range of 5?60 corresponds to pivot separation of 6?61 bars.
+Equal RSI does not qualify. An equal plateau chooses the rightmost extremum.
+There are no hidden patterns, trend gates, minimum percentage/delta filters,
+250-bar warmup, breakout conditions, stop losses or targets in this script.
 
-References reviewed October 12, 2026:
+A label is drawn five bars back on the RSI pivot; detection/confirmation time is
+five bars later. App result cards preserve this distinction. Scanner freshness
+(default 5 confirmation bars) is a result filter only; charts retain all events
+within the loaded history. The source alertcondition events are the bullish and
+bearish confirmations; importing this script does not subscribe users to alerts
+or send messages.
 
-- [StockCharts ChartSchool: RSI](https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/relative-strength-index-rsi): Wilder calculation, regular divergences, Cardwell positive/negative reversals (commonly called hidden divergences), trend context and failure swings.
-- [Fidelity: RSI](https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/RSI): traditional levels, persistent extremes and trend ranges.
-- [TradingView: RSI divergence](https://www.tradingview.com/support/solutions/43000589127-rsi-divergence-indicator/): divergence limitations and confirmation.
-- [StockCharts: scanning divergences](https://help.stockcharts.com/scanning-and-alerts/scan-writing-resource-center/scanning-case-studies/scanning-for-divergences): swing detection, noise and delay.
+The app preset enables Calculate Divergence and disables the 70/50/30 guide
+lines to match the screenshots. The Pine input default itself is false and its
+hline defaults visible. Defaults in the app restore the screenshot preset:
+purple RSI, yellow SMA 14, dark background, purple band, green/red gradients,
+and green Bull/red Bear labels. Settings have Defaults, Cancel and Ok and an
+accessible keyboard focus trap. Style-only changes require no provider request.
 
-## Our explicit scanner convention
+Calculation timeframe defaults to Chart. The selectable feed intervals are 5m,
+15m, 1h, 1d and 1w. Waiting for timeframe closes is enabled. Disabling it includes
+a developing provider candle when available; signals may then repaint until it
+closes. Weekly bars combine Monday-to-Sunday IST daily OHLCV and are final next
+Monday. Stock charts read stored candles only. Missing history stays unavailable;
+this app has no tick/second candle feed. Visibility preferences do not fetch data.
+Different calculation timeframes are drawn on their own candle timestamps with
+no forward-filled oscillator values (the Pine declaration uses timeframe_gaps).
 
-There is no universal numeric definition of a meaningful swing, minimum separation, or breakout confirmation. The settings below are engineering choices, not claims that these numbers are universally standard or optimized.
+Options retain their existing one-minute polling and shared bounded cache.
+The cache includes every RSI calculation input, while history cache entries are
+shared across settings. Leaving the chart cancels polling and browser requests.
+A broker/data-feed difference, available history, or minute refresh can produce
+values different from a TradingView live chart; no exported TradingView candle
+parity dataset was supplied. No price forecast is inferred from divergence.
 
-- Daily completed NSE candles; no current-session bars, no live intraday RSI claim.
-- Strict price low/high pivots with 3 bars on each side. Equal-price plateaus are excluded.
-- Compare consecutive pivots of the same kind, 5–60 bars apart. RSI is sampled **at the price pivot dates**; separate RSI extrema need not occur on those exact dates. This may differ from TradingView oscillator-pivot scripts.
-- Price difference at least 0.5%; RSI difference at least 3 points. Flat/equal swings do not qualify.
-- Hidden bullish: close above SMA50 and SMA50 higher than five bars earlier, at the second pivot. Hidden bearish requires the opposite. Regular patterns have no mandatory trend filter.
-- Traditional 30/70 proximity is displayed as context; it is not required for every divergence.
-- **WATCH**: both price pivots confirmed, divergence detected, breakout not confirmed.
-- **BULLISH CONFIRMED**: a close above the highest high between the two lows. **BEARISH CONFIRMED**: a close below the lowest low between the two highs. Breakout must occur within 20 bars after detection, and never before detection time.
-- A low below the second bullish pivot or high above the second bearish pivot invalidates the setup. Invalidation takes precedence if the same candle also crosses the trigger. Expired/broken patterns are omitted from current results.
-- Show only detections or breakout confirmations from the last 5 stored bars; display the latest stored date so old data is visible. Show one most recent applicable pattern per stock, not duplicate stock rows.
-- Dates distinguish pivot time, detected time and breakout time. No retroactive signal at the second pivot.
-- Reset history around malformed/non-finite OHLC, duplicate timestamps, close changes greater than 25%, or gaps greater than 10 calendar days. These resets avoid bridging suspected corporate actions/data gaps but can omit legitimate large moves. Raw prices are not automatically adjusted.
-
-## Backtest protocol
-
-`scanner/backtest_rsi_divergence.py` reuses the detector. It reads the latest 1,500 completed daily bars per currently active NSE instrument without changing the database. Two predeclared swing widths (3 and 5) are evaluated; other settings stay fixed. January 1, 2024 is the chronological development/holdout boundary. No parameters are selected using holdout results.
-
-Detection-entry and breakout-entry scenarios are reported separately, by divergence type and sample. Entry is at the **next bar's open**, never the historical pivot price. A 0.1% buffered second-pivot stop, 2R target and 10-bar time exit provide a reproducible simulation. Stops take precedence when both stop and target touch within one daily candle; gap stops fill at the open. Deduct 20 basis points round trip; also report stress results at 50 basis points. Skip entry gaps already beyond the stop, incomplete outcome windows and trades crossing the sample boundary. Positions do not overlap for a given symbol/scenario. Report counts, mean/median net trade returns, win rate, profit factor and 10-bar directional forward returns.
-
-The raw JSON report is `data/rsi-divergence-backtest.json`. Its results are evidence about these specific rules and this dataset, not portfolio performance or a profitability guarantee. No CAGR, Sharpe or portfolio drawdown is invented. Limitations include current-universe survivorship bias, cross-stock correlated trades, unknown historical corporate-action adjustment, missing/delisted securities, optimistic fillability in illiquid/limit-bound stocks, and fixed-cost assumptions. Bearish simulations are hypothetical shorts: overnight cash delivery shorting is not represented as an executable product flow. Signals are observations; no orders are placed.
-
-Run the study with `.venv/Scripts/python.exe -m scanner.backtest_rsi_divergence`. Results depend on the stored data revision and date. Run tests with `.venv/Scripts/python.exe -m unittest tests.test_rsi_divergence -v`.
+Validation: `python -m unittest discover -s tests -p test_pine_rsi.py`, option and
+Focused integration tests, frontend lifecycle tests and mocked browser checks.
+The original price-pivot research is in `rsi-divergence-legacy.md` and
+`scanner/rsi_divergence_legacy.py`; the original backtest imports only that
+archived detector, preserving reproducibility without using it in live views.
