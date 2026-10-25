@@ -1,6 +1,11 @@
+import { GoldenCrossSettingsComponent } from './golden-cross-settings.component';
+import { GoldenInputs,GoldenSettings,GoldenPlot,goldenPlots,defaultGoldenSettings } from './golden-cross.types';
+import { SuryavanshiSettingsComponent } from './suryavanshi-settings.component';
+import { SuryavanshiPrimitive } from './suryavanshi.primitive';
+import { SuryavanshiInputs,SuryavanshiSettings,defaultSuryavanshiSettings,suryavanshiVisible } from './suryavanshi.types';
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnChanges, OnDestroy, Output, ViewChild, inject } from '@angular/core';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, concat, catchError, of, defer } from 'rxjs';
 import { CandlestickSeries, LineSeries, LineType, LineWidth, ColorType, createChart, createSeriesMarkers, IChartApi, IPriceLine, ISeriesApi, Time, UTCTimestamp } from 'lightweight-charts';
 import { MarketApiService, OptionAnalysis, OptionStrategyResult } from '../market-api.service';
 import { backendUrl } from '../backend-url';
@@ -15,7 +20,7 @@ import { SutradharPrimitive } from './sutradhar.primitive';
 import { SutradharSettings,SutradharInputs,SutradharLevel,defaultSutradharSettings,sutradharLevels,sutradharVisible } from './sutradhar.types';
 
 @Component({
-  selector: 'app-option-analysis', standalone: true, imports: [CommonModule, GhostSettingsComponent,RsiSettingsComponent,RsiPaneComponent,SutradharSettingsComponent],
+  selector: 'app-option-analysis', standalone: true, imports: [CommonModule, GhostSettingsComponent,RsiSettingsComponent,RsiPaneComponent,SutradharSettingsComponent,SuryavanshiSettingsComponent,GoldenCrossSettingsComponent],
   templateUrl: './option-analysis.component.html', styleUrl: './option-analysis.component.css'
 })
 export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDestroy {
@@ -24,9 +29,41 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   @Input() strike = 0;
   @Input() side: 'CE' | 'PE' = 'CE';
   @Input() stockMode = false;
+  @Input() stockWorkspace = false;
   @Input() stockTimeframe = '1d';
   @Input() initialAtrMultiplier = 1.5;
   @Input() stockStrategy = 'ghost_rider';
+  @Input() initialSuryavanshiInputs:SuryavanshiInputs=defaultSuryavanshiSettings().inputs;
+  @ViewChild('suryavanshiSettingsButton') suryavanshiSettingsButton?:ElementRef<HTMLButtonElement>;
+  suryavanshiSettings=defaultSuryavanshiSettings();suryavanshiSettingsOpen=false;
+  private suryavanshiPrimitive?:SuryavanshiPrimitive;
+  get suryavanshiSelected():boolean{return this.strategyId==='suryavanshi';}
+  get suryavanshiVisible():boolean{return this.suryavanshiSelected&&suryavanshiVisible(this.suryavanshiSettings,this.interval);}
+  closeSuryavanshiSettings():void{this.suryavanshiSettingsOpen=false;this.suryavanshiSettingsButton?.nativeElement.focus();}
+  applySuryavanshiSettings(s:SuryavanshiSettings):void{
+    const changed=JSON.stringify(s.inputs)!==JSON.stringify(this.suryavanshiSettings.inputs);
+    this.suryavanshiSettings=s;this.closeSuryavanshiSettings();
+    if(changed){this.request?.unsubscribe();this.loading=false;this.load();}else this.draw(false);
+  }
+  suryavanshiNumber(value:number):string{return value.toFixed(this.suryavanshiSettings.precision<0?2:this.suryavanshiSettings.precision);}
+  suryavanshiHover(event:MouseEvent):void{
+    const el=event.currentTarget as HTMLElement,r=el.getBoundingClientRect();
+    el.title=this.suryavanshiPrimitive?.tooltipAt(event.clientX-r.left,event.clientY-r.top)??'';
+  }
+
+  @Input() initialGoldenInputs:GoldenInputs=defaultGoldenSettings().inputs;
+  @ViewChild('goldenSettingsButton') goldenSettingsButton?:ElementRef<HTMLButtonElement>;
+  goldenSettings=defaultGoldenSettings();goldenSettingsOpen=false;
+  private goldenSeries=new Map<GoldenPlot,ISeriesApi<'Line'>>();
+  get goldenSelected():boolean{return this.strategyId==='golden_death_cross';}
+  get goldenVisible():boolean{return this.goldenSelected&&suryavanshiVisible(this.goldenSettings,this.interval);}
+  goldenNumber(v:number|null):string{return v==null?'n/a':v.toFixed(this.goldenSettings.precision<0?2:this.goldenSettings.precision);}
+  get goldenPoint(){return this.data?.goldenCross?.points.find(p=>Date.parse(p.timestamp)===this.hoveredTimestamp)??this.data?.goldenCross?.points.at(-1);}
+  closeGoldenSettings():void{this.goldenSettingsOpen=false;this.goldenSettingsButton?.nativeElement.focus();}
+  applyGoldenSettings(s:GoldenSettings):void{
+    const changed=JSON.stringify(s.inputs)!==JSON.stringify(this.goldenSettings.inputs);this.goldenSettings=s;this.closeGoldenSettings();
+    if(changed){this.request?.unsubscribe();this.loading=false;this.load();}else this.draw(false);
+  }
   @Input() initialRsiPeriod = 14;
   @Input() initialSutradharInputs:SutradharInputs={p1:14,p2:7,p3:5,use_ema:false};
   @ViewChild('sutradharSettingsButton') sutradharSettingsButton?:ElementRef<HTMLButtonElement>;
@@ -35,7 +72,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   private sutradharSeries=new Map<SutradharLevel,ISeriesApi<'Line'>>();
   private sutradharPrimitive?:SutradharPrimitive;
   get sutradharSelected():boolean{return this.strategyId==='sutradhar';}
-  get darkSelected():boolean{return this.ghostSelected||this.rsiSelected||this.sutradharSelected;}
+  get darkSelected():boolean{return this.ghostSelected||this.rsiSelected||this.sutradharSelected||this.suryavanshiSelected||this.goldenSelected;}
   get sutradharVisible():boolean{return this.sutradharSelected&&sutradharVisible(this.sutradharSettings,this.interval);}
   get sutradharPoint(){return this.data?.sutradhar?.points.find(p=>Date.parse(p.timestamp)===this.hoveredTimestamp)??this.data?.sutradhar?.points.at(-1);}
   sutradharNumber(value:number|null|undefined):string{return value==null?'n/a':value.toFixed(this.sutradharSettings.precision<0?2:this.sutradharSettings.precision);}
@@ -67,7 +104,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
     else document.body.style.overflow = this.previousOverflow;
     this.fullscreenButton?.nativeElement.focus();
   }
-  @HostListener('document:keydown.escape') exitFullscreen(): void { if (!this.settingsOpen && !this.rsiSettingsOpen && !this.sutradharSettingsOpen && this.expanded) this.toggleFullscreen(); }
+  @HostListener('document:keydown.escape') exitFullscreen(): void { if (!this.settingsOpen && !this.rsiSettingsOpen && !this.sutradharSettingsOpen && !this.suryavanshiSettingsOpen && !this.goldenSettingsOpen && this.expanded) this.toggleFullscreen(); }
   private api = inject(MarketApiService);
   private zone = inject(NgZone);
   private hoveredTimestamp?: number;
@@ -75,7 +112,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   private polling?: Subscription;
   private chart?: IChartApi;
   @ViewChild(RsiPaneComponent) rsiPane?:RsiPaneComponent;
-  get rsiPriceChart():IChartApi|undefined{return this.stockMode?undefined:this.chart;}
+  get rsiPriceChart():IChartApi|undefined{return this.stockMode&&!this.stockWorkspace?undefined:this.chart;}
   private series?: ISeriesApi<'Candlestick'>;
   private markers?: ReturnType<typeof createSeriesMarkers<Time>>;
   private lines: IPriceLine[] = [];
@@ -98,7 +135,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
     return this.ghostSettings.minutes && this.interval >= this.ghostSettings.minuteMin && this.interval <= this.ghostSettings.minuteMax;
   }
   get displayedTimeframe(): string { return this.stockMode ? this.stockTimeframe : ({60:'1h',1440:'1d',10080:'1w'} as Record<number,string>)[this.interval] ?? this.interval+'m'; }
-  get activeCandles() { return (this.ghostSelected ? this.data?.ghostRider?.candles : this.sutradharSelected ? this.data?.sutradhar?.candles : undefined) ?? this.data?.candles ?? []; }
+  get activeCandles() { return (this.goldenSelected ? this.data?.goldenCross?.candles : this.suryavanshiSelected ? this.data?.suryavanshi?.candles : this.ghostSelected ? this.data?.ghostRider?.candles : this.sutradharSelected ? this.data?.sutradhar?.candles : undefined) ?? this.data?.candles ?? []; }
   get lastCandle() { return this.activeCandles.find(c=>Date.parse(c.timestamp)===this.hoveredTimestamp) ?? this.activeCandles.at(-1); }
   get ghostPoint() { return this.data?.ghostRider?.points.find(p=>Date.parse(p.timestamp)===this.hoveredTimestamp) ?? this.data?.ghostRider?.points.at(-1); }
   ghostNumber(value: number | undefined): string { return value == null ? 'n/a' : value.toFixed(this.ghostSettings.precision < 0 ? 2 : this.ghostSettings.precision); }
@@ -121,12 +158,14 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   get selectedStrategy(): OptionStrategyResult | undefined { return this.data?.strategies.find(s => s.id === this.strategyId); }
   ngOnChanges(): void {
     if (this.stockMode) {this.ghostSettings={...this.ghostSettings,atrMultiplier:this.initialAtrMultiplier};this.rsiSettings={...this.rsiSettings,inputs:{...this.rsiSettings.inputs,period:this.initialRsiPeriod}};}
+    if(this.stockMode)this.goldenSettings={...this.goldenSettings,inputs:{...this.initialGoldenInputs}};
+    if(this.stockMode)this.suryavanshiSettings={...this.suryavanshiSettings,inputs:{...this.initialSuryavanshiInputs}};
     if(this.stockMode)this.sutradharSettings={...this.sutradharSettings,inputs:{...this.initialSutradharInputs}};
     if (this.expanded) this.toggleFullscreen();
     this.hasChosenStrategy = false;
     if(this.stockMode){this.strategyId=this.stockStrategy;this.hasChosenStrategy=true;}
-    this.request?.unsubscribe(); this.polling?.unsubscribe();
-    this.data = undefined; this.interval = this.stockMode ? ({'1d':1440,'1h':60,'15m':15,'5m':5} as Record<string,number>)[this.stockTimeframe] ?? 1440 : 5; this.clearChart();
+    this.request?.unsubscribe(); this.polling?.unsubscribe(); this.loading=false;
+    this.data = undefined; this.interval = this.stockMode ? ({'1d':1440,'1h':60,'30m':30,'15m':15,'5m':5,'1m':1} as Record<string,number>)[this.stockTimeframe] ?? 1440 : 5; this.clearChart();
     if (!document.hidden) this.load();
     this.polling = interval(60000).subscribe(() => { if (!document.hidden && !this.loading) this.load(); });
   }
@@ -153,29 +192,38 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   }
   changeStockTimeframe(value: string): void {
     this.stockTimeframe=value;
-    this.changeInterval(String(({'1d':1440,'1h':60,'15m':15,'5m':5} as Record<string,number>)[value]));
+    this.changeInterval(String(({'1d':1440,'1h':60,'30m':30,'15m':15,'5m':5,'1m':1} as Record<string,number>)[value]));
   }
   load(): void {
     if (this.loading) return;
     this.loading = true; this.error = ''; this.needsConnection = false;
-    const response = this.stockMode ? (this.stockStrategy==='sutradhar'?this.api.analyzeStockSutradhar(this.underlyingKey,this.stockTimeframe,this.sutradharSettings.inputs):this.stockStrategy==='rsi_divergence'?this.api.analyzeStockRsi(this.underlyingKey,this.stockTimeframe,this.rsiSettings.inputs):this.api.analyzeStockGhost(this.underlyingKey,this.stockTimeframe,this.ghostSettings.atrMultiplier)) : this.api.analyzeOption(this.underlyingKey, this.expiry, this.strike, this.side, this.interval, this.ghostSettings.atrMultiplier,this.rsiSettings.inputs,this.sutradharSelected?this.sutradharSettings.inputs:undefined);
+    const stockRequest = (storedOnly=false) => this.api.analyzeStockWorkspace(this.underlyingKey,this.stockTimeframe,this.ghostSettings.atrMultiplier,this.rsiSettings.inputs,this.sutradharSelected?this.sutradharSettings.inputs:undefined,this.suryavanshiSettings.inputs,this.goldenSettings.inputs,storedOnly);
+    const previewFirst=this.stockWorkspace&&!this.data;
+    const response = this.stockWorkspace ? (previewFirst ? concat(
+      stockRequest(true).pipe(catchError(()=>of(null))),defer(()=>stockRequest())
+    ) : stockRequest()) : this.stockMode ? (this.stockStrategy==='golden_death_cross'?this.api.analyzeStockGolden(this.underlyingKey,this.stockTimeframe,this.goldenSettings.inputs):this.stockStrategy==='suryavanshi'?this.api.analyzeStockSuryavanshi(this.underlyingKey,this.stockTimeframe,this.suryavanshiSettings.inputs):this.stockStrategy==='sutradhar'?this.api.analyzeStockSutradhar(this.underlyingKey,this.stockTimeframe,this.sutradharSettings.inputs):this.stockStrategy==='rsi_divergence'?this.api.analyzeStockRsi(this.underlyingKey,this.stockTimeframe,this.rsiSettings.inputs):this.api.analyzeStockGhost(this.underlyingKey,this.stockTimeframe,this.ghostSettings.atrMultiplier)) : this.api.analyzeOption(this.underlyingKey, this.expiry, this.strike, this.side, this.interval, this.ghostSettings.atrMultiplier,this.rsiSettings.inputs,this.sutradharSelected?this.sutradharSettings.inputs:undefined,this.suryavanshiSettings.inputs,this.goldenSettings.inputs);
     this.request = response.subscribe({
       next: data => {
-        const first = !this.data; this.data = data; this.loading = false;
+        if (!data) return;
+        const first = !this.data || (!!this.data.storedPreview && !this.data.candles.length);
+        this.data = data; this.loading = previewFirst && !!data.storedPreview;
         if (first && !this.hasChosenStrategy) this.strategyId = data.strategies.find(s => s.id === 'ghost_rider' && s.levels.length)?.id
           ?? data.strategies.find(s => s.markers.length || s.levels.length)?.id ?? data.strategies[0]?.id ?? '';
         this.draw(first);
       },
-      error: error => { this.loading = false; this.needsConnection = error.status === 401; this.error = error.error?.detail || `Could not load ${this.stockMode ? 'stock' : 'option'} analysis. Please retry.`; }
+      error: error => { this.loading = false; this.needsConnection = error.status === 401; this.error = this.data?.storedPreview ? 'Current-session refresh failed. Stored history is still shown; retry Refresh.' : error.error?.detail || `Could not load ${this.stockMode ? 'stock' : 'option'} analysis. Please retry.`; }
     });
   }
   showStrategy(id: string): void {
     this.strategyId=id;this.hasChosenStrategy=true;
     if(this.sutradharSelected&&!this.data?.sutradhar){this.request?.unsubscribe();this.loading=false;this.load();}
     this.drawEvidence();
+    if(this.goldenSelected)this.fitChart();
   }
   label(value: string): string { return value.replace(/([a-z])([A-Z])/g, '$1 $2').replaceAll('_', ' '); }
   private clearChart(): void {
+    this.clearGolden();
+    this.clearSuryavanshi();
     this.clearSutradhar();
     if (this.ghostPrimitive && this.series) this.series.detachPrimitive(this.ghostPrimitive);
     this.ghostPrimitive = undefined;
@@ -197,6 +245,10 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
     this.setCandles();
     this.drawGhost();
     this.drawSutradhar();
+    this.drawSuryavanshi();
+    this.drawGolden();
+    if(this.goldenSelected)return;
+    if(this.suryavanshiSelected){this.markers?.setMarkers([]);return;}
     if(this.rsiSelected){this.markers?.setMarkers([]);return;}
     if(this.sutradharSelected){this.markers?.setMarkers([]);return;}
     if (this.ghostSelected) { this.markers?.setMarkers([]); return; }
@@ -212,10 +264,13 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   private setCandles(): void {
     if (!this.series || !this.data) return;
     const colors = new Map(this.ghostVisible && this.ghostSettings.barColor ? this.data.ghostRider?.points.map(p=>[p.timestamp,p.barColor]) : []);
+    const suryPoints=new Map(this.suryavanshiVisible?this.data.suryavanshi?.points.map(p=>[p.timestamp,p]):[]);
     this.series.setData(this.activeCandles.map(c => {
-      const color = colors.get(c.timestamp);
+      const point=suryPoints.get(c.timestamp);
+      const s=this.suryavanshiSettings,n=point?.state==='short'?0:point?.state==='long'?1:2;
+      const color = point?(s.plotCandle?s.bodyColors[n]:s.barColor?s.barColors[n]:undefined):colors.get(c.timestamp);
       return {time:(Date.parse(c.timestamp)/1000) as UTCTimestamp,open:c.open,high:c.high,low:c.low,close:c.close,
-        ...(color ? {color}: {})};
+        ...(color ? {color}: {}),...(point&&s.plotCandle?{borderColor:s.borderColors[n],wickColor:s.wick}:{})};
     }));
   }
   private drawGhost(): void {
@@ -247,6 +302,38 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
     if (this.ghostSelected) this.chart.timeScale().setVisibleLogicalRange({from:0,to:this.activeCandles.length-1+this.ghostSettings.labelOffset+80});
     else if(this.sutradharSelected)this.chart.timeScale().setVisibleLogicalRange({from:0,to:this.activeCandles.length+18});
     else this.chart.timeScale().fitContent();
+  }
+  private clearGolden():void{
+    if(this.chart)for(const series of this.goldenSeries.values())this.chart.removeSeries(series);
+    this.goldenSeries.clear();
+  }
+  private drawGolden():void{
+    if(!this.chart||!this.series)return;
+    const data=this.data?.goldenCross,s=this.goldenSettings;
+    if(!this.goldenVisible||!data){this.clearGolden();if(this.goldenSelected)this.markers?.setMarkers([]);return;}
+    const precision=s.precision<0?2:s.precision;
+    this.series.applyOptions({lastValueVisible:s.scaleLabels,priceFormat:{type:'price',precision,minMove:10**(-precision)}});
+    this.chart.timeScale().applyOptions({rightOffset:3});
+    for(const name of goldenPlots){
+      let series=this.goldenSeries.get(name);const style=s.plots[name];
+      if(!series){series=this.chart.addSeries(LineSeries,{priceLineVisible:false,crosshairMarkerVisible:false});this.goldenSeries.set(name,series);}
+      series.applyOptions({visible:style.enabled,color:style.color,lineWidth:style.width as LineWidth,lastValueVisible:s.scaleLabels,priceFormat:{type:'price',precision,minMove:10**(-precision)}});
+      series.setData(data.points.map(p=>({time:Date.parse(p.timestamp)/1000 as UTCTimestamp,...(p[name]==null?{}:{value:p[name]!})})));
+    }
+    this.markers?.setMarkers(s.labels?data.events.map(e=>({time:Date.parse(e.timestamp)/1000 as UTCTimestamp,position:e.direction==='BUY'?'belowBar' as const:'aboveBar' as const,color:e.direction==='BUY'?'#26a69a':'#ef5350',shape:e.kind==='CONFIRMATION'?'circle' as const:e.direction==='BUY'?'arrowUp' as const:'arrowDown' as const,text:e.kind==='GOLDEN_CROSS'?'Golden Cross':e.kind==='DEATH_CROSS'?'Death Cross':'Confirmed '+e.direction})):[]);
+  }
+  private clearSuryavanshi():void{
+    if(this.suryavanshiPrimitive&&this.series)this.series.detachPrimitive(this.suryavanshiPrimitive);
+    this.suryavanshiPrimitive=undefined;
+  }
+  private drawSuryavanshi():void{
+    if(!this.series)return;
+    const data=this.data?.suryavanshi,s=this.suryavanshiSettings;
+    if(!this.suryavanshiVisible||!data){this.clearSuryavanshi();return;}
+    const precision=s.precision<0?2:s.precision;
+    this.series.applyOptions({lastValueVisible:s.scaleLabels,priceFormat:{type:'price',precision,minMove:10**(-precision)}});
+    if(!this.suryavanshiPrimitive){this.suryavanshiPrimitive=new SuryavanshiPrimitive(data,s);this.series.attachPrimitive(this.suryavanshiPrimitive);}
+    else this.suryavanshiPrimitive.update(data,s);
   }
   private clearSutradhar():void{
     if(this.sutradharPrimitive&&this.series)this.series.detachPrimitive(this.sutradharPrimitive);

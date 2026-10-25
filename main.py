@@ -135,6 +135,11 @@ def require_token() -> str:
     return access_token
 
 
+from services import stock_chart
+stock_chart.get_token = require_token
+app.include_router(stock_chart.router)
+
+
 async def api_json_request(url: str, *, method: str = "GET", headers: dict | None = None, data=None, params=None):
     async with httpx.AsyncClient(timeout=12) as client:
         response = await client.request(method, url, headers=headers, data=data, params=params)
@@ -287,7 +292,11 @@ async def option_underlyings(commodities: bool = False):
 @app.get('/api/options/analysis')
 async def analyze_option(instrument_key: str, expiry: date, strike: float = Query(gt=0),
                          side: Literal['CE', 'PE'] = 'CE', interval: int = Query(default=5),
-                         atr_multiplier: float = Query(default=1.5, ge=0.1), rsi_settings: str | None = None, sutradhar_settings: str | None = None):
+                         atr_multiplier: float = Query(default=1.5, ge=0.1), rsi_settings: str | None = None, sutradhar_settings: str | None = None, suryavanshi_settings: str | None = None, golden_settings: str | None = None):
+    if golden_settings is not None:
+        return await option_analysis.analyze(api_json_request, require_token(), instrument_key, expiry, strike, side, interval, atr_multiplier, parse_rsi_settings(rsi_settings), parse_sutradhar_settings(sutradhar_settings), parse_suryavanshi_settings(suryavanshi_settings), parse_golden_settings(golden_settings))
+    if suryavanshi_settings is not None:
+        return await option_analysis.analyze(api_json_request, require_token(), instrument_key, expiry, strike, side, interval, atr_multiplier, parse_rsi_settings(rsi_settings), parse_sutradhar_settings(sutradhar_settings), parse_suryavanshi_settings(suryavanshi_settings))
     settings = parse_rsi_settings(rsi_settings)
     if sutradhar_settings is not None:
         return await option_analysis.analyze(api_json_request, require_token(), instrument_key, expiry, strike, side, interval, atr_multiplier, settings,parse_sutradhar_settings(sutradhar_settings))
@@ -319,7 +328,7 @@ def parse_sutradhar_settings(value):
 
 
 @app.get('/api/stocks/sutradhar')
-async def stock_sutradhar(instrument_key: str,timeframe: str='15m',sutradhar_settings: str | None=None):
+async def stock_sutradhar(instrument_key: str,timeframe: str='15m',sutradhar_settings: str | None=None, suryavanshi_settings: str | None=None):
     from services.sutradhar_scanner import stock_chart
     return await stock_chart(instrument_key,timeframe,parse_sutradhar_settings(sutradhar_settings))
 
@@ -328,6 +337,12 @@ async def stock_sutradhar(instrument_key: str,timeframe: str='15m',sutradhar_set
 async def stock_rsi_divergence(instrument_key: str,timeframe: str='1d',rsi_settings: str | None=None):
     from services.rsi_scanner import stock_chart
     return await stock_chart(instrument_key,timeframe,parse_rsi_settings(rsi_settings))
+
+
+@app.get('/api/stocks/analysis')
+async def analyze_stock_workspace(instrument_key: str, timeframe: str='1d', atr_multiplier: float=Query(default=1.5,ge=.1), rsi_settings: str | None=None, sutradhar_settings: str | None=None, suryavanshi_settings: str | None=None, golden_settings: str | None=None, stored_only: bool=False):
+    from services.stock_analysis import analyze
+    return await analyze(instrument_key,timeframe,atr_multiplier,parse_rsi_settings(rsi_settings),parse_sutradhar_settings(sutradhar_settings) if sutradhar_settings is not None else None,parse_suryavanshi_settings(suryavanshi_settings),parse_golden_settings(golden_settings),stored_only=stored_only)
 
 
 @app.get('/api/stocks/ghost-rider')
@@ -621,3 +636,46 @@ async def scanner_universe():
     instruments = await get_nse_equity_universe()
     stocks = sorted(instruments, key=lambda item: item["symbol"])
     return {"count": len(stocks), "stocks": stocks}
+
+
+def parse_suryavanshi_settings(value):
+    if value is None: return None
+    from services.suryavanshi import Config
+    try:
+        settings=json.loads(value)
+        if not isinstance(settings,dict): raise ValueError('Suryavanshi settings must be an object.')
+        Config.resolve(settings)
+        return settings
+    except (ValueError,TypeError) as exc: raise HTTPException(400,str(exc)) from exc
+
+
+@app.get('/api/stocks/suryavanshi')
+async def stock_suryavanshi(instrument_key: str,timeframe: str='15m',suryavanshi_settings: str | None=None):
+    from services.suryavanshi_scanner import stock_chart
+    return await stock_chart(instrument_key,timeframe,parse_suryavanshi_settings(suryavanshi_settings))
+
+
+def parse_golden_settings(value):
+    if value is None: return None
+    from services.golden_cross import resolve
+    try:
+        settings=json.loads(value)
+        if not isinstance(settings,dict): raise ValueError('Golden / Death Cross settings must be an object.')
+        return resolve(settings)
+    except (ValueError,TypeError) as exc: raise HTTPException(400,str(exc)) from exc
+
+
+@app.get('/api/stocks/golden-cross')
+async def stock_golden_cross(instrument_key: str,timeframe: str='1d',golden_settings: str | None=None):
+    from services.golden_cross_scanner import stock_chart
+    return await stock_chart(instrument_key,timeframe,parse_golden_settings(golden_settings))
+
+
+from services.focused_plans import router as focused_plans_router
+app.include_router(focused_plans_router)
+
+
+@app.get('/api/focused/plans/options')
+async def focused_option_plan(instrument_key: str,mode: Literal['intraday','swing']='intraday'):
+    from services.focused_options import option_plan
+    return await option_plan(instrument_key,mode,api_json_request,require_token())

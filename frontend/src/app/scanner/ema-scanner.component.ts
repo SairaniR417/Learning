@@ -1,3 +1,5 @@
+import { GoldenInputs,defaultGoldenSettings } from '../option-market/golden-cross.types';
+import { SuryavanshiInputs,defaultSuryavanshiSettings } from '../option-market/suryavanshi.types';
 import { backendUrl } from '../backend-url';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -11,7 +13,7 @@ import { SutradharInputs } from '../option-market/sutradhar.types';
 
 type FactorField = 'changePct' | 'volume' | 'price';
 interface FactorRule { field: FactorField; min: string; max: string; importance: 'Important' | 'Optional'; }
-interface SavedScreener { name: string; strategyId: string; timeframe: string; factors: FactorRule[]; sector?: string; strategyParams?: Record<string, number | boolean>; market?: string; }
+interface SavedScreener { name: string; strategyId: string; timeframe: string; factors: FactorRule[]; sector?: string; strategyParams?: Record<string, number | boolean | string>; market?: string; }
 interface SignalMetric { label: string; value: number; compareToClose: boolean; }
 interface SignalBadge { label: string; passed?: boolean; tone?: 'positive' | 'negative' | 'neutral'; }
 interface ScreenResult { entry?: number; stopLoss?: number; tp1?: number; tp2?: number; tp3?: number; tp4?: number; tp5?: number; setupState?: string; instrumentKey: string; exchange: string; symbol: string; name: string; price: number; changePct: number | null; volume: number; status: string; signal?: string; state?: string; divergenceType?: string; source: 'database' | 'strategy'; detail?: string; signalMetrics?: SignalMetric[]; signalBadges?: SignalBadge[]; sector: string; }
@@ -28,8 +30,10 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   @Output() stockSelected = new EventEmitter<SelectedStock>();
   openStock(row: ScreenResult | undefined): void {
     if (!row?.instrumentKey) return;
-    if (['ghost_rider','rsi_divergence','sutradhar'].includes(this.selectedStrategy)) {
+    if (['ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross'].includes(this.selectedStrategy)) {
       this.sutradharInputs={p1:this.numericParam('p1',14),p2:this.numericParam('p2',7),p3:this.numericParam('p3',5),use_ema:this.strategyParams['use_ema']===true};
+      this.suryavanshiInputs={length:this.numericParam('length',20),rr_ratio:this.numericParam('rr_ratio',1.1),candle_type:this.strategyParams['candle_type']==='Body'?'Body':'Wicks',sl_type:this.strategyParams['sl_type']==='High/Low'?'High/Low':'Close',show_sl:this.strategyParams['show_sl']===true};
+      this.goldenInputs={...defaultGoldenSettings().inputs,...this.strategyParams} as GoldenInputs;
       this.ghostStock = row; return;
     }
     this.stockSelected.emit({ key: row.instrumentKey, symbol: row.symbol, name: row.name, exchange: row.exchange, strategy: this.activeStrategy?.name ?? 'Market Screener', timeframe: this.timeframe, status: row.status, detail: row.detail, price: row.price, metrics: row.signalMetrics, checks: row.signalBadges });
@@ -46,8 +50,10 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   strategies: ScannerStrategy[] = [];
   selectedStrategy = 'market_screener';
   timeframe = '1d';
-  strategyParams: Record<string, number | boolean> = {};
+  strategyParams: Record<string, number | boolean | string> = {};
   numericParam(name:string,fallback:number):number{return typeof this.strategyParams[name]==='number'?this.strategyParams[name] as number:fallback;}
+  goldenInputs:GoldenInputs=defaultGoldenSettings().inputs;
+  suryavanshiInputs:SuryavanshiInputs=defaultSuryavanshiSettings().inputs;
   sutradharInputs:SutradharInputs={p1:14,p2:7,p3:5,use_ema:false};
   loading = false;
   loadingStrategies = true;
@@ -163,12 +169,13 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   selectStrategy(value: string): void {
     this.scanSubscription?.unsubscribe(); this.loading = false; this.totalScanned = 0;
     this.selectedStrategy = value; this.results = []; this.hasScanned = false; this.error = '';
-    for (const column of this.gridColumns.filter(c => ['setupState', 'entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5'].includes(c.id))) { column.visible = value === 'ghost_rider'; this.gridApi?.setColumnsVisible([column.id], column.visible); }
-    if (['ghost_rider','rsi_divergence'].includes(value) && !['1d','1h','15m','5m'].includes(this.timeframe)) this.timeframe = '1d';
+    for (const column of this.gridColumns.filter(c => ['setupState', 'entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5'].includes(c.id))) { column.visible = value === 'ghost_rider'||(value==='suryavanshi'&&['setupState','entry','stopLoss','tp1'].includes(column.id)); this.gridApi?.setColumnsVisible([column.id], column.visible); }
+    if (['ghost_rider','rsi_divergence','golden_death_cross'].includes(value) && !['1d','1h','15m','5m'].includes(this.timeframe)) this.timeframe = '1d';
+    if(value==='suryavanshi'&&!['1d','1h','15m','5m'].includes(this.timeframe))this.timeframe='15m';
     if(value==='sutradhar'&&!['1h','15m','5m'].includes(this.timeframe))this.timeframe='15m';
-    this.strategyParams = Object.fromEntries((this.activeStrategy?.parameters ?? []).filter(item=>typeof item.default==='number'||typeof item.default==='boolean').map(item=>[item.name,item.default as number|boolean]));
+    this.strategyParams = Object.fromEntries((this.activeStrategy?.parameters ?? []).filter(item=>['number','boolean','string'].includes(typeof item.default)).map(item=>[item.name,item.default as number|boolean|string]));
   }
-  updateStrategyParam(key: string, value: string | boolean): void { this.strategyParams[key] = typeof value==='boolean'?value:Number(value); }
+  updateStrategyParam(key: string, value: string | boolean): void { this.strategyParams[key] = this.activeStrategy?.parameters.find(p=>p.name===key)?.type==='str'?String(value):typeof value==='boolean'?value:Number(value); }
   selectSector(value: string): void { this.selectedSector = value; }
   onGridReady(event: GridReadyEvent<ScreenResult>): void {
     this.gridApi = event.api;
@@ -225,7 +232,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
           const numeric = (key: string) => Number(row[key] ?? 0);
           return { instrumentKey: String(row['instrumentKey'] ?? ''), exchange: String(row['exchange'] ?? 'NSE'), symbol: String(row['symbol'] ?? row['instrumentKey'] ?? '—'), name: String(row['name'] ?? row['symbol'] ?? ''),
             price: numeric('close'), changePct: row['changePct'] == null ? null : numeric('changePct'), volume: numeric('volume'), status: this.getScannerStatus(row), signal: String(row['signal'] ?? ''), state: String(row['state'] ?? ''), divergenceType: row['divergenceType'] ? String(row['divergenceType']) : undefined,
-            ...Object.fromEntries(['entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5', 'tp1Hit', 'tp2Hit', 'tp3Hit', 'tp4Hit', 'tp5Hit'].map(key => [key, row[key]])), setupState: row['strategyId'] === 'ghost_rider' ? String(row['state']) : undefined, source: 'strategy', detail: this.describeStrategyResult(row), signalMetrics: this.strategySignalMetrics(row), signalBadges: this.strategySignalBadges(row), sector: this.classifySector(String(row['symbol'] ?? ''), String(row['name'] ?? '')) };
+            ...Object.fromEntries(['entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5', 'tp1Hit', 'tp2Hit', 'tp3Hit', 'tp4Hit', 'tp5Hit'].map(key => [key, row[key]])), setupState: ['ghost_rider','suryavanshi'].includes(String(row['strategyId'])) ? String(row['state']) : undefined, source: 'strategy', detail: this.describeStrategyResult(row), signalMetrics: this.strategySignalMetrics(row), signalBadges: this.strategySignalBadges(row), sector: this.classifySector(String(row['symbol'] ?? ''), String(row['name'] ?? '')) };
         });
         this.loading = false;
       }, error: (error: HttpErrorResponse) => this.fail(error)
@@ -249,6 +256,8 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private describeStrategyResult(row: Record<string, unknown>): string {
+    if(row['strategyId']==='golden_death_cross')return `${String(row['crossType']).replaceAll('_',' ')} - ${this.signalDate(row['crossTime'])} - ${row['barsSinceCross']} bars ago - ${row['requireConfirmation']?'Six-filter confirmation':'Classic crossover'}`;
+    if(row['strategyId']==='suryavanshi')return `Suryavanshi ${row['status']} - ${row['state']} - Entry ${this.ghostPrice(row['entry'])} - Stop ${this.ghostPrice(row['stopLoss'])} - Target ${this.ghostPrice(row['tp1'])}`;
     if (row['strategyId'] === 'ghost_rider') return `Ghost rider v.2 ${row['signal']} · ${row['state']} · Signal ${this.signalDate(row['signalAt'])} · Entry ${this.ghostPrice(row['entry'])} · Stop ${this.ghostPrice(row['stopLoss'])} · TP1–TP5: ${[1,2,3,4,5].map(n => this.ghostPrice(row['tp'+n])).join(', ')}`;
     if (row['divergenceType']) return `${String(row['divergenceType']).replaceAll('_', ' ')} · Price ${this.formatPrice(Number(row['pivot1Price']))} → ${this.formatPrice(Number(row['pivot2Price']))} · RSI ${Number(row['pivot1Rsi']).toFixed(2)} → ${Number(row['pivot2Rsi']).toFixed(2)} · Confirmed ${this.signalDate(row['detectedAt'])} · As of ${this.signalDate(row['asOf'])}`;
     const close = Number(row['close'] ?? 0);
@@ -284,6 +293,8 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private strategySignalMetrics(row: Record<string, unknown>): SignalMetric[] {
+    if(row['strategyId']==='golden_death_cross'&&!row['requireConfirmation'])return [{label:`SMA ${row['smaMediumPeriod']}`,value:Number(row['sma50']),compareToClose:false},{label:`SMA ${row['smaLongPeriod']}`,value:Number(row['sma200']),compareToClose:false}];
+    if(row['strategyId']==='suryavanshi')return ['entry','stopLoss','tp1'].filter(k=>row[k]!=null).map(k=>({label:k,value:Number(row[k]),compareToClose:false}));
     if(row['strategyId']==='sutradhar')return ['Flow','Crest','Crown','Value','Base','Origin','Mid','O'].filter(key=>row[key]!=null&&Number.isFinite(Number(row[key]))).map(key=>({label:key,value:Number(row[key]),compareToClose:false}));
     if (row['strategyId'] === 'ghost_rider') return ['entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5'].filter(key=>row[key]!=null&&Number.isFinite(Number(row[key]))).map(key => ({ label: key === 'stopLoss' ? 'Stop loss' : key.toUpperCase(), value: Number(row[key]), compareToClose: false }));
     const fast = Number(row['emaFastPeriod'] ?? 9), slow = Number(row['emaSlowPeriod'] ?? 20);
@@ -300,6 +311,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private strategySignalBadges(row: Record<string, unknown>): SignalBadge[] {
+    if(row['strategyId']==='suryavanshi')return [{label:`${row['state']} - Signal ${this.signalDate(row['signalAt'])}`},{label:`Winning ${row['winningTrades']} / Losing ${row['losingTrades']}`}];
     if(row['strategyId']==='sutradhar')return [{label:`Daily-open reference levels - ${this.signalDate(row['asOf'])}`},{label:'No entry, stop, target or holding rule in source script'}];
     if (row['strategyId'] === 'ghost_rider') return [{ label: `${row['state']} · Signal ${this.signalDate(row['signalAt'])} · ${row['ageBars']} bars ago` }, { label: `As of ${this.signalDate(row['asOf'])}` }, { label: row['atrAtSignal']==null ? 'ATR warming up at signal' : `Signal ATR ${Number(row['atrAtSignal']).toFixed(2)}` },{label:`${row['bias']} · Pullers ${row['bullPct']}% · Draggers ${row['bearPct']}%`}, ...(row['stopTouched'] ? [{ label: 'Stop touched; script retains setup', tone: 'negative' as const }] : []), ...[1,2,3,4,5].filter(n => row['tp'+n+'Hit']).map(n => ({ label: `TP${n} touched`, tone: 'positive' as const }))];
     if (row['divergenceType']) {
@@ -339,7 +351,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
     const stateTone: SignalBadge['tone'] = rawState.includes('WEAKENED') ? 'negative' : rawState === 'CONFIRMED' || rawState === 'CONFIRMED_ACTIVE' ? 'positive' : 'neutral';
     const badges: SignalBadge[] = [
       { label: cross, tone: row['crossType'] === 'GOLDEN_CROSS' ? 'positive' : 'negative' },
-      { label: `${Number(row['confirmationCount'] ?? 0)}/6 confirmations`, tone: Number(row['confirmationCount'] ?? 0) === 6 ? 'positive' : 'neutral' },
+      ...(row['requireConfirmation'] ? [{ label: `${Number(row['confirmationCount'] ?? 0)}/6 confirmations`, tone: Number(row['confirmationCount'] ?? 0) === 6 ? 'positive' as const : 'neutral' as const }] : [{label:'Classic crossover',tone:'neutral' as const}]),
       { label: state, tone: stateTone },
     ];
     for (const [label, passed] of Object.entries((row['confirmationChecks'] ?? {}) as Record<string, unknown>)) {
@@ -440,10 +452,12 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
     const item = this.savedScreeners.find((saved) => saved.name === name);
     if (!item) return;
     this.scanSubscription?.unsubscribe(); this.loading = false; this.clearRightFilters();
-    this.selectedSaved = name; this.selectStrategy(item.strategyId); this.timeframe = ['ghost_rider','rsi_divergence'].includes(item.strategyId) && !['1d','1h','15m','5m'].includes(item.timeframe) ? '1d' : item.timeframe;
+    this.selectedSaved = name; this.selectStrategy(item.strategyId); this.timeframe = ['ghost_rider','rsi_divergence','golden_death_cross'].includes(item.strategyId) && !['1d','1h','15m','5m'].includes(item.timeframe) ? '1d' : item.timeframe;
+    if(item.strategyId==='suryavanshi'&&!['1d','1h','15m','5m'].includes(this.timeframe))this.timeframe='15m';
     if(item.strategyId==='sutradhar'&&!['1h','15m','5m'].includes(this.timeframe))this.timeframe='15m';
-    this.strategyParams = Object.fromEntries((this.activeStrategy?.parameters ?? []).filter(p=>typeof p.default==='number'||typeof p.default==='boolean').map(p=>{
+    this.strategyParams = Object.fromEntries((this.activeStrategy?.parameters ?? []).filter(p=>['number','boolean','string'].includes(typeof p.default)).map(p=>{
       const saved=item.strategyParams?.[p.name];
+      if(p.type==='str')return [p.name,typeof saved==='string'&&p.options?.includes(saved)?saved:p.default as string];
       if(p.type==='bool')return [p.name,typeof saved==='boolean'?saved:p.default as boolean];
       return [p.name,typeof saved==='number' && Number.isFinite(saved) && (p.min_value==null || saved>=p.min_value) && (p.max_value==null || saved<=p.max_value) ? saved : p.default as number];
     }));

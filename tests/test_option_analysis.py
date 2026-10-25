@@ -57,7 +57,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_all_strategies_evaluate_real_intraday_frame(self):
         results = analysis.evaluate(candles(400), {'instrument_key': CONTRACT, 'trading_symbol': 'NIFTY CE', 'exchange': 'NSE'}, 15)
-        self.assertEqual(len(results), 7)
+        self.assertEqual(len(results), 8)
         self.assertEqual(next(r for r in results if r['id']=='sutradhar')['status'],'NOT_LOADED')
         self.assertFalse(any(r['status'] in {'UNAVAILABLE', 'INSUFFICIENT_HISTORY'} for r in results), results)
         ghost = next(r for r in results if r['id'] == 'ghost_rider')
@@ -120,7 +120,7 @@ class AnalysisApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first, second)
         self.assertEqual(loader.await_count, 2)
         self.assertEqual(first['underlying']['trend'], 'UNAVAILABLE')
-        self.assertEqual(len(first['strategies']), 7)
+        self.assertEqual(len(first['strategies']), 8)
         self.assertEqual(first['contract']['key'], CONTRACT)
 
     def test_route_validates_timeframe_auth_and_query(self):

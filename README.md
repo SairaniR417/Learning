@@ -68,6 +68,21 @@ from `frontend`, `npm run test:option-chain` and `npm run build`.
 
 ## Selected option analysis
 
+The **Scanner** navigation item combines stock charts and option chains. Select
+**F&O stocks**, choose a stock, then use **Stock chart / Options** to switch views
+for the same underlying. Stock charts offer 1m, 5m, 15m, 30m, 1h and daily candles
+with the shared strategy selector, settings, price/RSI panes and fullscreen view.
+Indices and commodities retain their existing option-chain and CE/PE analysis.
+The market-wide screening grid is labelled **Stock Screener**.
+
+Stock workspace analysis uses `/api/stocks/analysis`, reading DB history and
+fetching live candles for the selected stock only. Strategies use up to 1,000
+completed bars; Ghost Rider can include the developing bar, and RSI follows its
+Wait for close setting. Offline daily analysis remains available. Switching
+stock/options views destroys the inactive component and cancels its browser
+polling and requests. Validation includes `tests.test_stock_analysis`, frontend
+lifecycle tests, and the mocked desktop/mobile `option_analysis_browser_smoke.py`.
+
 Choose **Analyze CE** or **Analyze PE** at a strike to replace the chain with
 Option Analysis. The backend resolves the exact underlying/expiry/strike/side
 against listed provider contracts, including MCX, before requesting any history.
@@ -171,7 +186,7 @@ parity is not asserted without matching exported input candles from TradingView.
 
 4. Open `http://localhost:4200` and connect Upstox to load F&O stock quotes, then search the saved stock list.
 
-Stock Details reads daily charts from PostgreSQL. The Overview chart and live
+Stock Details combines PostgreSQL history with selected-stock Upstox candles. The Overview chart and live
 quotes use Upstox. Provider credentials stay on the Python server. The application
 is intended for a single local user.
 
@@ -220,11 +235,76 @@ Scans load a bounded recent window per instrument, sized for the selected strate
 PostgreSQL uses an indexed per-instrument query; SQLite uses a ranked query for
 local testing. Indicator values may differ from calculations seeded with all history.
 
-Sync is manually triggered and runs in the API process. Follow a returned job ID
-with `GET /api/sync/jobs/{job_id}`. There is no recurring scheduler, durable worker
-queue, or distributed lock. Older gaps outside the correction overlap need separate
+API sync is manually triggered and runs in the API process. Follow a returned job ID
+with `GET /api/sync/jobs/{job_id}`. The Windows scheduled updater below runs separately;
+there is no durable API worker queue or distributed lock. Older gaps outside the correction overlap need separate
 reconciliation. Each timeframe is stored independently; daily candles do not
 populate intraday history automatically.
+
+## Selected-stock charts and automatic daily updates
+
+Restart the API to create `stock_chart_selections`, then refresh the frontend.
+Stock Details supports 1m, 5m, 15m, 30m, 1h and daily charts. Stored daily history
+loads immediately; `GET /api/stocks/chart?instrument_key=...&timeframe=1d` merges
+DB history with Upstox data for that stock only. Intraday charts use up to 28
+calendar days of 1-minute candles, aggregated from the NSE 09:15 IST session open.
+Developing bars are labelled and are excluded from persistent candle storage.
+Completed provider daily candles repair recent daily gaps. BHAV later reconciles
+official daily OHLCV. Daily history cannot reconstruct past minute candles.
+
+Charts refresh every minute while visible, cancel browser requests on stock/frame
+changes and tab hiding, and stop polling on exit. Shared backend work already in
+progress may finish and persist completed bars. Fetches are cached for 55 seconds
+across timeframe switches; historical responses for 15 minutes. Requests are paced
+and serialized per process. Stored data stays available without broker login.
+Use one backend worker for this local application.
+
+Install or update the local Windows task from the repository root:
+
+```powershell
+.\scripts\install_market_data_task.ps1
+```
+
+`TradersGita-MarketData` runs daily at 18:30 IST and repeats hourly for four hours,
+with up to three 30-minute retries on failure. It runs as the installing Windows
+user while logged in, starts missed runs when available, and prevents overlapping
+instances. The PC must be awake and connected. It does not install a cloud job.
+
+The standalone `scripts/update_market_data.py` downloads NSE PR archives directly,
+validates their trading dates, and applies the existing duplicate-safe BHAV importer
+for all saved F&O stocks. It catches up from the stalest stored daily date with a
+two-day correction overlap, bounded to one year (14 days for an empty DB). Weekends
+are skipped; 404 archives are reported as unavailable, not invented trading bars.
+Missing archives are retried by subsequent scheduled runs within the catch-up range.
+Other download/import failures return a failing exit status for Task Scheduler.
+Backups precede BHAV corrections; market-cap metadata never moves to an older date.
+
+Intraday catch-up is limited to stocks explicitly opened in Stock Details during
+the past 28 days. It needs a valid `UPSTOX_ACCESS_TOKEN` in `.env`; browser OAuth
+tokens are not available to the separate scheduled process. BHAV needs no broker
+token and still runs when one is absent. Provider rejection is recorded in the
+summary. Database connection details come from the existing `.env`.
+
+Latest run: `data/scheduled-update.json`; per-day details:
+`data/bhavcopy-import-YYYY-MM-DD.json`; downloaded archives: `data/archives/`.
+Run once manually with `.venv\Scripts\python.exe scripts\update_market_data.py`.
+If the summary reports damaged PostgreSQL pages, recover the database from a
+verified backup before retrying; the updater does not discard or replace damaged
+database storage pages.
+
+Recovery tooling: `scripts/recover_market_database.py` restores non-candle data
+and copies readable heap-page ranges into a separate database. It requires a
+physical preservation snapshot and a non-candle custom-format dump in the folder
+referenced by `data/backups/current-recovery.txt`. It reports unreadable pages
+and invalid OHLCV explicitly, checks personal-record counts and contents, and
+never switches the app automatically. `--resume` resumes a failed copy after
+checking its destination row count. `scripts/reconcile_recovered_history.py`
+rebuilds any deferred indexes and fills missing saved F&O daily CSV rows without
+overwriting recovered prices. Inspect the recovery report, validate the new DB,
+and take a healthy backup before changing `.env` and re-enabling the scheduler.
+Validation: `python -m unittest tests.test_stock_chart tests.test_scheduled_market_data
+tests.test_stock_details tests.test_candle_storage tests.test_market_cap` and the
+frontend Angular build. Provider reference: [Upstox intraday candles](https://upstox.com/developer/api-documentation/v3/get-intra-day-candle-data/).
 
 For a production deployment, add durable ingestion workers, authentication and
 rate limiting. The current configured database is already PostgreSQL.

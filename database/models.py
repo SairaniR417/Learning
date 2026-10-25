@@ -31,6 +31,12 @@ class Instrument(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     __table_args__ = (UniqueConstraint("exchange", "provider_instrument_key"),)
 
+class StockChartSelection(Base):
+    __tablename__ = 'stock_chart_selections'
+    instrument_id = Column(BIGINT_PK, ForeignKey('instruments.id'), primary_key=True)
+    last_viewed_at = Column(DateTime(timezone=True), nullable=False)
+
+
 class MarketCandle(Base):
     __tablename__ = "candles"
     id = Column(BIGINT_PK, primary_key=True, autoincrement=True)

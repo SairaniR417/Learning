@@ -8,14 +8,20 @@ const { Subject, Subscription } = require('rxjs');
 function setup() {
   const clock = new Subject();
   const calls = [];
-  const api = { analyzeOption: (...args) => { const stream = new Subject(); calls.push({ args, stream }); return stream; },
+  const api = { analyzeStockWorkspace: (...args) => { const stream = new Subject(); calls.push({ args, stream, workspace:true }); return stream; }, analyzeOption: (...args) => { const stream = new Subject(); calls.push({ args, stream }); return stream; },
     analyzeStockGhost: (...args) => { const stream = new Subject(); calls.push({ args, stream, stock:true }); return stream; },
     analyzeStockRsi: (...args) => { const stream = new Subject(); calls.push({ args, stream, rsi:true }); return stream; },
+    analyzeStockGolden: (...args) => { const stream = new Subject(); calls.push({ args, stream, golden:true }); return stream; },
+    analyzeStockSuryavanshi: (...args) => { const stream = new Subject(); calls.push({ args, stream, suryavanshi:true }); return stream; },
     analyzeStockSutradhar: (...args) => { const stream = new Subject(); calls.push({ args, stream, sutradhar:true }); return stream; } };
   const document = { hidden: false };
   const module = { exports: {} };
   const settingsModule = { exports: {} };
   const rsiModule = { exports: {} };
+  const suryavanshiModule = { exports: {} };
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync(__dirname + '/../src/app/option-market/suryavanshi.types.ts', 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, { module: suryavanshiModule, exports: suryavanshiModule.exports,require:()=>({}) });
+  const goldenModule={exports:{}};
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync(__dirname + '/../src/app/option-market/golden-cross.types.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module:goldenModule,exports:goldenModule.exports,require:()=>suryavanshiModule.exports});
   const sutradharModule = { exports: {} };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(__dirname + '/../src/app/option-market/sutradhar.types.ts', 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, { module: sutradharModule, exports: sutradharModule.exports,require:()=>({}) });
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(__dirname + '/../src/app/option-market/rsi.types.ts', 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, { module: rsiModule, exports: rsiModule.exports });
@@ -26,10 +32,12 @@ function setup() {
   vm.runInNewContext(js, { module, exports: module.exports, document,
     require: name => {
       if (name === '@angular/core') return { Component: () => x => x, Input: () => () => {}, Output: () => () => {}, ViewChild: () => () => {}, HostListener: () => () => {}, inject: () => api, EventEmitter: Emitter };
-      if (name === 'rxjs') return { Subscription, interval: ms => { assert.equal(ms, 60000); return clock; } };
+      if (name === 'rxjs') return { ...require('rxjs'), Subscription, interval: ms => { assert.equal(ms, 60000); return clock; } };
       if (name.includes('backend-url')) return { backendUrl: x => x };
       if (name.includes('ghost-rider.types')) return settingsModule.exports;
       if (name.includes('rsi.types')) return rsiModule.exports;
+      if (name.includes('suryavanshi.types')) return suryavanshiModule.exports;
+      if (name.includes('golden-cross.types')) return goldenModule.exports;
       if (name.includes('sutradhar.types')) return sutradharModule.exports;
       return {};
     }
@@ -121,4 +129,88 @@ test('Sutradhar stock chart retains selected periods and stops when destroyed',(
   const s=setup();Object.assign(s.component,{stockMode:true,stockStrategy:'sutradhar',stockTimeframe:'15m',initialSutradharInputs:{p1:10,p2:6,p3:4,use_ema:true}});
   s.component.ngOnChanges();assert.equal(s.calls[0].sutradhar,true);assert.equal(s.calls[0].args[2].p1,10);
   assert.equal(s.component.sutradharVisible,true);s.component.ngOnDestroy();assert.equal(s.calls[0].stream.observed,false);
+});
+
+test('combined workspace uses the selected stock endpoint and cancels frame requests', () => {
+  const s = setup();
+  Object.assign(s.component, {stockMode:true, stockWorkspace:true, underlyingKey:'NSE_EQ|INE002A01018', stockTimeframe:'1m'});
+  s.component.ngOnChanges();
+  assert.equal(s.calls[0].workspace,true);
+  assert.equal(s.component.interval,1);
+  s.component.changeStockTimeframe('30m');
+  assert.equal(s.calls[0].stream.observed,false);
+  assert.equal(s.calls[1].args[1],'30m');
+  assert.equal(s.component.interval,30);
+  s.component.ngOnDestroy();
+  assert.equal(s.calls[1].stream.observed,false);
+});
+
+test('combined workspace requests Sutradhar settings on selection and pauses hidden requests', () => {
+  const s = setup();
+  Object.assign(s.component,{stockMode:true,stockWorkspace:true,underlyingKey:'NSE_EQ|INE002A01018'});
+  s.component.ngOnChanges();
+  assert.equal(s.calls[0].args[4],undefined);
+  s.component.showStrategy('sutradhar');
+  assert.equal(s.calls[1].args[4].p1,14);
+  s.document.hidden=true; s.component.visibilityChanged();
+  assert.equal(s.calls[1].stream.observed,false);
+  s.clock.next(); assert.equal(s.calls.length,2);
+  s.component.ngOnDestroy();
+});
+
+
+test('Suryavanshi scanner chart retains inputs; style edits do not request data', () => {
+  const s=setup();s.component.stockMode=true;s.component.stockStrategy='suryavanshi';
+  s.component.initialSuryavanshiInputs={length:12,candle_type:'Body',rr_ratio:2,sl_type:'High/Low',show_sl:true};
+  s.component.ngOnChanges();
+  assert.equal(s.calls[0].suryavanshi,true);
+  assert.equal(s.calls[0].args[2].length,12);
+  assert.equal(s.calls[0].args[2].candle_type,'Body');
+  s.finish();
+  let settings=JSON.parse(JSON.stringify(s.component.suryavanshiSettings));settings.tables=false;
+  s.component.applySuryavanshiSettings(settings);assert.equal(s.calls.length,1);
+  settings=JSON.parse(JSON.stringify(settings));settings.inputs.rr_ratio=3;
+  s.component.applySuryavanshiSettings(settings);assert.equal(s.calls.length,2);
+  assert.equal(s.calls[1].args[2].rr_ratio,3);
+  s.component.ngOnDestroy();assert.equal(s.calls[1].stream.observed,false);
+});
+
+
+test('Golden Cross scanner and workspace retain periods and separate styles from inputs',()=>{
+  const s=setup();s.component.stockMode=true;s.component.stockStrategy='golden_death_cross';
+  s.component.initialGoldenInputs={...s.component.goldenSettings.inputs,sma_medium:20,sma_long:100};
+  s.component.ngOnChanges();assert.equal(s.calls[0].golden,true);assert.equal(s.calls[0].args[2].sma_medium,20);
+  s.finish();let settings=JSON.parse(JSON.stringify(s.component.goldenSettings));settings.labels=false;
+  s.component.applyGoldenSettings(settings);assert.equal(s.calls.length,1);
+  settings=JSON.parse(JSON.stringify(settings));settings.inputs.require_confirmation=true;
+  s.component.applyGoldenSettings(settings);assert.equal(s.calls.length,2);assert.equal(s.calls[1].args[2].require_confirmation,true);
+  s.component.ngOnDestroy();assert.equal(s.calls[1].stream.observed,false);
+});
+
+
+test('switching stock during the first load starts the new request immediately',()=>{
+  const s=setup();Object.assign(s.component,{stockMode:true,stockWorkspace:true,underlyingKey:'NSE_EQ|FIRST'});
+  s.component.ngOnChanges();assert.equal(s.component.loading,true);
+  s.component.underlyingKey='NSE_EQ|SECOND';s.component.ngOnChanges();
+  assert.equal(s.calls[0].stream.observed,false);assert.equal(s.calls.length,2);
+  assert.equal(s.calls[1].args[0],'NSE_EQ|SECOND');assert.equal(s.calls[1].stream.observed,true);
+  s.component.ngOnDestroy();
+});
+
+test('stored preview renders before live history; failure preserves preview and next selection works',()=>{
+  const s=setup();Object.assign(s.component,{stockMode:true,stockWorkspace:true});s.component.ngOnChanges();
+  assert.equal(s.calls[0].args[7],true);
+  const preview={storedPreview:true,candles:[{timestamp:'2026-10-23',close:100}],strategies:[{id:'ghost_rider',markers:[],levels:[]}]};
+  s.calls[0].stream.next(preview);assert.equal(s.component.data,preview);assert.equal(s.component.loading,true);
+  assert.equal(s.calls.length,1);s.calls[0].stream.complete();assert.equal(s.calls.length,2);assert.equal(s.calls[1].args[7],false);
+  s.calls[1].stream.error({status:502});assert.equal(s.component.data,preview);assert.equal(s.component.loading,false);assert.match(s.component.error,/Stored history/);
+  s.component.underlyingKey='NSE_EQ|NEXT';s.component.ngOnChanges();assert.equal(s.calls.length,3);assert.equal(s.calls[2].args[0],'NSE_EQ|NEXT');
+  s.component.ngOnDestroy();
+});
+
+test('preview failure falls through to live and changing stocks cancels that refresh',()=>{
+  const s=setup();Object.assign(s.component,{stockMode:true,stockWorkspace:true});s.component.ngOnChanges();
+  s.calls[0].stream.error({status:503});assert.equal(s.calls.length,2);assert.equal(s.calls[1].stream.observed,true);
+  s.component.underlyingKey='NSE_EQ|NEXT';s.component.ngOnChanges();assert.equal(s.calls[1].stream.observed,false);assert.equal(s.calls[2].stream.observed,true);
+  s.component.ngOnDestroy();
 });

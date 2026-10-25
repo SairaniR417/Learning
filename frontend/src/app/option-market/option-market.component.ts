@@ -3,13 +3,14 @@ import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inje
 import { Subscription } from 'rxjs';
 import { MarketApiService, OptionUnderlying } from '../market-api.service';
 import { OptionChainComponent } from '../stock-details/option-chain.component';
+import { OptionAnalysisComponent } from './option-analysis.component';
 
 @Component({
-  selector: 'app-option-market', standalone: true, imports: [CommonModule, OptionChainComponent],
+  selector: 'app-option-market', standalone: true, imports: [CommonModule, OptionChainComponent, OptionAnalysisComponent],
   template: `
     <section class="page-shell option-market">
-      <h1>Option chains</h1>
-      <p>Select an index, F&amp;O stock or commodity to load its chain. Updates every minute while this view is visible.</p>
+      <header class="market-toolbar">
+      <div class="market-title"><h1>Scanner</h1><small title="Updates every minute while this view is visible">Auto-refresh &middot; 1 min</small></div>
       <div class="selectors">
         <label>Market <select [value]="group" (change)="selectGroup($any($event.target).value)">
           <option>Indices</option><option>F&amp;O stocks</option><option>Commodities</option>
@@ -20,12 +21,17 @@ import { OptionChainComponent } from '../stock-details/option-chain.component';
           <div *ngIf="pickerOpen" class="picker-menu" role="dialog" aria-label="Choose underlying">
             <input #underlyingSearch type="search" [value]="search" (input)="search = $any($event.target).value" aria-label="Search underlyings" placeholder="Search symbol or name" />
             <div class="picker-options">
-              <button class="picker-option" type="button" *ngFor="let option of pickerOptions" (click)="chooseUnderlying(option.value); trigger.focus()" [attr.aria-pressed]="option.value === (group === 'Commodities' ? commodity : key)">{{ option.label }}</button>
+              <button class="picker-option" type="button" *ngFor="let option of pickerOptions; trackBy: trackOption" (click)="chooseUnderlying(option.value); trigger.focus()" [attr.aria-pressed]="option.value === (group === 'Commodities' ? commodity : key)">{{ option.label }}</button>
               <p *ngIf="!pickerOptions.length" role="status">No matching underlyings.</p>
             </div>
           </div>
         </div>
       </div>
+      <div class="view-switch" *ngIf="group === 'F&O stocks'" role="group" aria-label="Stock or options view">
+        <button type="button" (click)="view = 'stock'" [attr.aria-pressed]="view === 'stock'">Stock chart</button>
+        <button type="button" (click)="view = 'options'" [attr.aria-pressed]="view === 'options'">Options</button>
+      </div>
+      </header>
       <div *ngIf="group === 'Commodities' && commodity" class="futures">
         <h2>{{ commodity }} futures</h2>
         <p>Select a current futures contract to load its option chain.</p>
@@ -34,14 +40,18 @@ import { OptionChainComponent } from '../stock-details/option-chain.component';
       <p *ngIf="loading" role="status">Loading available contracts…</p>
       <p *ngIf="error" role="alert">{{ error }} <button (click)="selectGroup(group)">Retry</button></p>
       <p *ngIf="!loading && !error && !visible.length">No current option underlyings available.</p>
-      <app-option-chain *ngIf="key" [stockKey]="key" />
+      <p class="selection-hint" *ngIf="!key && !loading && !error && visible.length">{{ group === 'F&O stocks' ? 'Choose a stock above to view its chart, strategies or options.' : 'Choose an underlying above to load its option chain.' }}</p>
+      <app-option-analysis *ngIf="key && showStockChart" [stockMode]="true" [stockWorkspace]="true" [underlyingKey]="key" />
+      <app-option-chain *ngIf="key && !showStockChart" [stockKey]="key" />
     </section>`,
-  styles: [`.option-market{padding:24px}.selectors{display:flex;gap:20px;flex-wrap:wrap;margin:24px 0}label{display:grid;gap:8px}select,input,button{font:inherit;max-width:100%;padding:10px;background:#141f24;color:inherit;border:1px solid #35454c;border-radius:6px}.futures{margin-bottom:24px}.futures h2{font-size:18px}.contract-list{display:flex;gap:10px;flex-wrap:wrap}button{cursor:pointer}button.selected{border-color:#69d9ad;background:#203b30}select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid #69d9ad;outline-offset:2px}.underlying-picker{position:relative;display:grid;gap:8px;width:420px;max-width:100%}.picker-trigger{display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;width:100%;min-height:48px}.picker-menu{position:absolute;top:100%;left:0;right:0;margin-top:6px;padding:10px;background:#141f24;border:1px solid #35454c;border-radius:6px;z-index:10;box-shadow:0 12px 30px #0008}.picker-menu input{box-sizing:border-box;width:100%;margin-bottom:8px}.picker-options{max-height:280px;overflow:auto}.picker-option{display:block;width:100%;text-align:left;border:0;background:transparent}.picker-option:hover,.picker-option[aria-pressed=true]{background:#203b30}.picker-options p{padding:10px}`]
+  styleUrl: './option-market.component.css'
 })
 export class OptionMarketComponent implements OnInit, OnDestroy {
   private api = inject(MarketApiService);
   private request?: Subscription;
-  group = 'Indices'; key = ''; loading = false; error = '';
+  group = 'F&O stocks'; key = ''; loading = false; error = '';
+  view: 'stock' | 'options' = 'stock';
+  get showStockChart(): boolean { return this.group === 'F&O stocks' && this.view === 'stock'; }
   search = ''; commodity = '';
   pickerOpen = false;
   private host = inject(ElementRef);
@@ -55,6 +65,7 @@ export class OptionMarketComponent implements OnInit, OnDestroy {
       this.filtered.map(item => ({ value: item.key, label: `${item.name} (${item.symbol})` }));
   }
   togglePicker(): void { this.pickerOpen = !this.pickerOpen; this.search = ''; }
+  trackOption(_index: number, option: {value:string}): string { return option.value; }
   closePicker(trigger: HTMLElement): void { this.pickerOpen = false; trigger.focus(); }
   chooseUnderlying(value: string): void {
     if (this.group === 'Commodities') this.selectCommodity(value); else this.key = value;

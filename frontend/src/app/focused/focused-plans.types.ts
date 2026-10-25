@@ -1,0 +1,7 @@
+export type FocusMode='intraday'|'swing';
+export interface PlanEvidence {id:string;name:string;direction:string|null;state:string;reason:string;asOf:string|null;}
+export interface TradeLevels {entry:number;entryMin:number;entryMax:number;stopLoss:number;target1:number;target2:number;riskPerUnit:number;riskPct:number;rewardRisk:number;basis:string;}
+export interface FocusPlan {instrumentKey:string;symbol:string;name:string;mode:FocusMode;timeframe:string;direction:'BUY'|'SELL';action:'BUY'|'SELL'|'WAIT';score:number;maxScore:number;asOf:string;validUntil:string;whatHappening:string;decision:string;qualified:boolean;blockers:string[];waitReasons:string[];plan:TradeLevels|null;holding:string;exitRule:string;optionSide:string;evidence:PlanEvidence[];close:number;}
+export interface FocusPlans {mode:FocusMode;timeframe:string;plans:FocusPlan[];coverage:Record<string,number>;strategies:string[];scannedAt:string;methodology:string;policy:string;}
+export interface FocusPlansJob {id:string;status:'running'|'complete'|'failed';stage:string;result:FocusPlans|null;error:string;}
+export interface OptionPlan {action:string;reason:string;plan:TradeLevels|null;contract?:{key:string;symbol:string;expiry:string;strike:number;side:string;lotSize:number};quote?:{bid:number;ask:number;spreadPct:number;asOf:string};holding?:string;exitRule?:string;asOf?:string;validUntil?:string;estimatedPremiumPerLot?:number;plannedRiskPerLot?:number;maximumPremiumLossPerLot?:number;note?:string;evidence?:PlanEvidence[];}

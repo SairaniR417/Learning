@@ -1,7 +1,7 @@
-<app-option-analysis *ngIf="ghostStock as stock" [stockMode]="true" [underlyingKey]="stock.instrumentKey" [stockTimeframe]="timeframe" [stockStrategy]="selectedStrategy" [initialRsiPeriod]="numericParam('period',14)" [initialAtrMultiplier]="numericParam('atr_multiplier',1.5)" [initialSutradharInputs]="sutradharInputs" (back)="ghostStock = undefined" />
+<app-option-analysis *ngIf="ghostStock as stock" [stockMode]="true" [underlyingKey]="stock.instrumentKey" [stockTimeframe]="timeframe" [stockStrategy]="selectedStrategy" [initialRsiPeriod]="numericParam('period',14)" [initialAtrMultiplier]="numericParam('atr_multiplier',1.5)" [initialSutradharInputs]="sutradharInputs" [initialSuryavanshiInputs]="suryavanshiInputs" [initialGoldenInputs]="goldenInputs" (back)="ghostStock = undefined" />
 <section class="scanner-page" [hidden]="!!ghostStock" aria-labelledby="scanner-title">
   <header class="scanner-topbar">
-    <div class="scanner-brand"><span class="scanner-brand-mark">TG</span><span><strong>Market Scanner</strong><small>NSE · Saved F&O stocks</small></span></div>
+    <div class="scanner-brand"><span class="scanner-brand-mark">TG</span><span><strong>Stock Screener</strong><small>NSE · Saved F&O stocks</small></span></div>
     <div class="saved-controls">
       <select aria-label="Saved screeners" [value]="selectedSaved" (change)="loadScreener($any($event.target).value)"><option value="">My Screeners</option><option *ngFor="let saved of savedScreeners" [value]="saved.name">{{ saved.name }}</option></select>
       <button type="button" class="quiet-button" (click)="deleteScreener()" [disabled]="!selectedSaved">Delete</button>
@@ -37,11 +37,11 @@
 
       <p class="strategy-description" *ngIf="selectedStrategy === 'rsi_divergence'">Supplied Pine RSI · Regular Bull/Bear divergences. RSI pivots confirm five bars later. Click a result for the dark RSI chart and settings.</p>
       <div class="strategy-params" *ngIf="!isMarketScreener && activeStrategy">
-        <label *ngFor="let param of activeStrategy.parameters"><span>{{ param.display_name }}</span><input *ngIf="param.type !== 'bool'" type="number" [min]="param.min_value ?? null" [max]="param.max_value ?? null" [value]="strategyParams[param.name]" (input)="updateStrategyParam(param.name, $any($event.target).value)"><input *ngIf="param.type === 'bool'" type="checkbox" [checked]="strategyParams[param.name]" (change)="updateStrategyParam(param.name,$any($event.target).checked)"></label>
+        <ng-container *ngFor="let param of activeStrategy.parameters"><label *ngIf="selectedStrategy!=='golden_death_cross' || param.name==='require_confirmation' || ['sma_medium','sma_long','max_confirmation_bars'].includes(param.name) || strategyParams['require_confirmation']===true"><span>{{ param.display_name }}</span><input *ngIf="param.type !== 'bool' && param.type !== 'str'" type="number" [min]="param.min_value ?? null" [max]="param.max_value ?? null" [value]="strategyParams[param.name]" (input)="updateStrategyParam(param.name, $any($event.target).value)"><select *ngIf="param.type === 'str'" [value]="strategyParams[param.name]" (change)="updateStrategyParam(param.name,$any($event.target).value)"><option *ngFor="let opt of param.options" [value]="opt">{{opt}}</option></select><input *ngIf="param.type === 'bool'" type="checkbox" [checked]="strategyParams[param.name]" (change)="updateStrategyParam(param.name,$any($event.target).checked)"></label></ng-container>
       </div>
       <label class="control-label timeframe-label">TIMEFRAME</label>
       <select class="wide-control" [value]="timeframe" (change)="timeframe = $any($event.target).value">
-        <option *ngIf="selectedStrategy!=='sutradhar'" value="1d">Daily</option><option *ngIf="!['ghost_rider','rsi_divergence','sutradhar'].includes(selectedStrategy)" value="1w">Weekly</option><option *ngIf="!['ghost_rider','rsi_divergence','sutradhar'].includes(selectedStrategy)" value="1M">Monthly</option><option value="1h">1 hour</option><option value="15m">15 minutes</option><option *ngIf="['ghost_rider','rsi_divergence','sutradhar'].includes(selectedStrategy)" value="5m">5 minutes</option>
+        <option *ngIf="selectedStrategy!=='sutradhar'" value="1d">Daily</option><option *ngIf="!['ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross'].includes(selectedStrategy)" value="1w">Weekly</option><option *ngIf="!['ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross'].includes(selectedStrategy)" value="1M">Monthly</option><option value="1h">1 hour</option><option value="15m">15 minutes</option><option *ngIf="['ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross'].includes(selectedStrategy)" value="5m">5 minutes</option>
       </select>
       <p class="strategy-description" *ngIf="!isMarketScreener">{{ activeStrategy?.min_candles }} candles minimum. Results use locally stored history.</p>
       <p class="strategy-description" *ngIf="selectedStrategy === 'ghost_rider'">Same Pine v2 engine as Option Analysis. Click a result for the dark chart, ribbon, dashboard and targets. Intraday scans require stored candles; 5m RSI stays unavailable if its history is missing.</p>
@@ -62,7 +62,7 @@
 
     <main class="results-main">
       <header class="results-toolbar">
-        <div><div class="results-title-row"><h1>{{ selectedSector !== 'All sectors' ? selectedSector : (isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Market Scanner') }}</h1><span class="live-tag"><i></i>{{ isMarketScreener ? 'DAILY SCREENER' : 'STRATEGY SCAN' }}</span></div><p>{{ isMarketScreener ? 'Apply factors to the saved F&O stock universe.' : activeStrategy?.description }}</p></div>
+        <div><div class="results-title-row"><h1>{{ selectedSector !== 'All sectors' ? selectedSector : (isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Stock Screener') }}</h1><span class="live-tag"><i></i>{{ isMarketScreener ? 'DAILY SCREENER' : 'STRATEGY SCAN' }}</span></div><p>{{ isMarketScreener ? 'Apply factors to the saved F&O stock universe.' : activeStrategy?.description }}</p></div>
         <button class="run-scan" type="button" [disabled]="loading || loadingStrategies" (click)="scan()">{{ loading ? 'Scanning...' : 'Scan F&O Stocks' }}</button>
       </header>
 

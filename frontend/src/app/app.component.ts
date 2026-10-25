@@ -1,4 +1,5 @@
 import { backendUrl } from './backend-url';
+import { loadPageOrder, savePageOrder } from './navigation-order';
 import { CommonModule } from '@angular/common';
 import { OptionMarketComponent } from './option-market/option-market.component';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
@@ -74,7 +75,36 @@ export class AppComponent implements OnInit, OnDestroy {
   heatGainMax = 0;
   heatLossMax = 0;
   opportunities: Opportunity[] = [];
-  pages = ['Overview', 'Market Scanner', 'Focused', 'F&O Stocks', 'Stock Details', 'Option Chains', 'Watchlist', 'Trade Journal'];
+  pages = loadPageOrder();
+  draggedTab: string | null = null;
+  tabDropTarget: string | null = null;
+  pageLabel(item: string): string { return item === 'Option Chains' ? 'Scanner' : item === 'Market Scanner' ? 'Stock Screener' : item; }
+  trackPage(_index: number, item: string): string { return item; }
+  moveTab(item: string, destination: number): void {
+    const from = this.pages.indexOf(item);
+    if (from < 0 || destination < 0 || destination >= this.pages.length || from === destination) return;
+    const order = [...this.pages]; order.splice(from, 1); order.splice(destination, 0, item); this.pages = order;
+    savePageOrder(order);
+  }
+  startTabDrag(event: DragEvent, item: string): void {
+    this.draggedTab = item;
+    if (event.dataTransfer) { event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', item); }
+  }
+  overTab(event: DragEvent, item: string): void {
+    if (!this.draggedTab) return;
+    event.preventDefault(); this.tabDropTarget = item;
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  }
+  dropTab(event: DragEvent, item: string): void {
+    if (!this.draggedTab) return;
+    event.preventDefault(); this.moveTab(this.draggedTab, this.pages.indexOf(item)); this.endTabDrag();
+  }
+  endTabDrag(): void { this.draggedTab = null; this.tabDropTarget = null; }
+  tabKeydown(event: KeyboardEvent, item: string): void {
+    if (event.altKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+      event.preventDefault(); this.moveTab(item, this.pages.indexOf(item) + (event.key === 'ArrowLeft' ? -1 : 1));
+    }
+  }
 
   ngOnInit(): void {
     this.statusSubscription = timer(0, 15000).subscribe(() => {

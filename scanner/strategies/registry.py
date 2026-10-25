@@ -1,3 +1,4 @@
+from scanner.strategies.suryavanshi import SuryavanshiStrategy
 """Strategy Registry and Execution Orchestrator with Enterprise Result Caching."""
 from scanner.universe import universe_version
 
@@ -37,6 +38,7 @@ class StrategyRegistry:
         self.register(RsiDivergenceStrategy())
         self.register(GhostRiderStrategy())
         self.register(SutradharStrategy())
+        self.register(SuryavanshiStrategy())
 
     def register(self, strategy: BaseStrategy):
         """Register a new strategy instance."""
@@ -77,6 +79,10 @@ class StrategyRegistry:
             raise ValueError('RSI Divergence supports stored daily, 1h, 15m and 5m candles.')
         if strategy_id == 'ghost_rider' and timeframe not in {'1d','1h','15m','5m'}:
             raise ValueError('Ghost Rider supports stored daily, 1h, 15m and 5m candles.')
+        if strategy_id == 'golden_death_cross' and timeframe not in {'1d','1h','15m','5m'}:
+            raise ValueError('Golden / Death Cross supports stored daily, 1h, 15m and 5m candles.')
+        if strategy_id == 'suryavanshi' and timeframe not in {'1d','1h','15m','5m'}:
+            raise ValueError('Suryavanshi supports stored daily, 1h, 15m and 5m candles.')
         if strategy_id == 'sutradhar' and timeframe not in {'1h','15m','5m'}:
             raise ValueError('Sutradhar: Intraday charts only (stored 1h, 15m or 5m).')
 
@@ -89,6 +95,9 @@ class StrategyRegistry:
 
         for parameter in strategy.metadata.parameters:
             value = resolved_params[parameter.name]
+            if parameter.type=='str':
+                if not isinstance(value,str) or (parameter.options and value not in parameter.options): raise ValueError(f'Invalid option: {parameter.name}')
+                continue
             if parameter.type=='bool':
                 if type(value) is not bool: raise ValueError(f'Expected boolean: {parameter.name}')
                 continue
@@ -100,8 +109,12 @@ class StrategyRegistry:
                 raise ValueError(f"Parameter outside allowed range: {parameter.name}")
         if set(resolved_params) - {p.name for p in strategy.metadata.parameters}:
             raise ValueError("Unknown strategy parameter")
+        if strategy_id == 'golden_death_cross':
+            from services.golden_cross import resolve
+            resolve(resolved_params)
         revision = await get_candle_revision(timeframe)
         cache_key = self._generate_cache_key(strategy_id, timeframe, resolved_params) + f":v{revision}"
+        if strategy_id == 'golden_death_cross': cache_key += ':shared-golden-v2'
         if strategy_id == 'rsi_divergence': cache_key += ':pine-rsi-v1'
         if strategy_id == 'sutradhar':
             cache_key += f":sutradhar-v1:daily-v{await get_candle_revision('1d')}"

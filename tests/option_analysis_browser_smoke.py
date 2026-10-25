@@ -16,8 +16,10 @@ from services.ghost_scanner import scan_row
 from services.rsi_overlay import calculate as calculate_rsi, strategy_card as rsi_card
 from scanner.strategies.rsi_divergence import RsiDivergenceStrategy
 from scanner.strategies import strategy_registry
-from services import sutradhar
+from services import sutradhar, suryavanshi, golden_cross
 from scanner.strategies.sutradhar import SutradharStrategy
+from scanner.strategies.suryavanshi import SuryavanshiStrategy
+from scanner.strategies.golden_death_cross import GoldenDeathCrossStrategy
 
 import httpx
 import websockets
@@ -38,6 +40,7 @@ async def main():
                       levels=[dict(label='Stop', price=95)], scenario='Example strategy evidence.', signalAt=candles[-10]['timestamp'])
                   for name, label in [('ghost_rider', 'Ghost Rider'), ('rsi_divergence', 'RSI Divergence'), ('ema_alignment', 'EMA Alignment'), ('golden_death_cross', 'Golden Cross'), ('multi_ma_bullish', 'Multi MA'), ('rsi_reversal', 'RSI Reversal')]]
     strategies.append(sutradhar.unloaded_card(5))
+    strategies.append(suryavanshi.strategy_card(suryavanshi.calculate(candles),len(candles)))
     key = 'NSE_INDEX|Nifty 50'
     leg = dict(ltp=100, oi=1000, volume=500, bid_price=99, ask_price=101, iv=20, delta=.5, gamma=.01, theta=-1, vega=2)
     errors, pending, requests = [], {}, []
@@ -64,7 +67,7 @@ async def main():
             elif path == '/api/market/snapshot':
                 result = dict(market='equities', name='F&O stocks', assets=[], chartKey='', chartSymbol='', receivedAt=1)
             elif path == '/api/options/underlyings':
-                result = dict(underlyings=[dict(key=key, name='Nifty 50', symbol='NIFTY', group='Indices')])
+                result = dict(underlyings=[dict(key=key, name='Nifty 50', symbol='NIFTY', group='Indices'),dict(key='NSE_EQ|INE002A01018',name='Reliance Industries',symbol='RELIANCE',group='F&O stocks'),dict(key='NSE_EQ|INE009A01021',name='Infosys',symbol='INFY',group='F&O stocks')])
             elif path == '/api/stocks/option-expiries':
                 result = dict(expiries=[expiry])
             elif path == '/api/stocks/option-chain':
@@ -79,10 +82,15 @@ async def main():
                 rsi_scan=body.get('strategy_id')=='rsi_divergence'
                 row=(RsiDivergenceStrategy().run(__import__('polars').DataFrame(stock_rows),{'NSE_EQ|INE002A01018':dict(symbol='RELIANCE',name='Reliance Industries',exchange='NSE')},{'_timeframe':'5m','freshness':1000})[0] if rsi_scan else scan_row(stock_rows,stock_rows,dict(symbol='RELIANCE',name='Reliance Industries',exchange='NSE'),'5m',1.5))
                 result=dict(strategy_id='rsi_divergence' if rsi_scan else 'ghost_rider',strategy_name='RSI Divergence' if rsi_scan else 'Ghost rider v.2',timeframe='5m',total_scanned=1,total_matched=1,scanned_at=now.isoformat(),cached=False,results=[row])
+                if body.get('strategy_id')=='golden_death_cross':
+                    result.update(strategy_id='golden_death_cross',strategy_name='Golden Cross / Death Cross',timeframe=body['timeframe'],results=GoldenDeathCrossStrategy().run(__import__('polars').DataFrame(stock_rows),{'NSE_EQ|INE002A01018':dict(symbol='RELIANCE',name='Reliance Industries',exchange='NSE')},{**body.get('params',{}),'_timeframe':body['timeframe']}))
+                if body.get('strategy_id')=='suryavanshi':
+                    result.update(strategy_id='suryavanshi',strategy_name='Suryavanshi',timeframe=body['timeframe'],results=SuryavanshiStrategy().run(__import__('polars').DataFrame(stock_rows),{'NSE_EQ|INE002A01018':dict(symbol='RELIANCE',name='Reliance Industries',exchange='NSE')},{**body.get('params',{}),'_timeframe':body['timeframe']}))
                 if body.get('strategy_id')=='sutradhar':
                     result.update(strategy_id='sutradhar',strategy_name='Sutradhar',timeframe=body['timeframe'],results=SutradharStrategy().run(__import__('polars').DataFrame(stock_rows),{'NSE_EQ|INE002A01018':dict(symbol='RELIANCE',name='Reliance Industries',exchange='NSE')},{**body.get('params',{}),'_timeframe':body['timeframe'],'_daily_rows':{'NSE_EQ|INE002A01018':daily}}))
-            elif path in {'/api/options/analysis','/api/stocks/ghost-rider','/api/stocks/rsi-divergence','/api/stocks/sutradhar'}:
+            elif path in {'/api/stocks/analysis','/api/options/analysis','/api/stocks/ghost-rider','/api/stocks/rsi-divergence','/api/stocks/sutradhar','/api/stocks/suryavanshi','/api/stocks/golden-cross'}:
                 query = parse_qs(urlparse(event['request']['url']).query)
+                if path=='/api/stocks/analysis' and query.get('stored_only')!=['true']: await asyncio.sleep(.4)
                 ghost = calculate_ghost([dict(c,timestamp=datetime.fromisoformat(c['timestamp'])) for c in candles],
                     [dict(c,timestamp=datetime.fromisoformat(c['timestamp'])) for c in candles],
                     multiplier=float(query.get('atr_multiplier',['1.5'])[0]))
@@ -92,12 +100,29 @@ async def main():
                               warnings=[], ghostRider=ghost, historyMessage='300 completed candles.', asOf=now.isoformat(), receivedAt=now.isoformat())
                 rsi=calculate_rsi([dict(c,timestamp=datetime.fromisoformat(c['timestamp'])) for c in candles],json.loads(query.get('rsi_settings',['{}'])[0]))
                 rsi['interval']=int(query.get('interval',['5'])[0])
+                sury=suryavanshi.calculate(candles,suryavanshi.Config.resolve(json.loads(query.get('suryavanshi_settings',['{}'])[0])))
+                sury['candles']=candles
+                result['suryavanshi']=sury
+                result['strategies']=[suryavanshi.strategy_card(sury,len(candles)) if x['id']=='suryavanshi' else x for x in result['strategies']]
+                golden=golden_cross.calculate(candles,json.loads(query.get('golden_settings',['{}'])[0]))
+                golden['candles']=candles
+                result['goldenCross']=golden
+                result['strategies']=[golden_cross.strategy_card(golden,len(candles)) if x['id']=='golden_death_cross' else x for x in result['strategies']]
+                if path=='/api/stocks/golden-cross': result['strategies']=[golden_cross.strategy_card(golden,len(candles))]
                 result['rsiDivergence']=rsi
                 result['strategies']=[rsi_card(rsi,len(candles)) if x['id']=='rsi_divergence' else x for x in result['strategies']]
                 if 'sutradhar_settings' in query:
                     overlay=sutradhar.calculate([dict(c,timestamp=datetime.fromisoformat(c['timestamp'])) for c in candles],daily,settings=json.loads(query['sutradhar_settings'][0]))
                     result['sutradhar']=overlay
                     result['strategies']=[sutradhar.strategy_card(overlay,len(candles)) if x['id']=='sutradhar' else x for x in result['strategies']]
+                if path=='/api/stocks/analysis':
+                    result['contract'].update(key='NSE_EQ|INE002A01018',name='RELIANCE - Reliance Industries',underlyingKey='NSE_EQ|INE002A01018')
+                    if query.get('instrument_key')==['NSE_EQ|INE009A01021']: result['contract'].update(key='NSE_EQ|INE009A01021',name='INFY - Infosys',underlyingKey='NSE_EQ|INE009A01021')
+                    result['storedPreview']=query.get('stored_only')==['true']
+                    result['underlying'].update(description='Stock price relative to EMA 20.',supportsPremium=None)
+                if path=='/api/stocks/suryavanshi':
+                    result['contract']['name']='Reliance Industries'
+                    result['strategies']=[suryavanshi.strategy_card(result['suryavanshi'],len(candles))]
                 if path=='/api/stocks/sutradhar':
                     result['contract']['name']='Reliance Industries'
                     result['strategies']=[sutradhar.strategy_card(result['sutradhar'],len(candles))]
@@ -130,6 +155,10 @@ async def main():
             if response.get('exceptionDetails'):
                 raise AssertionError(response['exceptionDetails'])
             return response.get('result', {}).get('value')
+        async def pointer_click(selector):
+            bounds=await evaluate("(()=>{const e=document.querySelector("+json.dumps(selector)+");e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()")
+            await call('Input.dispatchMouseEvent',dict(type='mousePressed',button='left',clickCount=1,**bounds))
+            await call('Input.dispatchMouseEvent',dict(type='mouseReleased',button='left',clickCount=1,**bounds))
         async def until(expression):
             for _ in range(60):
                 if await evaluate(expression):
@@ -143,14 +172,112 @@ async def main():
         await call('Fetch.enable', dict(patterns=[dict(urlPattern='*/api/*')]))
         await call('Page.navigate', dict(url='http://127.0.0.1:4309'))
         await until("!!document.querySelector('.primary-nav')")
-        await evaluate("Array.from(document.querySelectorAll('.primary-nav button')).find(b=>b.textContent.trim()==='Option Chains').click()")
+        assert await evaluate("!document.querySelector('.arrange-tabs') && !document.querySelector('.tab-order-status')")
+        for _ in range(5):
+            await evaluate("Array.from(document.querySelectorAll('.primary-nav button')).find(b=>b.textContent.trim()==='Scanner').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',altKey:true,bubbles:true}))")
+        assert await evaluate("document.querySelector('.primary-nav button').textContent.trim()==='Scanner'")
+        assert await evaluate("document.querySelector('.primary-nav button[aria-current=page]').textContent.trim()==='Overview'")
+        await call('Page.reload',dict(ignoreCache=True))
+        await until("document.querySelector('.primary-nav button')?.textContent.trim()==='Scanner'")
+        await evaluate("document.querySelector('.primary-nav button').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',altKey:true,bubbles:true}))")
+        await evaluate("(()=>{const buttons=Array.from(document.querySelectorAll('.primary-nav button')),scanner=buttons.find(b=>b.textContent.trim()==='Scanner'),dataTransfer=new DataTransfer();scanner.dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer}));buttons[0].dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer}));buttons[0].dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer}));})()")
+        assert await evaluate("document.querySelector('.primary-nav button').textContent.trim()==='Scanner'")
+        for _ in range(5):
+            await evaluate("Array.from(document.querySelectorAll('.primary-nav button')).find(b=>b.textContent.trim()==='Scanner').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',altKey:true,bubbles:true}))")
+        assert await evaluate("document.querySelector('.primary-nav button').textContent.trim()==='Overview'")
+        await evaluate("Array.from(document.querySelectorAll('.primary-nav button')).find(b=>b.textContent.trim()==='Scanner').click()")
         await until("!!document.querySelector('.picker-trigger')")
+        await evaluate("document.querySelector('.picker-trigger').click()")
+        await until("!!document.querySelector('.picker-option')")
+        # Focusing a real option used to replace its DOM node before click.
+        await pointer_click('.picker-option')
+        await until("document.querySelector('.analysis-header')?.textContent.includes('RELIANCE')")
+        await pointer_click('.picker-trigger')
+        await pointer_click('.picker-option:nth-child(2)')
+        await until("document.querySelector('.analysis-header')?.textContent.includes('INFY')")
+        await pointer_click('.picker-trigger')
+        await pointer_click('.picker-option')
+        await until("document.querySelector('.analysis-header')?.textContent.includes('RELIANCE') && !document.querySelector('.analysis > [role=status]:not(.tab-order-status)')")
+
+        await until("document.querySelectorAll('.strategy-picker option').length === 8 && !!document.querySelector('.chart canvas')")
+        assert any('/api/stocks/analysis?' in r and 'instrument_key=NSE_EQ' in r for r in requests), requests
+        assert not any('/api/stocks/option-chain?' in r for r in requests), requests
+        assert await evaluate("document.querySelector('.market-toolbar').getBoundingClientRect().height < 100")
+        for frame in ['1m','30m']:
+            await evaluate("(()=>{const select=document.querySelector('.analysis-header select');select.value='"+frame+"';select.dispatchEvent(new Event('change',{bubbles:true}));})()")
+            await until("!document.querySelector('.analysis > [role=status]:not(.tab-order-status)') && !!document.querySelector('.chart canvas')")
+            assert any('/api/stocks/analysis?' in r and 'timeframe='+frame in r for r in requests), requests
+        await evaluate("(()=>{const select=document.querySelector('.strategy-picker select');select.value='rsi_divergence';select.dispatchEvent(new Event('change',{bubbles:true}));})()")
+        await until("!!document.querySelector('app-rsi-pane.shared-rsi') && Array.from(document.querySelectorAll('.chart:not([hidden]) canvas')).filter(c=>c.getBoundingClientRect().height>100).length>=4")
+        output=Path(__file__).resolve().parents[1]/'data/backups/scanner-workspace'
+        output.mkdir(parents=True,exist_ok=True)
+        picture=await call('Page.captureScreenshot',dict(format='png'))
+        (output/'stock-chart-desktop.png').write_bytes(base64.b64decode(picture['data']))
+        await call('Emulation.setDeviceMetricsOverride',dict(width=390,height=844,deviceScaleFactor=1,mobile=True))
+        await asyncio.sleep(.3)
+        assert await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), 'Mobile horizontal overflow'
+        picture=await call('Page.captureScreenshot',dict(format='png'))
+        (output/'stock-chart-mobile.png').write_bytes(base64.b64decode(picture['data']))
+        await call('Emulation.setDeviceMetricsOverride',dict(width=1440,height=900,deviceScaleFactor=1,mobile=False))
+        await evaluate("(()=>{const s=document.querySelector('.strategy-picker select');s.value='suryavanshi';s.dispatchEvent(new Event('change',{bubbles:true}));})()")
+        await until("!!document.querySelector('.suryavanshi-score')")
+        await evaluate("document.querySelector('[aria-label=\"Suryavanshi settings\"]').click()")
+        await until("!!document.querySelector('[role=dialog][aria-label=\"Suryavanshi settings\"]')")
+        assert await evaluate("document.querySelector('[role=dialog] input[type=number]').value==='20'")
+        await evaluate("(()=>{const d=document.querySelector('[role=dialog]'),i=d.querySelector('input[type=number]');i.value='2';i.dispatchEvent(new Event('input',{bubbles:true}));d.querySelector('.ok').click();})()")
+        await until("!document.querySelector('[role=dialog]') && !document.querySelector('.analysis > [role=status]:not(.tab-order-status)')")
+        assert any('suryavanshi_settings' in r and '%222%22' not in r for r in requests)
+        before=len(requests)
+        await evaluate("document.querySelector('[aria-label=\"Suryavanshi settings\"]').click()")
+        await evaluate("Array.from(document.querySelectorAll('[role=dialog] nav button')).find(b=>b.textContent==='Style').click()")
+        assert await evaluate("document.querySelectorAll('[role=dialog] input[type=color]').length===16")
+        await evaluate("(()=>{const d=document.querySelector('[role=dialog]');Array.from(d.querySelectorAll('label')).find(l=>l.textContent.trim()==='Tables').querySelector('input').click();d.querySelector('.ok').click();})()")
+        assert await evaluate("!document.querySelector('.suryavanshi-score')")
+        assert len(requests)==before, 'Style must not refetch history'
+        await evaluate("document.querySelector('[aria-label=\"Suryavanshi settings\"]').click()")
+        await evaluate("document.querySelector('[role=dialog] footer button').click();document.querySelector('[role=dialog] .ok').click()")
+        await until("!!document.querySelector('.suryavanshi-score') && !document.querySelector('.analysis > [role=status]:not(.tab-order-status)')")
+        picture=await call('Page.captureScreenshot',dict(format='png'))
+        (output/'suryavanshi-desktop.png').write_bytes(base64.b64decode(picture['data']))
+        await call('Emulation.setDeviceMetricsOverride',dict(width=390,height=844,deviceScaleFactor=1,mobile=True))
+        await evaluate("document.querySelector('[aria-label=\"Suryavanshi settings\"]').click()")
+        assert await evaluate("document.documentElement.scrollWidth<=innerWidth+1 && document.querySelector('[role=dialog]').getBoundingClientRect().right<=innerWidth")
+        picture=await call('Page.captureScreenshot',dict(format='png'))
+        (output/'suryavanshi-settings-mobile.png').write_bytes(base64.b64decode(picture['data']))
+        await evaluate("document.querySelector('[role=dialog] header button').click()")
+        await call('Emulation.setDeviceMetricsOverride',dict(width=1440,height=900,deviceScaleFactor=1,mobile=False))
+        await evaluate("(()=>{const s=document.querySelector('.strategy-picker select');s.value='golden_death_cross';s.dispatchEvent(new Event('change',{bubbles:true}));})()")
+        await until("!!document.querySelector('[aria-label=\"Golden / Death Cross settings\"]')")
+        assert await evaluate("document.querySelector('.strategies article').textContent.includes('Classic crossover')")
+        await evaluate("document.querySelector('[aria-label=\"Golden / Death Cross settings\"]').click()")
+        await until("!!document.querySelector('[role=dialog]')")
+        assert await evaluate("!document.querySelector('[role=dialog] input[type=checkbox]').checked && document.querySelectorAll('[role=dialog] input[type=number]').length===3")
+        await evaluate("(()=>{const d=document.querySelector('[role=dialog]');const i=d.querySelector('input[type=number]');i.value='20';i.dispatchEvent(new Event('input',{bubbles:true}));d.querySelector('.ok').click();})()")
+        await until("!document.querySelector('[role=dialog]') && !document.querySelector('.analysis > [role=status]')")
+        assert await evaluate("document.querySelector('.ghost-status').textContent.includes('20 / 200')")
+        before=len(requests)
+        await evaluate("document.querySelector('[aria-label=\"Golden / Death Cross settings\"]').click();Array.from(document.querySelectorAll('[role=dialog] nav button')).find(b=>b.textContent==='Style').click()")
+        await evaluate("document.querySelector('[role=dialog] input[type=color]').value='#ff0000';document.querySelector('[role=dialog] input[type=color]').dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('[role=dialog] .ok').click()")
+        assert len(requests)==before
+        picture=await call('Page.captureScreenshot',dict(format='png'))
+        (output/'golden-cross-desktop.png').write_bytes(base64.b64decode(picture['data']))
+        await call('Emulation.setDeviceMetricsOverride',dict(width=390,height=844,deviceScaleFactor=1,mobile=True))
+        await evaluate("document.querySelector('[aria-label=\"Golden / Death Cross settings\"]').click()")
+        assert await evaluate("document.documentElement.scrollWidth<=innerWidth+1 && document.querySelector('[role=dialog]').getBoundingClientRect().right<=innerWidth")
+        picture=await call('Page.captureScreenshot',dict(format='png'))
+        (output/'golden-cross-mobile.png').write_bytes(base64.b64decode(picture['data']))
+        await evaluate("document.querySelector('[role=dialog] header button').click()")
+        await call('Emulation.setDeviceMetricsOverride',dict(width=1440,height=900,deviceScaleFactor=1,mobile=False))
+        await evaluate("Array.from(document.querySelectorAll('.view-switch button')).find(b=>b.textContent.trim()==='Options').click()")
+        await until("!!document.querySelector('.leg-select')")
+        await evaluate("(()=>{const select=document.querySelector('.selectors > label select');select.value='Indices';select.dispatchEvent(new Event('change',{bubbles:true}));})()")
+        await until("!!document.querySelector('.picker-trigger') && !document.querySelector('app-option-analysis')")
         await evaluate("document.querySelector('.picker-trigger').click()")
         await until("!!document.querySelector('.picker-option')")
         await evaluate("document.querySelector('.picker-option').click()")
         await until("!!document.querySelector('.leg-select')")
         await evaluate("document.querySelector('.leg-select').click()")
-        await until("document.querySelectorAll('.strategy-picker option').length === 7 && document.querySelectorAll('.strategies article').length === 1")
+        await until("document.querySelectorAll('.strategy-picker option').length === 8 && document.querySelectorAll('.strategies article').length === 1")
         assert await evaluate("!!document.querySelector('.chart canvas')")
         assert not await evaluate("!!document.querySelector('.chain-scroll')")
         assert await evaluate("document.querySelectorAll('.ghost-dashboard tr').length === 16")
@@ -159,23 +286,23 @@ async def main():
         await evaluate("document.querySelector('[aria-label=\"Ghost Rider settings\"]').click()")
         await until("!!document.querySelector('.settings-dialog')")
         await evaluate("(()=>{const input=Array.from(document.querySelectorAll('.settings-content label')).find(l=>l.textContent.includes('SL ATR Multiplier')).querySelector('input');input.value='2';input.dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('.settings-dialog .ok').click();})()")
-        await until("!document.querySelector('.settings-dialog') && !document.querySelector('[role=status]')")
+        await until("!document.querySelector('.settings-dialog') && !document.querySelector('[role=status]:not(.tab-order-status)')")
         assert any('atr_multiplier=2' in r for r in requests), requests
         await evaluate("document.querySelector('[aria-label=\"Ghost Rider settings\"]').click()")
         await evaluate("document.querySelector('.settings-dialog footer button').click();document.querySelector('.settings-dialog .ok').click()")
-        await until("!document.querySelector('[role=status]') && !!document.querySelector('.ghost-dashboard')")
+        await until("!document.querySelector('[role=status]:not(.tab-order-status)') && !!document.querySelector('.ghost-dashboard')")
         ratio = await evaluate("document.querySelector('.chart-column').getBoundingClientRect().width / document.querySelector('.strategy-column').getBoundingClientRect().width")
         assert abs(ratio - 2 / 3) < .02, ratio
         assert not any('sutradhar_settings' in r for r in requests)
         await evaluate("(()=>{const select=document.querySelector('.strategy-picker select');select.value='sutradhar';select.dispatchEvent(new Event('change',{bubbles:true}));})()")
-        await until("!document.querySelector('[role=status]') && document.querySelectorAll('.sutradhar-values span').length===8")
+        await until("!document.querySelector('[role=status]:not(.tab-order-status)') && document.querySelectorAll('.sutradhar-values span').length===8")
         assert any('sutradhar_settings' in r for r in requests)
         assert await evaluate("document.querySelector('.strategies article').textContent.includes('LEVELS READY')")
         assert await evaluate("getComputedStyle(document.querySelector('.chart-panel')).backgroundColor==='rgb(0, 0, 0)'")
         await evaluate("document.querySelector('[aria-label=\"Sutradhar settings\"]').click()")
         await until("!!document.querySelector('[role=dialog][aria-label=\"Sutradhar settings\"]')")
         await evaluate("(()=>{const dialog=document.querySelector('[role=dialog]');const label=Array.from(dialog.querySelectorAll('label')).find(x=>x.textContent.includes('Use EMA'));label.querySelector('input').click();dialog.querySelector('.ok').click();})()")
-        await until("!document.querySelector('[role=dialog]') && !document.querySelector('[role=status]')")
+        await until("!document.querySelector('[role=dialog]') && !document.querySelector('[role=status]:not(.tab-order-status)')")
         assert await evaluate("document.querySelector('.sutradhar-status').textContent.includes('EMA')")
         await evaluate("document.querySelector('.chart-heading button:last-child').click()")
         await asyncio.sleep(.2)
@@ -201,7 +328,7 @@ async def main():
         await evaluate("document.querySelector('[aria-label=\"RSI settings\"]').click()")
         await until("!!document.querySelector('[aria-label=\"RSI settings\"][role=dialog]')")
         await evaluate("(()=>{const dialog=document.querySelector('[role=dialog]');const label=Array.from(dialog.querySelectorAll('label')).find(x=>x.textContent.trim().startsWith('Type'));const select=label.querySelector('select');select.value='EMA';select.dispatchEvent(new Event('change',{bubbles:true}));dialog.querySelector('.ok').click();})()")
-        await until("!document.querySelector('[role=dialog]') && !document.querySelector('[role=status]')")
+        await until("!document.querySelector('[role=dialog]') && !document.querySelector('[role=status]:not(.tab-order-status)')")
         assert any('EMA' in url and 'rsi_settings' in url for url in requests)
 
         await evaluate("document.querySelector('.chart-heading button:last-child').click()")
@@ -220,12 +347,12 @@ async def main():
         artifact.write_bytes(base64.b64decode(screenshot['data']))
         await evaluate("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));const select=document.querySelector('.strategy-picker select');select.value='rsi_divergence';select.dispatchEvent(new Event('change',{bubbles:true}));")
         await evaluate("(()=>{const select=document.querySelector('.controls select');select.value='15';select.dispatchEvent(new Event('change',{bubbles:true}));})()")
-        await until("!document.querySelector('[role=status]') && document.querySelectorAll('.strategies article').length === 1")
+        await until("!document.querySelector('[role=status]:not(.tab-order-status)') && document.querySelectorAll('.strategies article').length === 1")
         assert await evaluate("document.querySelector('.strategy-picker select').value === 'rsi_divergence'")
         assert any('/api/options/analysis' in r and 'interval=15' in r for r in requests)
         await evaluate("document.querySelector('.analysis-header button').click()")
         await until("!!document.querySelector('.chain-scroll')")
-        await evaluate("Array.from(document.querySelectorAll('.primary-nav button')).find(b=>b.textContent.trim()==='Market Scanner').click()")
+        await evaluate("Array.from(document.querySelectorAll('.primary-nav button')).find(b=>b.textContent.trim()==='Stock Screener').click()")
         await until("!!document.querySelector('.strategy-select option[value=ghost_rider]')")
         await evaluate("(()=>{const select=document.querySelector('.strategy-select');select.value='ghost_rider';select.dispatchEvent(new Event('change',{bubbles:true}));const frame=document.querySelector('.timeframe-label + select');frame.value='5m';frame.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('.run-scan').click();})()")
         await until("!!document.querySelector('.symbol-company-cell button')")
@@ -251,10 +378,27 @@ async def main():
         await until("document.querySelectorAll('.sutradhar-values span').length===8")
         assert any('/api/stocks/sutradhar' in r for r in requests)
         assert await evaluate("document.querySelector('.sutradhar-status').textContent.includes('EMA')")
+        await evaluate("document.querySelector('.analysis-header button').click()")
+        await until("!!document.querySelector('.strategy-select')")
+        await evaluate("(()=>{const s=document.querySelector('.strategy-select');s.value='suryavanshi';s.dispatchEvent(new Event('change',{bubbles:true}));})()")
+        assert await evaluate("document.querySelectorAll('.strategy-params select').length===2")
+        await evaluate("document.querySelector('.run-scan').click()")
+        await until("!!document.querySelector('.symbol-company-cell button')")
+        await evaluate("document.querySelector('.symbol-company-cell button').click()")
+        await until("!!document.querySelector('.suryavanshi-score')")
+        assert any('/api/stocks/suryavanshi' in r for r in requests)
+        assert await evaluate("document.querySelectorAll('.strategy-picker option').length===1 && document.querySelector('.strategy-picker select').value==='suryavanshi'")
+        await evaluate("document.querySelector('.analysis-header button').click()")
+        await until("!!document.querySelector('.strategy-select')")
+        await evaluate("(()=>{const s=document.querySelector('.strategy-select');s.value='golden_death_cross';s.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('.run-scan').click();})()")
+        await until("!!document.querySelector('.symbol-company-cell button')")
+        await evaluate("document.querySelector('.symbol-company-cell button').click()")
+        await until("!!document.querySelector('[aria-label=\"Golden / Death Cross settings\"]')")
+        assert any('/api/stocks/golden-cross' in r for r in requests)
         await evaluate("Array.from(document.querySelectorAll('.primary-nav button')).find(b=>b.textContent.trim()==='Overview').click()")
         await until("!document.querySelector('app-option-analysis')")
         assert not errors, errors
-        print('Browser smoke passed: CE analysis; 40/60 layout; Ghost Rider and RSI; Sutradhar eight levels, dark overlay, EMA input, Style and Visibility without refetch, scanner chart, fullscreen and navigation; no runtime errors.')
+        print('Browser smoke passed: single-pointer stock picks, rapid stock switching and stored preview; Golden / Death Cross classic workspace, inputs, Style, mobile and stored scanner chart; tab drag/drop, keyboard and persisted order without extra controls; Suryavanshi stock workspace, three settings tabs, mobile modal and stored scanner chart; CE analysis; 40/60 layout; Ghost Rider and RSI; Sutradhar eight levels, dark overlay, EMA input, Style and Visibility without refetch, scanner chart, fullscreen and navigation; no runtime errors.')
         try:
             await call('Browser.close')
         except Exception:

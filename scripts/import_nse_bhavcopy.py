@@ -19,9 +19,8 @@ from sqlalchemy import select
 from scanner.universe import fno_keys, fno_symbols
 from services.market_cap import parse_market_caps, SNAPSHOT
 
-async def main():
-    archive = Path(sys.argv[1])
-    apply = '--apply' in sys.argv
+async def import_archive(archive, apply=False, expected_date=None):
+    archive = Path(archive)
     market_caps = parse_market_caps(archive)
     market_caps["values"] = {k: v for k, v in market_caps["values"].items() if k in fno_symbols()}
     with zipfile.ZipFile(archive) as z:
@@ -29,6 +28,8 @@ async def main():
         if len(names) != 1:
             raise ValueError('Expected exactly one symbol-level pd report')
         date = datetime.strptime(Path(names[0]).stem[2:], '%d%m%Y').date()
+        if expected_date is not None and date != expected_date:
+            raise ValueError('Downloaded archive date does not match requested date')
         timestamp = datetime.combine(date, datetime.min.time(), timezone(timedelta(hours=5, minutes=30))).astimezone(timezone.utc)
         rows = list(csv.DictReader(io.StringIO(z.read(names[0]).decode('utf-8-sig'))))
         mcap = next(n for n in z.namelist() if Path(n).name.lower().startswith('mcap'))
@@ -72,11 +73,22 @@ async def main():
         if not backup_path.exists():
             backup_path.write_text(json.dumps(backup, indent=2), encoding='utf-8')
         report['changed'] = await upsert_candles(list(candidates.values()))
-        SNAPSHOT.write_text(json.dumps(market_caps, indent=2), encoding='utf-8')
+        previous_cap_date = json.loads(SNAPSHOT.read_text(encoding='utf-8')).get('asOf', '') if SNAPSHOT.exists() else ''
+        if market_caps['asOf'] >= previous_cap_date:
+            temp = SNAPSHOT.with_suffix('.tmp')
+            temp.write_text(json.dumps(market_caps, indent=2), encoding='utf-8')
+            temp.replace(SNAPSHOT)
     report['status'] = 'imported' if apply else 'preview'
     (ROOT / 'data' / f'bhavcopy-import-{date}.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
     print(json.dumps({k: len(v) if isinstance(v,list) else v for k,v in report.items()}), flush=True)
-    await engine.dispose()
+    return report
+
+
+async def main():
+    try:
+        await import_archive(sys.argv[1], apply='--apply' in sys.argv)
+    finally:
+        await engine.dispose()
 
 if __name__ == '__main__':
     asyncio.run(main())

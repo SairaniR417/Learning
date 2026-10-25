@@ -1,3 +1,5 @@
+from services import golden_cross
+from services import suryavanshi
 """Analyze a verified option contract against completed provider candles."""
 import asyncio
 from datetime import datetime, timedelta, timezone
@@ -147,13 +149,22 @@ METRICS = {
 }
 
 
-def evaluate(candles, contract, interval):
+def evaluate(candles, contract, interval, *, stock=False, defer_overlays=False):
     results = []
     key = contract['instrument_key']
     frame = pl.DataFrame(candles) if candles else pl.DataFrame()
     meta = {key: {'symbol': contract.get('trading_symbol', key), 'name': contract.get('name', ''),
                   'exchange': contract.get('exchange', key.split('_')[0])}}
     for descriptor in strategy_registry.list_strategies():
+        if defer_overlays and descriptor['id'] in {'ghost_rider','rsi_divergence','suryavanshi','golden_death_cross'}:
+            results.append({'id':descriptor['id']})
+            continue
+        if descriptor['id']=='golden_death_cross':
+            results.append(golden_cross.strategy_card(golden_cross.calculate(candles),len(candles)))
+            continue
+        if descriptor['id']=='suryavanshi':
+            results.append(suryavanshi.strategy_card(suryavanshi.calculate(candles),len(candles)))
+            continue
         if descriptor['id']=='sutradhar':
             results.append(sutradhar.unloaded_card(interval))
             continue
@@ -166,6 +177,8 @@ def evaluate(candles, contract, interval):
         strategy = strategy_registry.get(descriptor['id'])
         params = {p['name']: p['default'] for p in descriptor['parameters']}
         params['_timeframe'] = f'{interval}m'
+        if stock:
+            params['_timeframe'] = {1440:'1d',60:'1h'}.get(interval,f'{interval}m')
         minimum = descriptor['min_candles'] + (1 if descriptor['id'] == 'golden_death_cross' else 0)
         available = len(candles)
         result = dict(id=descriptor['id'], name=descriptor['name'], minimumCandles=minimum,
@@ -190,7 +203,7 @@ def evaluate(candles, contract, interval):
                               metrics=[{'label': label, 'value': match[name]} for name, label in METRICS.items()
                                        if isinstance(match.get(name), (int, float)) and isfinite(match[name])],
                               checks=[{'label': name, 'passed': bool(value)} for name, value in match.get('confirmationChecks', {}).items()])
-                result['scenario'] = f"Current premium setup: {status.replace('_', ' ').lower()}. Confirm with the displayed conditions; no price target is implied."
+                result['scenario'] = f"Current {'stock' if stock else 'premium'} setup: {status.replace('_', ' ').lower()}. Confirm with the displayed conditions; no price target is implied."
                 if result['signalAt']:
                     result['markers'].append({'timestamp': result['signalAt'], 'label': descriptor['name'], 'bias': result['bias']})
         except Exception:
@@ -217,9 +230,13 @@ def underlying_context(candles, side):
                            + f' a rising {side} premium, before volatility and time-decay effects.'}
 
 
-async def analyze(request, token, underlying, expiry, strike, side, interval, atr_multiplier=1.5, rsi_settings=None, sutradhar_settings=None):
+async def analyze(request, token, underlying, expiry, strike, side, interval, atr_multiplier=1.5, rsi_settings=None, sutradhar_settings=None, suryavanshi_settings=None, golden_settings=None):
     if interval not in OPTION_TIMEFRAMES or side not in {'CE', 'PE'} or not isfinite(strike) or strike <= 0:
         raise HTTPException(400, 'Select CE/PE, a valid strike, and a 5m, 15m, 1h, 1d or 1w timeframe.')
+    try: golden_config=golden_cross.resolve(golden_settings)
+    except (ValueError,TypeError) as exc: raise HTTPException(400,str(exc)) from exc
+    try: sury_config=suryavanshi.Config.resolve(suryavanshi_settings)
+    except (ValueError,TypeError) as exc: raise HTTPException(400,str(exc)) from exc
     contract = await resolve_contract(request, token, underlying, expiry, strike, side)
     try: rsi_config=RsiConfig.resolve(rsi_settings)
     except (ValueError,TypeError) as exc: raise HTTPException(400,str(exc)) from exc
@@ -261,6 +278,12 @@ async def analyze(request, token, underlying, expiry, strike, side, interval, at
         ghost['candles'] = [{**{k:v for k,v in row.items() if k != 'instrument_key'},'timestamp':row['timestamp'].isoformat()} for row in ghost_candles]
         ghost['developingBar'] = bool(option_history.get('formingCandles'))
         results = [strategy_card(ghost,len(ghost_candles)) if r['id']=='ghost_rider' else r for r in results]
+        sury_data=await asyncio.to_thread(suryavanshi.calculate,ghost_candles,sury_config)
+        sury_data['candles']=ghost['candles']
+        results=[suryavanshi.strategy_card(sury_data,len(ghost_candles)) if r['id']=='suryavanshi' else r for r in results]
+        golden_data=await asyncio.to_thread(golden_cross.calculate,candles,golden_config)
+        golden_data['candles']=[dict(r,timestamp=r['timestamp'].isoformat()) for r in candles]
+        results=[golden_cross.strategy_card(golden_data,len(candles)) if r['id']=='golden_death_cross' else r for r in results]
         sutradhar_data=None
         if sutradhar_config is not None:
             daily_rows=[]
@@ -277,10 +300,10 @@ async def analyze(request, token, underlying, expiry, strike, side, interval, at
                              'underlyingKey': underlying, 'expiry': expiry.isoformat(), 'strike': strike, 'side': side},
                 'interval': interval, 'candles': [{**{k: v for k, v in r.items() if k != 'instrument_key'},
                               'timestamp': r['timestamp'].isoformat()} for r in candles],
-                'strategies': results, 'underlying': context, 'warnings': warnings, 'ghostRider': ghost, 'rsiDivergence':rsi, 'sutradhar':sutradhar_data,
+                'strategies': results, 'underlying': context, 'warnings': warnings, 'ghostRider': ghost, 'rsiDivergence':rsi, 'sutradhar':sutradhar_data, 'suryavanshi':sury_data, 'goldenCross':golden_data,
                 'asOf': candles[-1]['timestamp'].isoformat() if candles else None,
                 'receivedAt': datetime.now(timezone.utc).isoformat(),
                 'historyMessage': f"{len(candles)} completed {OPTION_TIMEFRAMES[interval][3]} candles available within up to {option_history.get('lookbackDays',OPTION_TIMEFRAMES[interval][2])} calendar days of contract history. No gaps are filled."}
-    return await option_market.cache.get(('option-analysis', hashlib.sha256(token.encode()).hexdigest(),
+    return await option_market.cache.get(('option-analysis-golden-v2',json.dumps(golden_config,sort_keys=True),json.dumps(sury_config.__dict__,sort_keys=True), hashlib.sha256(token.encode()).hexdigest(),
                                           contract['instrument_key'], interval, atr_multiplier, json.dumps(rsi_config.__dict__,sort_keys=True),
                                           json.dumps(sutradhar_config.__dict__,sort_keys=True) if sutradhar_config is not None else None), 55, load)

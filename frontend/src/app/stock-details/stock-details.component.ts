@@ -60,12 +60,30 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
     this.volumeSeries.priceScale().applyOptions({ scaleMargins: { top: .82, bottom: 0 }, visible: false });
     this.chartApi.subscribeCrosshairMove(event => {
       const data = this.candleSeries ? event.seriesData.get(this.candleSeries) : undefined;
-      const selected = data ? this.chart.find(c => c.timestamp.slice(0, 10) === String(data.time)) ?? null : null;
+      const selected = data ? this.chart.find(c => this.chartTime(c) === data.time) ?? null : null;
       this.zone.run(() => this.hoveredCandle = selected);
     });
     this.drawChart();
   }
   private subscriptions = new Subscription();
+  timeframe = '1d';
+  readonly timeframes = ['1m', '5m', '15m', '30m', '1h', '1d'];
+  chartWarning = ''; chartError = ''; chartSource = ''; chartAt = ''; chartLoading = false;
+  private chartSubscription?: Subscription;
+  private chartTimer?: ReturnType<typeof setInterval>;
+  private chartTime(c: HistoricalCandle): Time { return this.timeframe === '1d' ? new Date(new Date(c.timestamp).getTime() + 19800000).toISOString().slice(0, 10) as Time : Math.floor(new Date(c.timestamp).getTime() / 1000) as Time; }
+  setTimeframe(frame: string): void { this.timeframe = frame; this.chart = []; this.hoveredCandle = null; this.drawChart(); this.loadChart(); }
+  loadChart(): void {
+    if (!this.stock || document.hidden) return;
+    this.chartSubscription?.unsubscribe(); this.chartLoading = true; this.chartError = '';
+    this.chartSubscription = this.api.stockChart(this.stock.key, this.timeframe).subscribe({next: data => {
+      const visible = this.chart.length ? this.chartApi?.timeScale().getVisibleLogicalRange() : null;
+      this.chart = data.candles; this.chartWarning = data.warning || ''; this.chartSource = data.source; this.chartAt = data.fetchedAt;
+      this.chartLoading = false; this.hoveredCandle = null; this.drawChart();
+      if (visible) this.chartApi?.timeScale().setVisibleLogicalRange(visible);
+    }, error: e => { this.chartLoading = false; this.chartError = e.error?.detail || 'Chart unavailable. Please retry.'; }});
+  }
+  @HostListener('document:visibilitychange') chartVisibility(): void { if (document.hidden) this.chartSubscription?.unsubscribe(); else this.loadChart(); }
   history?: StockHistory; news?: StockNews; profile?: CompanyProfile; actions: CorporateAction[] = [];
   historyError = ''; newsError = ''; profileError = ''; actionsError = ''; quoteError = '';
   loading = false; newsLoading = false; profileLoading = false; actionsLoading = false;
@@ -92,16 +110,19 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
   get passedChecks(): number { return this.confirmationChecks.filter(check => check.passed).length; }
   get divergenceEvidence(): { label: string }[] { return this.stock?.strategy === 'RSI Divergence' ? (this.stock.checks ?? []).filter(check => check.passed === undefined && !check.label.startsWith('Current RSI')) : []; }
   ngOnChanges(): void { this.activeTab = 'overview'; this.load(); }
-  ngOnDestroy(): void { clearTimeout(this.searchTimer); this.searchSubscription?.unsubscribe(); this.subscriptions.unsubscribe(); this.chartApi?.remove(); if (this.expanded) document.body.style.overflow = this.previousOverflow; }
+  ngOnDestroy(): void { clearInterval(this.chartTimer); this.chartSubscription?.unsubscribe(); clearTimeout(this.searchTimer); this.searchSubscription?.unsubscribe(); this.subscriptions.unsubscribe(); this.chartApi?.remove(); if (this.expanded) document.body.style.overflow = this.previousOverflow; }
   load(): void {
+    clearInterval(this.chartTimer); this.chartSubscription?.unsubscribe();
     this.subscriptions.unsubscribe(); this.subscriptions = new Subscription();
     this.history = undefined; this.news = undefined; this.profile = undefined; this.actions = []; this.chart = [];
     this.historyError = this.newsError = this.profileError = this.actionsError = this.quoteError = '';
+    this.chartWarning = this.chartError = this.chartSource = this.chartAt = ''; this.chartLoading = false;
     this.quote = null; this.quoteAt = ''; this.page = 1; this.range = '1M'; this.hoveredCandle = null;
     this.candleSeries?.setData([]); this.volumeSeries?.setData([]);
     this.newsLoading = this.profileLoading = this.actionsLoading = false;
     if (!this.stock) return;
-    this.loadHistory(1); this.loadNews();
+    this.loadHistory(1); this.loadNews(); this.loadChart();
+    this.chartTimer = setInterval(() => { if (!this.chartLoading && !document.hidden) this.loadChart(); }, 60000);
     const stock = this.stock;
     this.subscriptions.add(this.api.quotes([stock.key]).subscribe({ next: response => {
       const quote = Object.values(response.data).find(q => q.instrument_token === stock.key) ?? Object.values(response.data)[0];
@@ -117,12 +138,7 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
     this.loading = true; this.historyError = '';
     this.subscriptions.add(this.api.stockHistory(this.stock.key, page).subscribe({ next: data => {
       this.history = data; this.page = page;
-      if (page === 1) {
-        const valid = data.chart.filter(c => [c.open, c.high, c.low, c.close, c.volume].every(Number.isFinite));
-        this.chart = [...new Map(valid.map(c => [c.timestamp.slice(0, 10), c])).values()].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-        if (data.chart.length && !this.chart.length) this.historyError = 'Restart the API to load full OHLCV data for candlesticks.';
-        this.drawChart();
-      }
+      if (page === 1 && this.timeframe === '1d' && !this.chart.length) { this.chart = data.chart; this.drawChart(); }
       this.loading = false;
     }, error: e => { this.historyError = e.error?.detail || 'Price history unavailable.'; this.loading = false; } }));
   }
@@ -138,8 +154,9 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
     return this.chart.filter(c => new Date(c.timestamp) >= cutoff);
   }
   private drawChart(): void {
-    this.candleSeries?.setData(this.chart.map(c => ({ time: c.timestamp.slice(0, 10) as Time, open: c.open, high: c.high, low: c.low, close: c.close })));
-    this.volumeSeries?.setData(this.chart.map(c => ({ time: c.timestamp.slice(0, 10) as Time, value: c.volume, color: c.close >= c.open ? '#49cba150' : '#ed788250' })));
+    this.chartApi?.applyOptions({ timeScale: { timeVisible: this.timeframe !== '1d' } });
+    this.candleSeries?.setData(this.chart.map(c => ({ time: this.chartTime(c), open: c.open, high: c.high, low: c.low, close: c.close })));
+    this.volumeSeries?.setData(this.chart.map(c => ({ time: this.chartTime(c), value: c.volume, color: c.close >= c.open ? '#49cba150' : '#ed788250' })));
     this.setRange(this.range);
   }
   setRange(range: string): void {
@@ -147,7 +164,7 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
     const data = this.visibleChart;
     if (!data.length || !this.chartApi) return;
     if (range === 'ALL' || data.length === 1) this.chartApi.timeScale().fitContent();
-    else this.chartApi.timeScale().setVisibleRange({ from: data[0].timestamp.slice(0, 10) as Time, to: data[data.length - 1].timestamp.slice(0, 10) as Time });
+    else this.chartApi.timeScale().setVisibleRange({ from: this.chartTime(data[0]), to: this.chartTime(data[data.length - 1]) });
   }
   toggleFullscreen(): void {
     this.expanded = !this.expanded;

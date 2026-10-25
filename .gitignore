@@ -7,3 +7,8 @@ __pycache__/
 .venv/
 data/backups/
 frontend/.angular/
+data/archives/
+data/scheduled-update.json
+data/scheduled-update.lock
+data/bhavcopy-backup-*.json
+data/bhavcopy-import-*.json

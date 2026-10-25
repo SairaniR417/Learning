@@ -23,7 +23,7 @@ _scan_lock = asyncio.Lock()
 _jobs: dict[str, dict[str, Any]] = {}
 _active_job: str | None = None
 _active_task: asyncio.Task | None = None
-CACHE_VERSION = "focused:v3-pine-rsi"
+CACHE_VERSION = "golden-v2-focused:v3-pine-rsi"
 FAMILY_CAPS = {"trend": 3, "crossover": 3, "momentum": 3}
 
 
@@ -172,12 +172,13 @@ def analyze_snapshot(df: pl.DataFrame, instruments: dict[str, dict[str, Any]], p
     df = df.filter(pl.col("timestamp").map_elements(lambda ts: nse_daily_closed(ts, now), return_dtype=pl.Boolean)).sort(["instrument_key", "timestamp"])
     outputs, names, coverage = {}, {}, []
     # Sutradhar supplies intraday reference levels, not a directional signal.
-    strategies = [s for s in strategy_registry.list_strategies() if s['id']!='sutradhar']
+    strategies = [s for s in strategy_registry.list_strategies() if s['id'] not in {'sutradhar','suryavanshi'}]
     for index, metadata in enumerate(strategies):
         if progress:
             progress(f"Checking {metadata['name']} ({index + 1}/{len(strategies)})")
         strategy = strategy_registry.get(metadata["id"])
         params = {p.name: p.default for p in strategy.metadata.parameters}
+        if metadata['id']=='golden_death_cross': params['require_confirmation']=True
         window = focus_window(strategy, params)
         strategy_df = df.group_by("instrument_key", maintain_order=True).tail(window)
         outputs[metadata["id"]] = strategy.run(strategy_df, instruments, params)
