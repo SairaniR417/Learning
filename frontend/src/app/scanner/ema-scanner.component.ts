@@ -1,6 +1,7 @@
 import { GoldenInputs,defaultGoldenSettings } from '../option-market/golden-cross.types';
 import { SuryavanshiInputs,defaultSuryavanshiSettings } from '../option-market/suryavanshi.types';
 import { backendUrl } from '../backend-url';
+import { OptionChainComponent } from '../stock-details/option-chain.component';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, Input, OnChanges, OnDestroy, OnInit, EventEmitter, Output, inject } from '@angular/core';
@@ -21,10 +22,11 @@ interface GridColumnOption { id: string; label: string; visible: boolean; }
 const STORAGE_KEY = 'traders-gita-saved-screeners';
 ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnApiModule, TextFilterModule, NumberFilterModule, QuickFilterModule, PaginationModule, CellStyleModule]);
 
-@Component({ selector: 'app-ema-scanner', standalone: true, imports: [CommonModule, AgGridAngular, OptionAnalysisComponent], templateUrl: './ema-scanner.component.html', styleUrl: './ema-scanner.component.css' })
+@Component({ selector: 'app-ema-scanner', standalone: true, imports: [CommonModule, AgGridAngular, OptionAnalysisComponent, OptionChainComponent], templateUrl: './ema-scanner.component.html', styleUrl: './ema-scanner.component.css' })
 export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   @Input() active = true;
-  ngOnChanges(): void { if (!this.active) this.ghostStock = undefined; }
+  ngOnChanges(): void { if (!this.active) { this.ghostStock = undefined; this.optionStock = undefined; } }
+  optionStock?: ScreenResult;
   ghostStock?: ScreenResult;
   readonly loginUrl = backendUrl('/auth/upstox');
   @Output() stockSelected = new EventEmitter<SelectedStock>();
@@ -89,6 +91,19 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   });
   readonly defaultColDef: ColDef<ScreenResult> = { sortable: true, filter: true, floatingFilter: false, resizable: true, minWidth: 100 };
   readonly columnDefs: ColDef<ScreenResult>[] = [
+    { headerName: 'Actions', colId: 'actions', width: 170, pinned: 'right', sortable: false, filter: false, resizable: false, cellRenderer: (p: ICellRendererParams<ScreenResult>) => {
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:6px;align-items:center;height:100%';
+      for (const label of ['Chart', 'Options']) {
+        const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
+        button.setAttribute('aria-label', `${label} for ${p.data?.symbol ?? 'stock'}`);
+        button.style.cssText = 'background:#172220;border:1px solid #35454c;border-radius:4px;color:#d4e2dc;cursor:pointer;padding:4px 8px;font:inherit';
+        button.disabled = !p.data?.instrumentKey;
+        button.addEventListener('click', event => { event.stopPropagation(); if (label === 'Chart') this.openStock(p.data); else if (p.data) this.optionStock = p.data; });
+        actions.appendChild(button);
+      }
+      return actions;
+    } },
     { headerName: '#', valueGetter: (p) => (p.node?.rowIndex ?? 0) + 1, width: 58, maxWidth: 65, sortable: false, filter: false, floatingFilter: false, pinned: 'left' },
     { field: 'status', headerName: 'Status', width: 195, pinned: 'left', valueFormatter: (p) => p.value === 'NEWLY_ALIGNED' ? 'NEW MATCH' : String(p.value ?? ''), cellStyle: (p) => ['BULLISH CONFIRMED', 'STRONG BULLISH', 'STRONG BULLISH ACTIVE', 'CONFIRMED BULLISH', 'CONFIRMED BULLISH ACTIVE', 'BUY', 'PREVIOUS SIGNAL'].includes(String(p.value)) ? { color: '#55c99f', fontWeight: '700' } : ['BEARISH CONFIRMED', 'BEARISH WATCH', 'BEARISH WARNING', 'SELL', 'WEAKENED'].includes(String(p.value)) ? { color: '#ec8c91', fontWeight: '700' } : ['EARLY BULLISH', 'BULLISH WATCH', 'WATCH', 'NEWLY_ALIGNED'].includes(String(p.value)) ? { color: '#edc74f', fontWeight: '700' } : p.value === 'PREFERRED' ? { color: '#edd36a', fontWeight: '700' } : { color: '#a4a8b2', fontWeight: '700' } },
     { headerName: 'Symbol / Company', colId: 'symbolCompany', valueGetter: (p) => p.data ? (p.data.name && p.data.name !== p.data.symbol ? `${p.data.symbol} · ${p.data.name}` : p.data.symbol) : '', minWidth: 220, flex: 1, filter: 'agTextColumnFilter', cellClass: 'symbol-company-cell', cellRenderer: (p: ICellRendererParams<ScreenResult>) => {

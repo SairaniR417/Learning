@@ -279,11 +279,14 @@ Missing archives are retried by subsequent scheduled runs within the catch-up ra
 Other download/import failures return a failing exit status for Task Scheduler.
 Backups precede BHAV corrections; market-cap metadata never moves to an older date.
 
-Intraday catch-up is limited to stocks explicitly opened in Stock Details during
-the past 28 days. It needs a valid `UPSTOX_ACCESS_TOKEN` in `.env`; browser OAuth
-tokens are not available to the separate scheduled process. BHAV needs no broker
-token and still runs when one is absent. Provider rejection is recorded in the
-summary. Database connection details come from the existing `.env`.
+The evening job writes only daily candles for all saved active stocks; it does not
+fetch intraday candles or require an Upstox token. Each daily import reports its
+matched and missing stocks, so an unavailable stock is visible rather than fabricated.
+Charts reuse historical candles from the database and request today's minute
+candles from Upstox, aggregating them into the requested chart timeframe. Missing
+stock history is fetched on demand for the selected timeframe and saved for reuse. Completed
+minute candles viewed in charts may be saved, but the evening job does not backfill
+minute history. A daily candle cannot reconstruct historical intraday charts.
 
 Latest run: `data/scheduled-update.json`; per-day details:
 `data/bhavcopy-import-YYYY-MM-DD.json`; downloaded archives: `data/archives/`.
@@ -453,3 +456,25 @@ Daily option history loads only when this strategy is selected. Stock scans use
 stored intraday and daily candles. These are reference levels, with no source
 entry, stop-loss, target or holding-time rules. See [Sutradhar](docs/sutradhar.md)
 and its [MPL-2.0 source](docs/sutradhar.pine).
+
+
+Daily updater resource limits: one archive at a time; streamed downloads capped at
+32 MiB and 90 seconds per attempt; at most three attempts; decompressed archives
+capped at 128 MiB total and 32 MiB per member; each import has a 120-second deadline.
+The full worker has a 45-minute deadline in addition to Task Scheduler's existing
+three-hour execution limit and overlap prevention. Failures are reported for retry.
+Charts allow four active requests, at most 20,000 stored candles per request,
+2 MiB / 2,000 candles per API response, and a 45-second total deadline including
+queue time. Live-fetch timeouts fall back to stored history; a total request timeout
+returns HTTP 504. These limits reduce resource risk; they are not an OS memory cap.
+
+
+Every analysis chart displays a shared historical-plus-current candle series even
+when the selected strategy evaluates completed candles only. The screener opens
+the same DB/live workspace. Stock charts reuse stored timeframe bars and hydrate
+missing history for the selected instrument/timeframe only, in bounded windows
+(up to 2,000 candles per response), persisting completed candles for later opens.
+The evening schedule remains daily-only. Latest traded prices use an independent,
+validated quote request every 15 seconds while visible; candle/strategy refreshes
+remain once per minute. Quote retrieval times are labelled separately from candle
+timestamps, and failed refreshes retain the Old data warning.

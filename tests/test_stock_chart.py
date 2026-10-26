@@ -1,7 +1,9 @@
 import unittest
+import asyncio
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, AsyncMock
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from database.connection import Base
 from database.models import Instrument, MarketCandle
@@ -39,7 +41,7 @@ class SelectedChartTests(unittest.IsolatedAsyncioTestCase):
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         self.factory = async_sessionmaker(self.engine)
-        self.patches = [patch.object(chart, 'async_session_factory', self.factory), patch.object(chart, 'get_token', lambda: 'test-token'), patch.object(candle_repo, 'engine', self.engine)]
+        self.patches = [patch.object(chart, 'async_session_factory', self.factory), patch.object(chart, 'get_token', lambda: 'test-token'), patch.object(candle_repo, 'engine', self.engine), patch.object(candle_repo, 'async_session_factory', self.factory)]
         for p in self.patches:
             p.start()
         chart._cache.clear()
@@ -60,6 +62,8 @@ class SelectedChartTests(unittest.IsolatedAsyncioTestCase):
             result = await chart.stock_chart(KEY, '1d')
         self.assertEqual(len(result['candles']), 1)
         self.assertIn('Connect Upstox', result['warning'])
+        self.assertTrue(result['staleData'])
+        self.assertEqual(result['dataAsOf'], result['candles'][-1]['timestamp'])
         provider.assert_not_called()
 
     async def test_selected_only_shared_fetch_and_completed_writes(self):
@@ -71,15 +75,17 @@ class SelectedChartTests(unittest.IsolatedAsyncioTestCase):
             @classmethod
             def now(cls, tz=None):
                 return now.astimezone(tz or timezone.utc)
-        with patch.object(chart, 'datetime', Clock), patch.object(chart, 'provider_rows', AsyncMock(side_effect=[rows,daily])) as provider, patch.object(chart, 'upsert_candles', AsyncMock()) as save:
+        with patch.object(chart, 'datetime', Clock), patch.object(chart, 'provider_rows', AsyncMock(return_value=rows)) as provider, patch.object(chart, 'upsert_candles', AsyncMock()) as save:
             result = await chart.stock_chart(KEY, '1d')
             minute = await chart.stock_chart(KEY, '5m')
         self.assertEqual(provider.await_count, 2)
+        self.assertFalse(result['staleData'])
+        self.assertEqual(provider.await_args_list[0].args[1:3], ('minutes', now.date()))
         self.assertTrue(all(c.args[0] == KEY for c in provider.await_args_list))
         self.assertEqual(len(result['candles']), 2)
         self.assertEqual(result['candles'][0]['close'], 102)  # Stored/BHAV daily values win.
         self.assertTrue(result['candles'][-1]['developing'])
-        saved = save.await_args.args[0]
+        saved = save.await_args_list[0].args[0]
         self.assertEqual(len([r for r in saved if r['timeframe']=='1m']), 1)
         self.assertTrue(minute['candles'][-1]['developing'])
 
@@ -88,3 +94,49 @@ class SelectedChartTests(unittest.IsolatedAsyncioTestCase):
             result = await chart.stock_chart(KEY, '1d')
         self.assertEqual(len(result['candles']), 1)
         self.assertIn('unavailable', result['warning'])
+        self.assertTrue(result['staleData'])
+
+
+    async def test_stalled_chart_returns_timeout(self):
+        async def stalled(*args):
+            await asyncio.Event().wait()
+        with patch.object(chart, 'CHART_TIMEOUT_SECONDS', 0.01), patch.object(chart, '_stock_chart', stalled):
+            with self.assertRaises(chart.HTTPException) as error:
+                await chart.stock_chart(KEY)
+        self.assertEqual(error.exception.status_code, 504)
+
+
+    async def test_existing_timeframe_history_is_combined_with_today(self):
+        now = datetime(2026,10,26,10,0,tzinfo=INDIA)
+        async with self.factory() as session:
+            stock = await session.scalar(select(Instrument).where(Instrument.instrument_key == KEY))
+            session.add(MarketCandle(instrument_id=stock.id,timeframe='5m',timestamp=datetime(2026,10,23,9,15,tzinfo=INDIA).astimezone(timezone.utc),open=100,high=103,low=99,close=102,volume=500))
+            await session.commit()
+        class Clock(datetime):
+            @classmethod
+            def now(cls,tz=None): return now.astimezone(tz or timezone.utc)
+        live = [dict(timestamp=now.replace(minute=0),open=103,high=105,low=102,close=104,volume=20)]
+        with patch.object(chart,'datetime',Clock), patch.object(chart,'provider_rows',AsyncMock(return_value=live)) as provider:
+            result = await chart.stock_chart(KEY,'5m')
+        self.assertEqual([r['close'] for r in result['candles']],[102,104])
+        self.assertTrue(result['candles'][-1]['developing'])
+        provider.assert_awaited_once()
+
+    async def test_missing_history_is_fetched_once_and_saved_for_reuse(self):
+        now=datetime(2026,10,26,10,0,tzinfo=INDIA)
+        class Clock(datetime):
+            @classmethod
+            def now(cls,tz=None): return now.astimezone(tz or timezone.utc)
+        historical=dict(timestamp=datetime(2026,10,23,9,15,tzinfo=INDIA).astimezone(timezone.utc),open=100,high=103,low=99,close=102,volume=500)
+        live=dict(timestamp=now,open=103,high=105,low=102,close=104,volume=20)
+        async def provider(*args,**kwargs):
+            return [historical] if kwargs.get('include_today') is False else [live]
+        with patch.object(chart,'datetime',Clock), patch.object(chart,'provider_rows',AsyncMock(side_effect=provider)) as fetch:
+            first=await chart.stock_chart(KEY,'5m')
+            second=await chart.stock_chart(KEY,'5m')
+        self.assertEqual([r['close'] for r in first['candles']],[102,104])
+        self.assertEqual(first['candles'],second['candles'])
+        self.assertEqual(fetch.await_count,2)
+        async with self.factory() as session:
+            saved=await session.scalar(select(MarketCandle).where(MarketCandle.timeframe=='5m'))
+        self.assertEqual(saved.close,102)

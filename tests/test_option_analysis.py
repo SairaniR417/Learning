@@ -148,6 +148,8 @@ class AnalysisApiTests(unittest.IsolatedAsyncioTestCase):
             second = await analysis.analyze(AsyncMock(),'token',KEY,self.expiry,25000,'CE',5,2)
         self.assertEqual(len(first['candles']),300)
         self.assertEqual(len(first['ghostRider']['candles']),301)
+        self.assertEqual(len(first['chartCandles']),301)
+        self.assertEqual(first['chartCandles'][-1]['close'],150)
         self.assertTrue(first['ghostRider']['developingBar'])
         self.assertEqual(first['ghostRider']['multiplier'],1.5)
         self.assertEqual(second['ghostRider']['multiplier'],2)

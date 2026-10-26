@@ -27,22 +27,22 @@ import { OptionAnalysisComponent } from './option-analysis.component';
           </div>
         </div>
       </div>
-      <div class="view-switch" *ngIf="group === 'F&O stocks'" role="group" aria-label="Stock or options view">
-        <button type="button" (click)="view = 'stock'" [attr.aria-pressed]="view === 'stock'">Stock chart</button>
+      <div class="view-switch" role="group" aria-label="Chart or options view">
+        <button type="button" (click)="view = 'stock'" [attr.aria-pressed]="view === 'stock'">Chart</button>
         <button type="button" (click)="view = 'options'" [attr.aria-pressed]="view === 'options'">Options</button>
       </div>
       </header>
       <div *ngIf="group === 'Commodities' && commodity" class="futures">
         <h2>{{ commodity }} futures</h2>
-        <p>Select a current futures contract to load its option chain.</p>
+        <p>Select a current futures contract to view its chart or options.</p>
         <div class="contract-list"><button type="button" *ngFor="let item of futures" (click)="key = item.key" [class.selected]="key === item.key" [attr.aria-pressed]="key === item.key">{{ item.name }}</button></div>
       </div>
       <p *ngIf="loading" role="status">Loading available contracts…</p>
       <p *ngIf="error" role="alert">{{ error }} <button (click)="selectGroup(group)">Retry</button></p>
       <p *ngIf="!loading && !error && !visible.length">No current option underlyings available.</p>
-      <p class="selection-hint" *ngIf="!key && !loading && !error && visible.length">{{ group === 'F&O stocks' ? 'Choose a stock above to view its chart, strategies or options.' : 'Choose an underlying above to load its option chain.' }}</p>
-      <app-option-analysis *ngIf="key && showStockChart" [stockMode]="true" [stockWorkspace]="true" [underlyingKey]="key" />
-      <app-option-chain *ngIf="key && !showStockChart" [stockKey]="key" />
+      <p class="selection-hint" *ngIf="!key && !loading && !error && visible.length">Choose an underlying above to view its chart or options.</p>
+      <app-option-analysis *ngIf="key && view === 'stock'" [stockMode]="true" [stockWorkspace]="true" [underlyingWorkspace]="group !== 'F&O stocks'" [underlyingKind]="group === 'Commodities' ? 'Futures' : 'Index'" [underlyingLabel]="selectedLabel" [stockTimeframe]="group === 'F&O stocks' ? '1d' : '5m'" [underlyingKey]="key" />
+      <app-option-chain *ngIf="key && view === 'options'" [stockKey]="key" />
     </section>`,
   styleUrl: './option-market.component.css'
 })

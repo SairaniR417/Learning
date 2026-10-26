@@ -17,6 +17,12 @@ FRAMES = {1:'1m',5:'5m',15:'15m',30:'30m',60:'1h',1440:'1d',10080:'1w'}
 
 async def analyze(key, timeframe='1d', atr_multiplier=1.5, rsi_settings=None, sutradhar_settings=None, suryavanshi_settings=None, golden_settings=None, stored_only=False):
     require_fno_key(key)
+    return await _analyze(key, timeframe, atr_multiplier, rsi_settings, sutradhar_settings,
+                          suryavanshi_settings, golden_settings, stored_only)
+
+
+async def _analyze(key, timeframe='1d', atr_multiplier=1.5, rsi_settings=None, sutradhar_settings=None, suryavanshi_settings=None, golden_settings=None, stored_only=False,
+                   *, load_frame=None, metadata=None, instrument_label='Stock', continuous_futures=False):
     if timeframe not in stock_chart.FRAMES or not isfinite(atr_multiplier) or atr_multiplier < .1:
         raise HTTPException(400,'Select a supported stock timeframe and ATR multiplier.')
     try:
@@ -30,28 +36,35 @@ async def analyze(key, timeframe='1d', atr_multiplier=1.5, rsi_settings=None, su
     interval=stock_chart.FRAMES[timeframe]
     loaded={}
     warnings=[]
+    stale_frames=set()
 
     async def rows_for(frame):
         if frame in loaded:
             return loaded[frame]
-        if frame=='1w':
+        if frame=='1w' and load_frame is None:
             days=await rows_for('1d')
             rows=option_analysis.weekly_candles([r for r in days if not r['developing']])
             for row in rows:
                 row['developing']=row['timestamp'].astimezone(INDIA).date()+timedelta(days=7)>now.astimezone(INDIA).date()
         else:
-            if stored_only:
+            if load_frame is not None:
+                response=await load_frame(frame)
+            elif stored_only:
                 from services.ghost_scanner import load_stock_candles
                 data=await load_stock_candles(key,frame)
                 response=dict(candles=[dict(r,timestamp=r['timestamp'].isoformat()) for r in data.sort('timestamp').to_dicts()] if not data.is_empty() else [],warning=None)
             else:
                 response=await stock_chart.stock_chart(key,frame)
+            if response.get('staleData') or response.get('warning'):
+                stale_frames.add(frame)
+            if response.get('historyWarning') and response['historyWarning'] not in warnings:
+                warnings.append(response['historyWarning'])
             if response.get('warning') and response['warning'] not in warnings:
                 warnings.append(response['warning'])
             rows=[]
             for item in response['candles']:
                 timestamp=datetime.fromisoformat(item['timestamp'])
-                developing=bool(item.get('developing')) or (frame=='1d' and not nse_daily_closed(timestamp,now))
+                developing=bool(item.get('developing')) or (frame=='1d' and not option_analysis.bar_closed(timestamp,key,1440,now))
                 rows.append(dict(item,timestamp=timestamp,instrument_key=key,developing=developing))
         loaded[frame]=rows
         return rows
@@ -65,8 +78,8 @@ async def analyze(key, timeframe='1d', atr_multiplier=1.5, rsi_settings=None, su
     all_rows=await rows_for(timeframe)
     candles=plain([r for r in all_rows if not r['developing']][-1000:])
     developing=plain(all_rows[-1000:])
-    metadata=next(s for s in get_fno_stocks() if s['key']==key)
-    contract=dict(instrument_key=key,trading_symbol=metadata['symbol'],name=metadata['name'],exchange='NSE')
+    metadata=metadata or next(s for s in get_fno_stocks() if s['key']==key)
+    contract=dict(instrument_key=key,trading_symbol=metadata['symbol'],name=metadata['name'],exchange=key.split('_')[0])
     results=await asyncio.to_thread(option_analysis.evaluate,candles,contract,interval,stock=True,defer_overlays=True)
     five=plain((await rows_for('5m'))[-1000:])
     ghost=await asyncio.to_thread(ghost_overlay,developing,five,interval,atr_multiplier)
@@ -81,7 +94,7 @@ async def analyze(key, timeframe='1d', atr_multiplier=1.5, rsi_settings=None, su
     if sutradhar_config is not None:
         daily=plain(await rows_for('1d')) if interval<1440 else []
         levels=await asyncio.to_thread(sutradhar.calculate,developing,daily,interval,sutradhar_config,
-                                       session_opens=sutradhar.stored_session_open(developing))
+                                       session_opens=sutradhar.stored_session_open(developing), continuous_futures=continuous_futures)
         levels['candles']=serial(developing)
     results=[ghost_card(ghost,len(developing)) if r['id']=='ghost_rider' else
              rsi_card(rsi,len(rsi_rows)) if r['id']=='rsi_divergence' else
@@ -93,10 +106,11 @@ async def analyze(key, timeframe='1d', atr_multiplier=1.5, rsi_settings=None, su
     golden_data['candles']=serial(candles)
     results=[golden_cross.strategy_card(golden_data,len(candles)) if r['id']=='golden_death_cross' else r for r in results]
     context=option_analysis.underlying_context(candles,'CE')
-    context.update(supportsPremium=None,description='Stock close relative to EMA 20; strategy signals refer to the stock price.')
+    context.update(supportsPremium=None,description=f'{instrument_label} close relative to EMA 20; strategy signals refer to the underlying price.')
     if not five:
         warnings.append('5-minute history is unavailable; Ghost Rider 5m RSI remains n/a.')
     return dict(contract=dict(key=key,name=f"{metadata['symbol']} · {metadata['name']}",underlyingKey=key,expiry='',strike=0,side='CE'),
-                interval=interval,candles=serial(candles),strategies=results,ghostRider=ghost,rsiDivergence=rsi,sutradhar=levels,suryavanshi=sury_data,goldenCross=golden_data,storedPreview=stored_only,
+                interval=interval,candles=serial(candles),chartCandles=serial(all_rows[-1000:]),strategies=results,ghostRider=ghost,rsiDivergence=rsi,sutradhar=levels,suryavanshi=sury_data,goldenCross=golden_data,storedPreview=stored_only, staleData=stored_only or timeframe in stale_frames,
+                dataAsOf=all_rows[-1]['timestamp'].isoformat() if all_rows else None,
                 underlying=context,warnings=warnings,asOf=candles[-1]['timestamp'].isoformat() if candles else None,
-                receivedAt=now.isoformat(),historyMessage=f'{len(candles)} completed {timeframe} candles. '+('Stored history preview; current-session data is loading.' if stored_only else 'DB history plus selected-stock live data; developing bars are used only by Ghost Rider and explicitly configured overlays.'))
+                receivedAt=now.isoformat(),historyMessage=f'{len(candles)} completed {timeframe} candles. '+('Stored history preview; current-session data is loading.' if stored_only else ('Provider history and current-session data for this instrument.' if load_frame is not None else 'DB history plus selected-stock live data; developing bars are used only by Ghost Rider and explicitly configured overlays.')))

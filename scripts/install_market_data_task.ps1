@@ -12,7 +12,7 @@ $triggerXml = '<CalendarTrigger><Repetition><Interval>PT1H</Interval><Duration>P
 $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 30) -ExecutionTimeLimit (New-TimeSpan -Hours 3) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-$task = New-ScheduledTask -Action $action -Principal $principal -Settings $settings -Description 'NSE BHAV daily catch-up and selected-stock intraday candles; 18:30 IST with evening retries.'
+$task = New-ScheduledTask -Action $action -Principal $principal -Settings $settings -Description 'NSE BHAV daily-only catch-up for all saved stocks; 18:30 IST with evening retries.'
 $xml = [xml](Export-ScheduledTask -InputObject $task)
 $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
 $ns.AddNamespace('t', $xml.DocumentElement.NamespaceURI)

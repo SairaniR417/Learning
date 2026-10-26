@@ -8,7 +8,7 @@ const { Subject, Subscription } = require('rxjs');
 function setup() {
   const clock = new Subject();
   const calls = [];
-  const api = { analyzeStockWorkspace: (...args) => { const stream = new Subject(); calls.push({ args, stream, workspace:true }); return stream; }, analyzeOption: (...args) => { const stream = new Subject(); calls.push({ args, stream }); return stream; },
+  const api = { analyzeUnderlyingWorkspace: (...args) => { const stream = new Subject(); calls.push({args, stream, underlying:true}); return stream; }, analyzeStockWorkspace: (...args) => { const stream = new Subject(); calls.push({ args, stream, workspace:true }); return stream; }, analyzeOption: (...args) => { const stream = new Subject(); calls.push({ args, stream }); return stream; },
     analyzeStockGhost: (...args) => { const stream = new Subject(); calls.push({ args, stream, stock:true }); return stream; },
     analyzeStockRsi: (...args) => { const stream = new Subject(); calls.push({ args, stream, rsi:true }); return stream; },
     analyzeStockGolden: (...args) => { const stream = new Subject(); calls.push({ args, stream, golden:true }); return stream; },
@@ -212,5 +212,66 @@ test('preview failure falls through to live and changing stocks cancels that ref
   const s=setup();Object.assign(s.component,{stockMode:true,stockWorkspace:true});s.component.ngOnChanges();
   s.calls[0].stream.error({status:503});assert.equal(s.calls.length,2);assert.equal(s.calls[1].stream.observed,true);
   s.component.underlyingKey='NSE_EQ|NEXT';s.component.ngOnChanges();assert.equal(s.calls[1].stream.observed,false);assert.equal(s.calls[2].stream.observed,true);
+  s.component.ngOnDestroy();
+});
+
+
+test('stored fallback stays visibly old through retry, then clears on live success',()=>{
+  const s=setup();Object.assign(s.component,{stockMode:true,stockWorkspace:true});s.component.ngOnChanges();
+  const candle={timestamp:'2026-10-23T00:00:00+05:30',close:100};
+  const data={candles:[candle],strategies:[],storedPreview:true};
+  s.calls[0].stream.next(data);assert.equal(s.component.staleData,true);
+  assert.equal(s.component.lastDataAt,candle.timestamp);
+  s.calls[0].stream.complete();
+  s.calls[1].stream.next({...data,storedPreview:false,staleData:true});s.calls[1].stream.complete();
+  assert.equal(s.component.staleData,true);
+  s.component.load();assert.equal(s.component.staleData,true);
+  s.calls[2].stream.next({...data,storedPreview:false,staleData:false});s.calls[2].stream.complete();
+  assert.equal(s.component.staleData,false);
+  s.component.load();s.calls[3].stream.error({status:502});
+  assert.equal(s.component.staleData,true);
+  s.component.load();assert.equal(s.component.staleData,true);
+  s.calls[4].stream.next({...data,storedPreview:false,staleData:false});
+  assert.equal(s.component.staleData,false);
+  s.component.ngOnDestroy();
+});
+
+
+test('index and commodity workspace uses underlying analysis with matching settings and no stock preview',()=>{
+  const s=setup();Object.assign(s.component,{stockMode:true,stockWorkspace:true,underlyingWorkspace:true,stockTimeframe:'5m',underlyingKey:'NSE_INDEX|Nifty 50'});
+  s.component.ngOnChanges();
+  assert.equal(s.calls.length,1);assert.equal(s.calls[0].underlying,true);
+  assert.equal(s.calls[0].args[0],'NSE_INDEX|Nifty 50');assert.equal(s.calls[0].args[1],'5m');
+  assert.equal(s.calls[0].args.length,7);s.finish();
+  s.component.showStrategy('sutradhar');assert.equal(s.calls[1].args[4].p1,14);
+  s.component.changeStockTimeframe('1h');assert.equal(s.calls[1].stream.observed,false);
+  assert.equal(s.calls[2].args[1],'1h');
+  s.component.underlyingKey='MCX_FO|123';s.component.ngOnChanges();
+  assert.equal(s.calls[2].stream.observed,false);assert.equal(s.calls[3].args[0],'MCX_FO|123');
+  s.finish();s.component.load();s.calls[4].stream.error({status:502});assert.equal(s.component.staleData,true);
+  s.component.load();assert.equal(s.component.staleData,true);s.finish();assert.equal(s.component.staleData,false);
+  s.component.ngOnDestroy();
+});
+
+
+test('every strategy displays historical and current candles without changing confirmed signal candles',()=>{
+  const s=setup();
+  const history={timestamp:'2026-10-23T09:15:00+05:30',close:100};
+  const today={timestamp:'2026-10-26T09:15:00+05:30',close:110,developing:true};
+  s.component.data={candles:[history],chartCandles:[history,today],goldenCross:{candles:[history]},strategies:[]};
+  for(const strategy of ['ghost_rider','golden_death_cross','rsi_divergence','sutradhar','suryavanshi','ema_alignment']){
+    s.component.strategyId=strategy;
+    assert.equal(s.component.activeCandles.length,2);
+    assert.equal(s.component.activeCandles.at(-1),today);
+  }
+  assert.equal(s.component.data.candles.length,1);
+  s.component.ngOnDestroy();
+});
+
+test('screener workspace keeps selected strategy while loading stored preview then today',()=>{
+  const s=setup();Object.assign(s.component,{stockMode:true,stockWorkspace:true,showBack:true,stockStrategy:'rsi_divergence'});
+  s.component.ngOnChanges();assert.equal(s.calls[0].workspace,true);assert.equal(s.calls[0].args[7],true);
+  s.calls[0].stream.next({storedPreview:true,candles:[],strategies:[]});s.calls[0].stream.complete();
+  assert.equal(s.calls[1].args[7],false);assert.equal(s.component.strategyId,'rsi_divergence');
   s.component.ngOnDestroy();
 });

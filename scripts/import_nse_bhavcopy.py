@@ -21,6 +21,13 @@ from services.market_cap import parse_market_caps, SNAPSHOT
 
 async def import_archive(archive, apply=False, expected_date=None):
     archive = Path(archive)
+    # Check decompressed sizes before any ZIP member is read into memory.
+    with zipfile.ZipFile(archive) as checked:
+        members = checked.infolist()
+        if len(members) > 200 or sum(m.file_size for m in members) > 128 * 1024 * 1024:
+            raise ValueError('NSE archive exceeds decompressed size limit')
+        if any(m.file_size > 32 * 1024 * 1024 for m in members):
+            raise ValueError('NSE archive member exceeds size limit')
     market_caps = parse_market_caps(archive)
     market_caps["values"] = {k: v for k, v in market_caps["values"].items() if k in fno_symbols()}
     with zipfile.ZipFile(archive) as z:
@@ -31,7 +38,7 @@ async def import_archive(archive, apply=False, expected_date=None):
         if expected_date is not None and date != expected_date:
             raise ValueError('Downloaded archive date does not match requested date')
         timestamp = datetime.combine(date, datetime.min.time(), timezone(timedelta(hours=5, minutes=30))).astimezone(timezone.utc)
-        rows = list(csv.DictReader(io.StringIO(z.read(names[0]).decode('utf-8-sig'))))
+        rows = csv.DictReader(io.StringIO(z.read(names[0]).decode('utf-8-sig')))
         mcap = next(n for n in z.namelist() if Path(n).name.lower().startswith('mcap'))
         dates = {datetime.strptime(r['Trade Date'].strip(), '%d %b %Y').date() for r in csv.DictReader(io.StringIO(z.read(mcap).decode('utf-8-sig')))}
         if dates != {date}:
@@ -66,6 +73,8 @@ async def import_archive(archive, apply=False, expected_date=None):
         for symbol in report['ambiguous']:
             candidates.pop(symbol, None)
         report['matched'] = len(candidates)
+        report['expected'] = len(instruments)
+        report['missing'] = sorted(set(lookup) - set(candidates))
         previous = (await s.execute(select(MarketCandle).where(MarketCandle.timeframe=='1d',MarketCandle.candle_time==timestamp,MarketCandle.instrument_id.in_([i.id for i in instruments])))).scalars().all()
         backup = [{k: str(getattr(r,k)) if k in {'candle_time','open','high','low','close'} else getattr(r,k) for k in ('instrument_id','timeframe','candle_time','open','high','low','close','volume','open_interest')} for r in previous]
     if apply:

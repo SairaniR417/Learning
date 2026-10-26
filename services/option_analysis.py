@@ -23,6 +23,8 @@ OPTION_TIMEFRAMES = {5:('minutes',5,28,'5m'),15:('minutes',15,28,'15m'),
                      60:('hours',1,89,'1h'),1440:('days',1,1095,'1d'),10080:('days',1,1095,'1w')}
 
 
+HISTORY_TIMEFRAMES = {**OPTION_TIMEFRAMES, 1: ('minutes',1,28,'1m'), 30: ('minutes',30,89,'30m')}
+
 def bar_closed(timestamp,key,interval,now):
     if interval==1440:
         return (timestamp.astimezone(option_chain.INDIA).date()<now.astimezone(option_chain.INDIA).date()
@@ -101,7 +103,7 @@ async def history(request, token, key, interval):
     async def load():
         now = datetime.now(timezone.utc)
         today = now.astimezone(option_chain.INDIA).date()
-        unit,provider_interval,lookback,_=OPTION_TIMEFRAMES[interval]
+        unit,provider_interval,lookback,_=HISTORY_TIMEFRAMES[interval]
         start, end = today - timedelta(days=lookback), today - timedelta(days=1)
         base = 'https://api.upstox.com/v3/historical-candle'
         encoded = quote(key, safe='')
@@ -300,6 +302,7 @@ async def analyze(request, token, underlying, expiry, strike, side, interval, at
                              'underlyingKey': underlying, 'expiry': expiry.isoformat(), 'strike': strike, 'side': side},
                 'interval': interval, 'candles': [{**{k: v for k, v in r.items() if k != 'instrument_key'},
                               'timestamp': r['timestamp'].isoformat()} for r in candles],
+                'chartCandles': [dict(r, timestamp=r['timestamp'].isoformat(), developing=not bar_closed(r['timestamp'],contract['instrument_key'],interval,datetime.now(timezone.utc))) for r in ghost_candles],
                 'strategies': results, 'underlying': context, 'warnings': warnings, 'ghostRider': ghost, 'rsiDivergence':rsi, 'sutradhar':sutradhar_data, 'suryavanshi':sury_data, 'goldenCross':golden_data,
                 'asOf': candles[-1]['timestamp'].isoformat() if candles else None,
                 'receivedAt': datetime.now(timezone.utc).isoformat(),

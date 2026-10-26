@@ -69,6 +69,8 @@ class ScheduledDataTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(worker.httpx, 'AsyncClient', return_value=client):
             self.assertEqual(await worker.run(), 0)
         report = json.loads((self.root/'data'/'scheduled-update.json').read_text())
+        self.assertNotIn('intraday', report)
+        self.assertTrue(all(r['matched'] == 1 and not r['missing'] for r in report['imported']))
         self.assertEqual([r['date'] for r in report['imported']], ['2026-10-20','2026-10-21','2026-10-22','2026-10-23'])
         async with self.factory() as s:
             bars = (await s.scalars(select(MarketCandle))).all()
@@ -92,3 +94,22 @@ class ScheduledDataTests(unittest.IsolatedAsyncioTestCase):
         client = httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(503)))
         with patch.object(worker.httpx, 'AsyncClient', return_value=client):
             self.assertEqual(await worker.run(), 1)
+
+
+    async def test_oversized_archive_stops_and_removes_partial_download(self):
+        client = httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, content=b'too large')))
+        destination = self.root / 'data' / 'oversize.tmp'
+        async with client:
+            with patch.object(worker, 'MAX_ARCHIVE_BYTES', 4):
+                with self.assertRaises(ValueError):
+                    await worker.download_archive(client, 'https://example.test/archive', destination)
+        self.assertFalse(destination.exists())
+
+    async def test_import_rejects_oversized_uncompressed_archive(self):
+        archive = self.root / 'data' / 'oversize.zip'
+        archive.write_bytes(archive_for(datetime(2026, 10, 23)))
+        with patch.object(importer.zipfile.ZipFile, 'infolist', return_value=[
+                type('Member', (), {'file_size': 129 * 1024 * 1024})()]):
+            with self.assertRaisesRegex(ValueError, 'decompressed size'):
+                await importer.import_archive(archive, apply=True)

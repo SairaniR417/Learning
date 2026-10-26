@@ -1,4 +1,5 @@
-﻿import os
+import os
+import asyncio
 import re
 import secrets
 import base64
@@ -337,6 +338,46 @@ async def stock_sutradhar(instrument_key: str,timeframe: str='15m',sutradhar_set
 async def stock_rsi_divergence(instrument_key: str,timeframe: str='1d',rsi_settings: str | None=None):
     from services.rsi_scanner import stock_chart
     return await stock_chart(instrument_key,timeframe,parse_rsi_settings(rsi_settings))
+
+
+@app.get('/api/market/chart-quote')
+async def chart_latest_quote(instrument_key: str, expiry: date | None=None, strike: float | None=None, side: str='CE'):
+    from services.chart_quote import latest
+    try:
+        return await latest(api_json_request, require_token(), instrument_key, expiry, strike, side)
+    except TimeoutError:
+        raise HTTPException(504, 'Latest price request timed out. Please retry.')
+
+
+@app.get('/api/market/chart')
+async def underlying_chart(instrument_key: str, interval: int = 5):
+    from services import option_market, option_analysis
+    if interval not in {5, 15, 60, 1440}:
+        raise HTTPException(400, 'Select a supported chart timeframe.')
+    token = require_token()
+    try:
+        async with asyncio.timeout(40):
+            await option_market.require_key(instrument_key)
+            history = await option_analysis.history(api_json_request, token, instrument_key, interval)
+    except TimeoutError:
+        raise HTTPException(504, 'Chart request timed out. Please retry.')
+    rows = (history['candles'] + history.get('formingCandles', []))[-1000:]
+    return dict(candles=[dict(timestamp=r['timestamp'].isoformat(),
+        **{k: r[k] for k in ('open', 'high', 'low', 'close', 'volume')}) for r in rows],
+        source='Upstox underlying candles', invalidCandles=history['invalidCandles'])
+
+
+@app.get('/api/market/analysis')
+async def analyze_underlying_workspace(instrument_key: str, timeframe: str='5m', atr_multiplier: float=Query(default=1.5,ge=.1), rsi_settings: str | None=None, sutradhar_settings: str | None=None, suryavanshi_settings: str | None=None, golden_settings: str | None=None):
+    from services.underlying_analysis import analyze
+    token = require_token()
+    try:
+        async with asyncio.timeout(45):
+            return await analyze(api_json_request, token, instrument_key, timeframe, atr_multiplier,
+                parse_rsi_settings(rsi_settings), parse_sutradhar_settings(sutradhar_settings),
+                parse_suryavanshi_settings(suryavanshi_settings), parse_golden_settings(golden_settings))
+    except TimeoutError:
+        raise HTTPException(504, 'Analysis request timed out. Please retry.')
 
 
 @app.get('/api/stocks/analysis')

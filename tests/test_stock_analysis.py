@@ -32,6 +32,7 @@ class StockWorkspaceTests(unittest.IsolatedAsyncioTestCase):
         live.assert_not_called()
         self.assertEqual({call.args for call in load.await_args_list},{(KEY,'1d'),(KEY,'5m')})
         self.assertTrue(result['storedPreview'])
+        self.assertTrue(result['staleData'])
         self.assertEqual(len(result['candles']),300)
         self.assertEqual({s['id'] for s in result['strategies']},{s['id'] for s in strategy_registry.list_strategies()})
         self.assertTrue(all('status' in s and 'name' in s for s in result['strategies']))
@@ -59,6 +60,8 @@ class StockWorkspaceTests(unittest.IsolatedAsyncioTestCase):
             result=await analysis.analyze(KEY)
         self.assertEqual(len(result['candles']),300)
         self.assertEqual(result['warnings'].count('Connect Upstox for live candles.'),1)
+        self.assertTrue(result['staleData'])
+        self.assertEqual(result['dataAsOf'], result['candles'][-1]['timestamp'])
         self.assertTrue(any('5-minute' in w for w in result['warnings']))
 
     async def test_sutradhar_and_secondary_rsi_reuse_same_stock_frames(self):

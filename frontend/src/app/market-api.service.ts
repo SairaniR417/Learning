@@ -125,8 +125,12 @@ export interface OptionStrategyResult {
   markers: { timestamp: string; label: string; bias: string }[]; levels: { label: string; price: number }[];
   scenario: string; signalAt: string | null;
 }
+export interface ChartQuote { instrumentKey: string; price: number; receivedAt: string; }
 export interface OptionAnalysis {
+  chartCandles?: HistoricalCandle[];
   storedPreview?: boolean;
+  staleData?: boolean;
+  dataAsOf?: string | null;
   goldenCross?: import('./option-market/golden-cross.types').GoldenOverlay;
   suryavanshi?: import('./option-market/suryavanshi.types').SuryavanshiOverlay;
   sutradhar?: import('./option-market/sutradhar.types').SutradharOverlay;
@@ -140,8 +144,14 @@ export interface OptionAnalysis {
 
 @Injectable({ providedIn: 'root' })
 export class MarketApiService {
+  chartQuote(key: string, expiry = '', strike = 0, side: 'CE' | 'PE' = 'CE'): Observable<ChartQuote> {
+    return this.http.get<ChartQuote>('/api/market/chart-quote', {params:{instrument_key:key,...(expiry?{expiry,strike,side}:{})}});
+  }
   analyzeStockWorkspace(key: string, timeframe: string, atrMultiplier: number, rsiSettings: import('./option-market/rsi.types').RsiInputs, sutradharSettings?: import('./option-market/sutradhar.types').SutradharInputs, suryavanshiSettings?: import('./option-market/suryavanshi.types').SuryavanshiInputs, goldenSettings?: import('./option-market/golden-cross.types').GoldenInputs, storedOnly = false): Observable<OptionAnalysis> {
     return this.http.get<OptionAnalysis>('/api/stocks/analysis', { params: { instrument_key:key, timeframe, ...(storedOnly?{stored_only:true}:{}), ...(goldenSettings?{golden_settings:JSON.stringify(goldenSettings)}:{}), ...(suryavanshiSettings?{suryavanshi_settings:JSON.stringify(suryavanshiSettings)}:{}), atr_multiplier:atrMultiplier, rsi_settings:JSON.stringify(rsiSettings), ...(sutradharSettings ? {sutradhar_settings:JSON.stringify(sutradharSettings)} : {}) } });
+  }
+  analyzeUnderlyingWorkspace(key: string, timeframe: string, atrMultiplier: number, rsiSettings: import('./option-market/rsi.types').RsiInputs, sutradharSettings?: import('./option-market/sutradhar.types').SutradharInputs, suryavanshiSettings?: import('./option-market/suryavanshi.types').SuryavanshiInputs, goldenSettings?: import('./option-market/golden-cross.types').GoldenInputs): Observable<OptionAnalysis> {
+    return this.http.get<OptionAnalysis>('/api/market/analysis', { params: { instrument_key:key, timeframe, atr_multiplier:atrMultiplier, rsi_settings:JSON.stringify(rsiSettings), ...(sutradharSettings?{sutradhar_settings:JSON.stringify(sutradharSettings)}:{}), ...(suryavanshiSettings?{suryavanshi_settings:JSON.stringify(suryavanshiSettings)}:{}), ...(goldenSettings?{golden_settings:JSON.stringify(goldenSettings)}:{}) } });
   }
   analyzeStockGolden(key:string,timeframe:string,settings:import('./option-market/golden-cross.types').GoldenInputs):Observable<OptionAnalysis> {
     return this.http.get<OptionAnalysis>('/api/stocks/golden-cross',{params:{instrument_key:key,timeframe,golden_settings:JSON.stringify(settings)}});
@@ -198,7 +208,7 @@ export class MarketApiService {
   readNotification(id: number): Observable<unknown> { return this.http.post(`/api/watchlists/notifications/${id}/read`, {}); }
   indexConstituents(id: string): Observable<IndexConstituents> { return this.http.get<IndexConstituents>(`/api/market/index-constituents/${encodeURIComponent(id)}`); }
   stockHistory(key: string, page = 1): Observable<StockHistory> { return this.http.get<StockHistory>('/api/stocks/history', { params: { instrument_key: key, page } }); }
-  stockChart(key: string, timeframe: string): Observable<{candles: HistoricalCandle[]; warning: string | null; source: string; fetchedAt: string}> { return this.http.get<{candles: HistoricalCandle[]; warning: string | null; source: string; fetchedAt: string}>('/api/stocks/chart', { params: { instrument_key: key, timeframe } }); }
+  stockChart(key: string, timeframe: string): Observable<{candles: HistoricalCandle[]; staleData?: boolean; dataAsOf?: string | null; historyWarning?: string | null; warning: string | null; source: string; fetchedAt: string}> { return this.http.get<{candles: HistoricalCandle[]; staleData?: boolean; dataAsOf?: string | null; historyWarning?: string | null; warning: string | null; source: string; fetchedAt: string}>('/api/stocks/chart', { params: { instrument_key: key, timeframe } }); }
   stockNews(symbol: string, name: string): Observable<StockNews> { return this.http.get<StockNews>('/api/stocks/news', { params: { symbol, name } }); }
 
   status(): Observable<ApiStatus> {

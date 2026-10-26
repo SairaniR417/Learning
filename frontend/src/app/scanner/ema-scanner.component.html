@@ -1,5 +1,6 @@
-<app-option-analysis *ngIf="ghostStock as stock" [stockMode]="true" [underlyingKey]="stock.instrumentKey" [stockTimeframe]="timeframe" [stockStrategy]="selectedStrategy" [initialRsiPeriod]="numericParam('period',14)" [initialAtrMultiplier]="numericParam('atr_multiplier',1.5)" [initialSutradharInputs]="sutradharInputs" [initialSuryavanshiInputs]="suryavanshiInputs" [initialGoldenInputs]="goldenInputs" (back)="ghostStock = undefined" />
-<section class="scanner-page" [hidden]="!!ghostStock" aria-labelledby="scanner-title">
+<section *ngIf="optionStock as stock" class="scanner-options" aria-label="Stock options"><header><button type="button" (click)="optionStock = undefined">Back to results</button><h2>{{ stock.symbol }} Options</h2></header><app-option-chain [stockKey]="stock.instrumentKey" /></section>
+<app-option-analysis *ngIf="ghostStock as stock" [stockMode]="true" [stockWorkspace]="true" [showBack]="true" [underlyingKey]="stock.instrumentKey" [stockTimeframe]="timeframe" [stockStrategy]="selectedStrategy" [initialRsiPeriod]="numericParam('period',14)" [initialAtrMultiplier]="numericParam('atr_multiplier',1.5)" [initialSutradharInputs]="sutradharInputs" [initialSuryavanshiInputs]="suryavanshiInputs" [initialGoldenInputs]="goldenInputs" (back)="ghostStock = undefined" />
+<section class="scanner-page" [hidden]="!!ghostStock || !!optionStock" aria-labelledby="scanner-title">
   <header class="scanner-topbar">
     <div class="scanner-brand"><span class="scanner-brand-mark">TG</span><span><strong>Stock Screener</strong><small>NSE · Saved F&O stocks</small></span></div>
     <div class="saved-controls">

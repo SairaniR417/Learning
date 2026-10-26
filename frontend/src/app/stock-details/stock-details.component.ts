@@ -1,3 +1,4 @@
+import { LivePriceComponent } from '../live-price.component';
 import { OptionChainComponent } from './option-chain.component';
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnChanges, OnDestroy, Output, ViewChild, inject } from '@angular/core';
@@ -5,7 +6,7 @@ import { Subscription } from 'rxjs';
 import { CandlestickSeries, HistogramSeries, ColorType, CrosshairMode, createChart, IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { MarketApiService, SelectedStock, StockHistory, StockNews, CompanyProfile, CorporateAction, HistoricalCandle, Instrument } from '../market-api.service';
 
-@Component({ selector: 'app-stock-details', standalone: true, imports: [CommonModule, OptionChainComponent], templateUrl: './stock-details.component.html', styleUrl: './stock-details.component.css' })
+@Component({ selector: 'app-stock-details', standalone: true, imports: [CommonModule, OptionChainComponent, LivePriceComponent], templateUrl: './stock-details.component.html', styleUrl: './stock-details.component.css' })
 export class StockDetailsComponent implements OnChanges, OnDestroy {
   @Input() stock: SelectedStock | null = null;
   @Output() stockSelected = new EventEmitter<SelectedStock>();
@@ -68,6 +69,9 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
   private subscriptions = new Subscription();
   timeframe = '1d';
   readonly timeframes = ['1m', '5m', '15m', '30m', '1h', '1d'];
+  chartStale = false;
+  get lastChartDataAt(): string | null { return this.chart.at(-1)?.timestamp || null; }
+  get quoteStale(): boolean { return !!this.quoteError || (!!this.quoteAt && Date.now() - Date.parse(this.quoteAt) > 120000); }
   chartWarning = ''; chartError = ''; chartSource = ''; chartAt = ''; chartLoading = false;
   private chartSubscription?: Subscription;
   private chartTimer?: ReturnType<typeof setInterval>;
@@ -78,10 +82,10 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
     this.chartSubscription?.unsubscribe(); this.chartLoading = true; this.chartError = '';
     this.chartSubscription = this.api.stockChart(this.stock.key, this.timeframe).subscribe({next: data => {
       const visible = this.chart.length ? this.chartApi?.timeScale().getVisibleLogicalRange() : null;
-      this.chart = data.candles; this.chartWarning = data.warning || ''; this.chartSource = data.source; this.chartAt = data.fetchedAt;
+      this.chartStale = !!data.staleData || !!data.warning; this.chart = data.candles; this.chartWarning = data.warning || data.historyWarning || ''; this.chartSource = data.source; this.chartAt = data.fetchedAt;
       this.chartLoading = false; this.hoveredCandle = null; this.drawChart();
       if (visible) this.chartApi?.timeScale().setVisibleLogicalRange(visible);
-    }, error: e => { this.chartLoading = false; this.chartError = e.error?.detail || 'Chart unavailable. Please retry.'; }});
+    }, error: e => { this.chartStale = true; this.chartLoading = false; this.chartError = e.error?.detail || 'Chart unavailable. Please retry.'; }});
   }
   @HostListener('document:visibilitychange') chartVisibility(): void { if (document.hidden) this.chartSubscription?.unsubscribe(); else this.loadChart(); }
   history?: StockHistory; news?: StockNews; profile?: CompanyProfile; actions: CorporateAction[] = [];
@@ -116,6 +120,7 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
     this.subscriptions.unsubscribe(); this.subscriptions = new Subscription();
     this.history = undefined; this.news = undefined; this.profile = undefined; this.actions = []; this.chart = [];
     this.historyError = this.newsError = this.profileError = this.actionsError = this.quoteError = '';
+    this.chartStale = false;
     this.chartWarning = this.chartError = this.chartSource = this.chartAt = ''; this.chartLoading = false;
     this.quote = null; this.quoteAt = ''; this.page = 1; this.range = '1M'; this.hoveredCandle = null;
     this.candleSeries?.setData([]); this.volumeSeries?.setData([]);
@@ -124,10 +129,6 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
     this.loadHistory(1); this.loadNews(); this.loadChart();
     this.chartTimer = setInterval(() => { if (!this.chartLoading && !document.hidden) this.loadChart(); }, 60000);
     const stock = this.stock;
-    this.subscriptions.add(this.api.quotes([stock.key]).subscribe({ next: response => {
-      const quote = Object.values(response.data).find(q => q.instrument_token === stock.key) ?? Object.values(response.data)[0];
-      if (quote) { this.quote = quote.last_price; this.quoteAt = new Date().toISOString(); }
-    }, error: () => this.quoteError = 'Live quote unavailable. Stored closing prices remain available.' }));
     if (!/^IN[A-Z0-9]{10}$/.test(this.isin)) { this.profileError = this.actionsError = 'Company fundamentals are available for Indian cash equities with an ISIN.'; return; }
     this.profileLoading = this.actionsLoading = true;
     this.subscriptions.add(this.api.companyProfile(this.isin).subscribe({ next: data => { this.profile = data; this.profileLoading = false; }, error: e => { this.profileError = e.error?.detail || 'Company profile unavailable from Upstox.'; this.profileLoading = false; } }));

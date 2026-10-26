@@ -1,3 +1,4 @@
+import { LivePriceComponent } from '../live-price.component';
 import { GoldenCrossSettingsComponent } from './golden-cross-settings.component';
 import { GoldenInputs,GoldenSettings,GoldenPlot,goldenPlots,defaultGoldenSettings } from './golden-cross.types';
 import { SuryavanshiSettingsComponent } from './suryavanshi-settings.component';
@@ -20,7 +21,7 @@ import { SutradharPrimitive } from './sutradhar.primitive';
 import { SutradharSettings,SutradharInputs,SutradharLevel,defaultSutradharSettings,sutradharLevels,sutradharVisible } from './sutradhar.types';
 
 @Component({
-  selector: 'app-option-analysis', standalone: true, imports: [CommonModule, GhostSettingsComponent,RsiSettingsComponent,RsiPaneComponent,SutradharSettingsComponent,SuryavanshiSettingsComponent,GoldenCrossSettingsComponent],
+  selector: 'app-option-analysis', standalone: true, imports: [CommonModule, LivePriceComponent, GhostSettingsComponent,RsiSettingsComponent,RsiPaneComponent,SutradharSettingsComponent,SuryavanshiSettingsComponent,GoldenCrossSettingsComponent],
   templateUrl: './option-analysis.component.html', styleUrl: './option-analysis.component.css'
 })
 export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDestroy {
@@ -30,6 +31,10 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   @Input() side: 'CE' | 'PE' = 'CE';
   @Input() stockMode = false;
   @Input() stockWorkspace = false;
+  @Input() showBack = false;
+  @Input() underlyingWorkspace = false;
+  @Input() underlyingLabel = '';
+  @Input() underlyingKind = 'Index';
   @Input() stockTimeframe = '1d';
   @Input() initialAtrMultiplier = 1.5;
   @Input() stockStrategy = 'ghost_rider';
@@ -135,7 +140,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
     return this.ghostSettings.minutes && this.interval >= this.ghostSettings.minuteMin && this.interval <= this.ghostSettings.minuteMax;
   }
   get displayedTimeframe(): string { return this.stockMode ? this.stockTimeframe : ({60:'1h',1440:'1d',10080:'1w'} as Record<number,string>)[this.interval] ?? this.interval+'m'; }
-  get activeCandles() { return (this.goldenSelected ? this.data?.goldenCross?.candles : this.suryavanshiSelected ? this.data?.suryavanshi?.candles : this.ghostSelected ? this.data?.ghostRider?.candles : this.sutradharSelected ? this.data?.sutradhar?.candles : undefined) ?? this.data?.candles ?? []; }
+  get activeCandles() { return this.data?.chartCandles ?? this.data?.ghostRider?.candles ?? (this.goldenSelected ? this.data?.goldenCross?.candles : this.suryavanshiSelected ? this.data?.suryavanshi?.candles : this.ghostSelected ? this.data?.ghostRider?.candles : this.sutradharSelected ? this.data?.sutradhar?.candles : undefined) ?? this.data?.candles ?? []; }
   get lastCandle() { return this.activeCandles.find(c=>Date.parse(c.timestamp)===this.hoveredTimestamp) ?? this.activeCandles.at(-1); }
   get ghostPoint() { return this.data?.ghostRider?.points.find(p=>Date.parse(p.timestamp)===this.hoveredTimestamp) ?? this.data?.ghostRider?.points.at(-1); }
   ghostNumber(value: number | undefined): string { return value == null ? 'n/a' : value.toFixed(this.ghostSettings.precision < 0 ? 2 : this.ghostSettings.precision); }
@@ -152,6 +157,9 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   loading = false;
   error = '';
   needsConnection = false;
+  refreshFailed = false;
+  get staleData(): boolean { return !!this.data && (this.refreshFailed || !!this.data.staleData || !!this.data.storedPreview || (this.stockMode && !this.stockWorkspace)); }
+  get lastDataAt(): string | null { return this.data?.dataAsOf || this.data?.ghostRider?.candles?.at(-1)?.timestamp || this.data?.candles?.at(-1)?.timestamp || this.data?.asOf || null; }
   data?: OptionAnalysis;
   strategyId = 'ghost_rider';
   readonly loginUrl = backendUrl('/auth/upstox');
@@ -198,20 +206,20 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
     if (this.loading) return;
     this.loading = true; this.error = ''; this.needsConnection = false;
     const stockRequest = (storedOnly=false) => this.api.analyzeStockWorkspace(this.underlyingKey,this.stockTimeframe,this.ghostSettings.atrMultiplier,this.rsiSettings.inputs,this.sutradharSelected?this.sutradharSettings.inputs:undefined,this.suryavanshiSettings.inputs,this.goldenSettings.inputs,storedOnly);
-    const previewFirst=this.stockWorkspace&&!this.data;
-    const response = this.stockWorkspace ? (previewFirst ? concat(
+    const previewFirst=this.stockWorkspace&&!this.underlyingWorkspace&&!this.data;
+    const response = this.underlyingWorkspace ? this.api.analyzeUnderlyingWorkspace(this.underlyingKey,this.stockTimeframe,this.ghostSettings.atrMultiplier,this.rsiSettings.inputs,this.sutradharSelected?this.sutradharSettings.inputs:undefined,this.suryavanshiSettings.inputs,this.goldenSettings.inputs) : this.stockWorkspace ? (previewFirst ? concat(
       stockRequest(true).pipe(catchError(()=>of(null))),defer(()=>stockRequest())
     ) : stockRequest()) : this.stockMode ? (this.stockStrategy==='golden_death_cross'?this.api.analyzeStockGolden(this.underlyingKey,this.stockTimeframe,this.goldenSettings.inputs):this.stockStrategy==='suryavanshi'?this.api.analyzeStockSuryavanshi(this.underlyingKey,this.stockTimeframe,this.suryavanshiSettings.inputs):this.stockStrategy==='sutradhar'?this.api.analyzeStockSutradhar(this.underlyingKey,this.stockTimeframe,this.sutradharSettings.inputs):this.stockStrategy==='rsi_divergence'?this.api.analyzeStockRsi(this.underlyingKey,this.stockTimeframe,this.rsiSettings.inputs):this.api.analyzeStockGhost(this.underlyingKey,this.stockTimeframe,this.ghostSettings.atrMultiplier)) : this.api.analyzeOption(this.underlyingKey, this.expiry, this.strike, this.side, this.interval, this.ghostSettings.atrMultiplier,this.rsiSettings.inputs,this.sutradharSelected?this.sutradharSettings.inputs:undefined,this.suryavanshiSettings.inputs,this.goldenSettings.inputs);
     this.request = response.subscribe({
       next: data => {
         if (!data) return;
         const first = !this.data || (!!this.data.storedPreview && !this.data.candles.length);
-        this.data = data; this.loading = previewFirst && !!data.storedPreview;
+        this.refreshFailed = false; this.data = data; this.loading = previewFirst && !!data.storedPreview;
         if (first && !this.hasChosenStrategy) this.strategyId = data.strategies.find(s => s.id === 'ghost_rider' && s.levels.length)?.id
           ?? data.strategies.find(s => s.markers.length || s.levels.length)?.id ?? data.strategies[0]?.id ?? '';
         this.draw(first);
       },
-      error: error => { this.loading = false; this.needsConnection = error.status === 401; this.error = this.data?.storedPreview ? 'Current-session refresh failed. Stored history is still shown; retry Refresh.' : error.error?.detail || `Could not load ${this.stockMode ? 'stock' : 'option'} analysis. Please retry.`; }
+      error: error => { this.refreshFailed = true; this.loading = false; this.needsConnection = error.status === 401; this.error = this.data?.storedPreview ? 'Current-session refresh failed. Stored history is still shown; retry Refresh.' : error.error?.detail || `Could not load ${this.stockMode ? 'stock' : 'option'} analysis. Please retry.`; }
     });
   }
   showStrategy(id: string): void {

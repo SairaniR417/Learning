@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 :root { color-scheme: dark; font-family:'Manrope','Segoe UI',sans-serif; color:#eceeed; background:#050606; font-size:13px; }
 * { box-sizing:border-box; }
 body { margin:0; min-width:320px; background:#050606; }
@@ -23,3 +23,5 @@ td { color:#d5dad7!important; border-color:#242827!important; } tbody tr:nth-chi
 .scanner-page td:first-child small { color:#929a96!important; }
 .results-toolbar { font-size:0; }
 .results-toolbar input { font-size:12px; }
+
+.stale-data-alert{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:12px 0;padding:12px 14px;background:#352810;color:#ffe2a4;border:1px solid #b68126;border-left:4px solid #edb647;border-radius:6px;font-size:13px}.stale-data-alert strong{color:#ffd16c}.stale-data-alert button{margin-left:auto;background:#4a3613;color:#ffe2a4;border:1px solid #b68126;border-radius:4px;padding:6px 10px;cursor:pointer}.stale-data-alert button:disabled{opacity:.65;cursor:wait}

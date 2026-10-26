@@ -1,6 +1,7 @@
 """Selected-stock charts: stored history plus a temporary developing session."""
 import asyncio
 import hashlib
+import json
 import math
 import time
 from datetime import datetime, timedelta, timezone
@@ -8,7 +9,7 @@ from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import select
 from database.connection import async_session_factory
 from database.models import Instrument, MarketCandle, StockChartSelection
 from database.candle_repo import upsert_candles, _insert_fn
@@ -21,10 +22,14 @@ FRAMES = {"1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "1d": 1440}
 _cache = {}
 _history_cache = {}
 _lock = asyncio.Lock()
+_chart_slots = asyncio.Semaphore(4)
+CHART_TIMEOUT_SECONDS = 45
 _last_request = 0.0
 
 
 def parse_candles(rows, now):
+    if len(rows) > 2000:
+        raise ValueError('Chart provider returned too many candles')
     result = {}
     for row in rows:
         ts = datetime.fromisoformat(row[0].replace("Z", "+00:00")).astimezone(timezone.utc)
@@ -59,16 +64,16 @@ def aggregate(rows, timeframe, now):
     return list(buckets.values())
 
 
-async def provider_rows(key, unit, start, now, token):
+async def provider_rows(key, unit, start, now, token, interval=1, include_today=True):
     global _last_request
     base = 'https://api.upstox.com/v3/historical-candle'
     encoded = quote(key, safe='')
     yesterday = now.astimezone(INDIA).date()-timedelta(days=1)
     urls = []
     if start <= yesterday:
-        urls.append(f'{base}/{encoded}/{unit}/1/{yesterday}/{start}')
-    if unit == 'minutes' or now.astimezone(INDIA).hour >= 16:
-        urls.append(f'{base}/intraday/{encoded}/{unit}/1')
+        urls.append(f'{base}/{encoded}/{unit}/{interval}/{yesterday}/{start}')
+    if include_today and (unit in {'minutes', 'hours'} or now.astimezone(INDIA).hour >= 16):
+        urls.append(f'{base}/intraday/{encoded}/{unit}/{interval}')
     result = []
     async with httpx.AsyncClient(timeout=25, trust_env=False) as client:
         for url in urls:
@@ -80,9 +85,14 @@ async def provider_rows(key, unit, start, now, token):
                 continue
             await asyncio.sleep(max(0, 1.05-(time.monotonic()-_last_request)))
             _last_request = time.monotonic()
-            response = await client.get(url, headers={'Authorization': f'Bearer {token}'})
-            response.raise_for_status()
-            payload = response.json()
+            async with client.stream('GET', url, headers={'Authorization': f'Bearer {token}'}) as response:
+                response.raise_for_status()
+                body = bytearray()
+                async for chunk in response.aiter_bytes(64 * 1024):
+                    if len(body) + len(chunk) > 2 * 1024 * 1024:
+                        raise ValueError('Chart provider response exceeds size limit')
+                    body.extend(chunk)
+                payload = json.loads(body)
             if payload.get('status') != 'success':
                 raise ValueError('Provider history unavailable')
             parsed = parse_candles(payload['data']['candles'], now)
@@ -98,6 +108,15 @@ async def provider_rows(key, unit, start, now, token):
 
 @router.get('/chart')
 async def stock_chart(instrument_key: str, timeframe: str = '1d'):
+    try:
+        async with asyncio.timeout(CHART_TIMEOUT_SECONDS):
+            async with _chart_slots:
+                return await _stock_chart(instrument_key, timeframe)
+    except TimeoutError:
+        raise HTTPException(504, 'Chart request timed out. Please retry.')
+
+
+async def _stock_chart(instrument_key: str, timeframe: str = '1d'):
     require_fno_key(instrument_key)
     if timeframe not in FRAMES:
         raise HTTPException(400, 'Unsupported chart timeframe')
@@ -115,15 +134,18 @@ async def stock_chart(instrument_key: str, timeframe: str = '1d'):
         query = select(MarketCandle).where(MarketCandle.instrument_id == instrument_id, MarketCandle.timeframe == source_frame)
         if source_frame == '1m':
             query = query.where(MarketCandle.timestamp >= now-timedelta(days=28))
-        stored = (await session.scalars(query.order_by(MarketCandle.timestamp))).all()
-        daily_timestamps = list((await session.scalars(select(MarketCandle.timestamp).where(
-            MarketCandle.instrument_id == instrument_id, MarketCandle.timeframe == '1d'))).all())
-        last_minute = await session.scalar(select(func.max(MarketCandle.timestamp)).where(
-            MarketCandle.instrument_id == instrument_id, MarketCandle.timeframe == '1m'))
+        stored = (await session.scalars(query.order_by(MarketCandle.timestamp.desc()).limit(20000))).all()
+        native = []
+        if timeframe != source_frame:
+            native = (await session.scalars(select(MarketCandle).where(
+                MarketCandle.instrument_id == instrument_id, MarketCandle.timeframe == timeframe)
+                .order_by(MarketCandle.timestamp.desc()).limit(5000))).all()
     def utc(ts):
         return ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts.astimezone(timezone.utc)
+    stored.reverse()
     rows = [dict(timestamp=utc(r.timestamp), **{k: float(getattr(r,k)) for k in ('open','high','low','close')}, volume=r.volume) for r in stored]
-    daily_dates = {utc(ts).astimezone(INDIA).date() for ts in daily_timestamps}
+    native_rows = [dict(timestamp=utc(r.timestamp), **{k: float(getattr(r,k)) for k in ('open','high','low','close')}, volume=r.volume) for r in native]
+    history_warning = None
     warning = None
     try:
         token = get_token()
@@ -138,27 +160,41 @@ async def stock_chart(instrument_key: str, timeframe: str = '1d'):
                 live, daily = cached[1:]
             else:
                 try:
-                    start = today-timedelta(days=27)
-                    if last_minute is not None:
-                        start = max(start, utc(last_minute).astimezone(INDIA).date()-timedelta(days=2))
-                    live = await provider_rows(instrument_key, 'minutes', start, now, token)
-                    # Repair recent missed daily sessions without reloading the full DB history.
-                    daily_start = max(today-timedelta(days=3650), max(daily_dates)-timedelta(days=2) if daily_dates else today-timedelta(days=27))
-                    daily = await provider_rows(instrument_key, 'days', daily_start, now, token)
+                    # Historical candles come exclusively from the DB. Only today's
+                    # session is requested from the provider, shared across timeframes.
+                    async with asyncio.timeout(30):
+                        live = await provider_rows(instrument_key, 'minutes', today, now, token)
+                    daily = []
                     completed = [dict(r, instrument_key=instrument_key, timeframe='1m') for r in live if candle_closed(r['timestamp'], 'minutes', 1, now, 'NSE')]
-                    # Existing daily rows may already be official BHAV values. Only fill gaps;
-                    # the scheduled BHAV importer owns corrections to stored daily candles.
-                    completed += [dict(r, instrument_key=instrument_key, timeframe='1d') for r in daily if r['timestamp'].astimezone(INDIA).date() not in daily_dates and candle_closed(r['timestamp'], 'days', 1, now, 'NSE')]
                     await upsert_candles(completed)
                     if len(_cache) >= 32:
                         _cache.pop(next(iter(_cache)))
                     _cache[cache_key] = (time.monotonic(), live, daily)
-                except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+                except (httpx.HTTPError, TimeoutError, ValueError, KeyError, IndexError, TypeError):
                     live, daily = [], []
                     warning = 'Live candles unavailable. Showing stored history; reconnect Upstox or retry.'
+        # Hydrate only the selected timeframe if no historical candles are stored.
+        # Each window stays below 2,000 bars; later opens reuse the persisted rows.
+        if not any(r['timestamp'].astimezone(INDIA).date() < today for r in rows + native_rows):
+            unit, interval, days = {'1m':('minutes',1,7), '5m':('minutes',5,20),
+                '15m':('minutes',15,28), '30m':('minutes',30,89),
+                '1h':('hours',1,89), '1d':('days',1,730)}[timeframe]
+            try:
+                async with _lock:
+                    async with asyncio.timeout(15):
+                        history = await provider_rows(instrument_key, unit, today-timedelta(days=days), now, token,
+                                                      interval=interval, include_today=False)
+                        history = [r for r in history if r['timestamp'].astimezone(INDIA).date() < today]
+                        await upsert_candles([dict(r, instrument_key=instrument_key, timeframe=timeframe) for r in history])
+                if timeframe == source_frame:
+                    rows = history + rows
+                else:
+                    native_rows = history + native_rows
+            except (httpx.HTTPError, TimeoutError, ValueError, KeyError, IndexError, TypeError):
+                history_warning = 'Historical candles could not be loaded. Showing available stored and current-session data.'
         if timeframe == '1d':
             rows = daily + rows
-            # A provider daily close takes precedence over an aggregate after market close.
+            # Official stored daily candles take precedence over today's aggregate.
             if not any(r['timestamp'].astimezone(INDIA).date() == today for r in rows):
                 rows += aggregate([r for r in live if r['timestamp'].astimezone(INDIA).date() == today], '1d', now)
         else:
@@ -175,6 +211,16 @@ async def stock_chart(instrument_key: str, timeframe: str = '1d'):
     chart = sorted(merged.values(), key=lambda r:r['timestamp'])
     if timeframe != '1d':
         chart = aggregate(chart, timeframe, now)
+        if native_rows:
+            # Keep complete stored bars when minute history covers only part of an old bucket.
+            combined = {r['timestamp']: dict(r, developing=False) for r in native_rows}
+            for row in chart:
+                if row['timestamp'].astimezone(INDIA).date() == today:
+                    combined[row['timestamp']] = row
+                else:
+                    combined.setdefault(row['timestamp'], row)
+            chart = sorted(combined.values(), key=lambda row: row['timestamp'])[-5000:]
     return dict(candles=[dict(r, timestamp=r['timestamp'].isoformat()) for r in chart], timeframe=timeframe,
-                warning=warning, source='DB history + selected-stock Upstox candles' if token and not warning else 'Stored history',
+                staleData=bool(warning), dataAsOf=chart[-1]['timestamp'].isoformat() if chart else None,
+                historyWarning=history_warning, warning=warning, source='DB history + selected-stock Upstox candles' if token and not warning else 'Stored history',
                 fetchedAt=now.isoformat())
