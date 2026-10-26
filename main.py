@@ -717,6 +717,6 @@ app.include_router(focused_plans_router)
 
 
 @app.get('/api/focused/plans/options')
-async def focused_option_plan(instrument_key: str,mode: Literal['intraday','swing']='intraday'):
+async def focused_option_plan(instrument_key: str,mode: Literal['intraday','swing']='intraday',timeframe: Literal['1m','5m','15m','1h','1d']|None=None):
     from services.focused_options import option_plan
-    return await option_plan(instrument_key,mode,api_json_request,require_token())
+    return await option_plan(instrument_key,mode,api_json_request,require_token(),timeframe=timeframe)

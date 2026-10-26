@@ -1,5 +1,6 @@
+export type FocusTimeframe='1m'|'5m'|'15m'|'1h'|'1d';
 export type FocusMode='intraday'|'swing';
-export interface PlanEvidence {id:string;name:string;direction:string|null;state:string;reason:string;asOf:string|null;}
+export interface PlanEvidence {id:string;name:string;direction:string|null;state:string;reason:string;asOf:string|null;signal?:'BUY'|'SELL'|null;entryEligible?:boolean;ageBars?:number;signalAt?:string;signalState?:string;signalReason?:string;timeframe?:string;entry?:number|null;stopLoss?:number|null;targets?:(number|null)[];}
 export interface TradeLevels {entry:number;entryMin:number;entryMax:number;stopLoss:number;target1:number;target2:number;riskPerUnit:number;riskPct:number;rewardRisk:number;basis:string;}
 export interface FocusPlan {instrumentKey:string;symbol:string;name:string;mode:FocusMode;timeframe:string;direction:'BUY'|'SELL';action:'BUY'|'SELL'|'WAIT';score:number;maxScore:number;asOf:string;validUntil:string;whatHappening:string;decision:string;qualified:boolean;blockers:string[];waitReasons:string[];plan:TradeLevels|null;holding:string;exitRule:string;optionSide:string;evidence:PlanEvidence[];close:number;}
 export interface FocusPlans {mode:FocusMode;timeframe:string;plans:FocusPlan[];coverage:Record<string,number>;strategies:string[];scannedAt:string;methodology:string;policy:string;}

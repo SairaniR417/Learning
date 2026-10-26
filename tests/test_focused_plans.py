@@ -80,6 +80,92 @@ class DecisionTests(unittest.TestCase):
         self.assertIsNone(result['plan'])
 
 
+class SourceSignalTests(unittest.TestCase):
+    def test_selected_timeframe_controls_engine_and_expiry(self):
+        for frame,minutes in f.TIMEFRAMES.items():
+            with self.subTest(frame=frame),patch.object(f,'evidence',return_value=computed()) as calculate:
+                result=f.build_plan(rows(),daily(),[],dict(key=KEY,symbol='TEST'),'intraday',NOW,timeframe=frame)
+                self.assertEqual(result['timeframe'],frame)
+                self.assertEqual(calculate.call_args.args[3],minutes)
+                self.assertEqual(f.utc(result['validUntil'])-f.utc(result['asOf']),timedelta(minutes=minutes*2,seconds=5))
+
+    def test_one_minute_completion_keeps_developing_bar_out(self):
+        source=[dict(rows(1)[0],timestamp=NOW-timedelta(seconds=65)),dict(rows(1)[0],timestamp=NOW-timedelta(seconds=30))]
+        self.assertEqual(len(f.completed_rows(source,'1m',NOW)),1)
+
+    def test_daily_snapshot_uses_completed_daily_candles(self):
+        response=f.analyze_snapshot(pl.DataFrame(daily()),pl.DataFrame(daily()),pl.DataFrame(),{KEY:dict(symbol='TEST')},'swing',now=NOW,timeframe='1d')
+        self.assertEqual(response['timeframe'],'1d')
+        self.assertEqual(response['plans'][0]['timeframe'],'1d')
+        self.assertEqual(response['plans'][0]['action'],'WAIT')
+
+    def test_source_levels_survive_a_blocked_combined_plan(self):
+        setup=dict(signal='BUY',signalAt=NOW.isoformat(),index=99,entry=100,stopLoss=90,
+                   targets=[dict(price=110,hit=False)])
+        trade=dict(direction='short',timestamp=NOW.isoformat(),index=99,entry=103,sl=108,tp=97,state='TARGET')
+        with patch.object(f,'ghost_calculate',return_value={'setup':setup}), \
+             patch.object(f.suryavanshi,'calculate',return_value={'activeTrade':None,'trades':[trade]}):
+            checks,drivers,levels=f.evidence(rows(),daily(),[],15,NOW)
+        by_id={c['id']:c for c in checks}
+        self.assertEqual(by_id['ghost_rider']['entry'],100)
+        self.assertEqual(by_id['ghost_rider']['stopLoss'],90)
+        self.assertEqual(by_id['ghost_rider']['targets'],[110])
+        self.assertEqual(by_id['suryavanshi']['signal'],'SELL')
+        self.assertEqual(by_id['suryavanshi']['signalState'],'TARGET')
+        self.assertIsNone(by_id['suryavanshi']['direction'])
+        result=f.build_plan(rows(),daily(),[],dict(key=KEY,symbol='TEST'),'intraday',NOW,(checks,drivers,levels))
+        self.assertEqual(result['action'],'WAIT')
+        self.assertEqual(result['evidence'][0]['signal'],'BUY')
+
+    def test_daily_trend_does_not_invent_an_execution_cross(self):
+        trend=dict(points=[dict(sma50=110,sma200=100,timestamp=NOW.isoformat())])
+        no_cross=dict(latestCross=None)
+        with patch.object(f.golden_cross,'calculate',side_effect=[trend,no_cross]):
+            checks,_,_=f.evidence(rows(),daily(),[],15,NOW)
+        cross=next(c for c in checks if c['id']=='golden_death_cross')
+        self.assertEqual(cross['direction'],'BUY')
+        self.assertNotIn('signal',cross)
+
+    def test_execution_cross_has_its_own_direction_and_no_invented_levels(self):
+        trend=dict(points=[dict(sma50=110,sma200=100,timestamp=NOW.isoformat())])
+        execution=dict(latestCross=dict(direction='SELL',timestamp=NOW.isoformat(),kind='DEATH_CROSS'),
+                       barsSinceCross=2,confirmationTime=None,state='CROSS_ACTIVE',signal='SELL')
+        with patch.object(f.golden_cross,'calculate',side_effect=[trend,execution]):
+            checks,_,_=f.evidence(rows(),daily(),[],15,NOW)
+        cross=next(c for c in checks if c['id']=='golden_death_cross')
+        self.assertEqual((cross['direction'],cross['signal'],cross['signalState']),('BUY','SELL','CROSS_ACTIVE'))
+        self.assertEqual(cross['timeframe'],'15m')
+        self.assertNotIn('entry',cross)
+
+    def test_bse_style_eight_bar_ghost_buy_is_not_hidden_by_fresh_entry_window(self):
+        setup=dict(signal='BUY',signalAt='2026-10-12T00:00:00+05:30',index=91,entry=3330.2,
+                   stopLoss=3169.44,targets=[dict(price=3490.96,hit=False)])
+        trend=dict(points=[dict(sma50=90,sma200=100,timestamp=NOW.isoformat())])
+        execution=dict(latestCross=dict(direction='SELL',timestamp='2026-10-14T00:00:00+05:30',kind='DEATH_CROSS'),
+                       barsSinceCross=6,confirmationTime=None,state='CROSS_ACTIVE',signal='SELL')
+        with patch.object(f,'ghost_calculate',return_value={'setup':setup}), \
+             patch.object(f.golden_cross,'calculate',side_effect=[trend,execution]):
+            checks,drivers,_=f.evidence(rows(),daily(),[],1440,NOW)
+        by_id={c['id']:c for c in checks}
+        self.assertEqual(by_id['ghost_rider']['signal'],'BUY')
+        self.assertEqual(by_id['ghost_rider']['signalState'],'CURRENT_SETUP')
+        self.assertEqual(by_id['ghost_rider']['ageBars'],8)
+        self.assertFalse(by_id['ghost_rider']['entryEligible'])
+        self.assertIsNone(by_id['ghost_rider']['direction'])
+        self.assertNotIn('ghost_rider',drivers)
+        self.assertEqual(by_id['golden_death_cross']['signal'],'SELL')
+
+    def test_unconfirmed_cross_does_not_invent_a_sell_signal(self):
+        trend=dict(points=[])
+        execution=dict(latestCross=dict(direction='SELL',timestamp=NOW.isoformat(),kind='DEATH_CROSS'),
+                       barsSinceCross=2,confirmationTime=None,state='WATCH',signal=None)
+        with patch.object(f.golden_cross,'calculate',side_effect=[trend,execution]):
+            checks,_,_=f.evidence(rows(),daily(),[],15,NOW)
+        cross=next(c for c in checks if c['id']=='golden_death_cross')
+        self.assertIsNone(cross['signal'])
+        self.assertEqual(cross['signalState'],'WATCH')
+
+
 class QuoteTests(unittest.TestCase):
     def quote(self):
         return dict(timestamp=str(NOW.timestamp()*1000),last_trade_time=str(NOW.timestamp()*1000),depth={'buy':[dict(price=9.9,quantity=500)],'sell':[dict(price=10,quantity=500)]},volume=1000,oi=1000)
@@ -96,6 +182,16 @@ class QuoteTests(unittest.TestCase):
 
 
 class OptionPlanTests(unittest.IsolatedAsyncioTestCase):
+    async def test_option_check_passes_selected_frame_to_underlying_plan(self):
+        async def chart(key,frame):
+            return dict(candles=[dict(r,timestamp=r['timestamp'].isoformat()) for r in (daily() if frame=='1d' else rows(100,interval=1))])
+        with patch.object(o.stock_chart,'stock_chart',AsyncMock(side_effect=chart)) as history, \
+             patch.object(o.plans,'build_plan',return_value=dict(qualified=False,blockers=['test'])) as build:
+            result=await o.option_plan(KEY,'intraday',AsyncMock(),'token',NOW,timeframe='1m')
+        self.assertEqual(result['action'],'WAIT')
+        self.assertEqual(build.call_args.kwargs['timeframe'],'1m')
+        self.assertIn('1m',[call.args[1] for call in history.call_args_list])
+
     async def test_closed_market_never_fetches_contracts(self):
         with patch.object(o.option_market,'expiries',AsyncMock()) as fetch:
             result=await o.option_plan(KEY,'intraday',AsyncMock(),'token',NOW+timedelta(days=5))

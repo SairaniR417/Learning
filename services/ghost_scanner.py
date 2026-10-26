@@ -26,7 +26,7 @@ async def load_stock_candles(key, timeframe):
 
 def completed_rows(rows, timeframe, now=None):
     now = now or datetime.now(timezone.utc)
-    interval = TIMEFRAMES[timeframe]
+    interval = 1 if timeframe == '1m' else TIMEFRAMES[timeframe]
     result = []
     for row in rows:
         row = dict(row)

@@ -18,6 +18,14 @@ from services.option_market import SharedCache
 router=APIRouter(prefix='/api/focused/plans',tags=['Focused plans'])
 NAMES={'ghost_rider':'Ghost Rider','rsi_divergence':'RSI Divergence','sutradhar':'Sutradhar','suryavanshi':'Suryavanshi','golden_death_cross':'Golden / Death Cross'}
 MODES={'intraday':('15m',15,8),'swing':('1h',60,35)}
+FocusTimeframe=Literal['1m','5m','15m','1h','1d']
+TIMEFRAMES={'1m':1,'5m':5,'15m':15,'1h':60,'1d':1440}
+
+def execution_frame(mode,timeframe=None):
+    frame=timeframe or MODES[mode][0]
+    if frame not in TIMEFRAMES: raise HTTPException(400,'Select 1m, 5m, 15m, 1h or 1d.')
+    return frame,TIMEFRAMES[frame]
+
 _cache=SharedCache(capacity=4)
 _jobs={}
 _tasks={}
@@ -83,12 +91,41 @@ def evidence(rows,daily,five,interval,now):
     else: add('golden_death_cross',None,'UNAVAILABLE','At least 200 completed daily candles are needed for trend context.')
     level=levels['points'][-1] if levels['status']=='LEVELS_READY' else None
     add('sutradhar',None,levels['status'],'Daily-open reference levels locate nearby support/resistance; not an independent Buy/Sell vote.',rows[-1]['timestamp'].isoformat())
+    # Expose individual source signals independently of the combined plan gates.
+    # Daily MA context above remains a vote, never a fabricated crossover signal.
+    signals={}
+    if setup:
+        signals['ghost_rider']=dict(signal=setup['signal'],signalAt=setup['signalAt'],
+            entry=setup['entry'],stopLoss=setup['stopLoss'],
+            signalState='CURRENT_SETUP',ageBars=n-1-setup['index'],
+            entryEligible='ghost_rider' in drivers,
+            targets=[t['price'] for t in setup['targets']],timeframe={60:'1h',1440:'1d'}.get(interval,f'{interval}m'),
+            signalReason='Latest EMA 9/21 crossover remains '+setup['signal']+' until the opposite crossover, as in Scanner. '+next(c['reason'] for c in out if c['id']=='ghost_rider'))
+    recent_trade=s['trades'][-1] if s['trades'] else None
+    if recent_trade and (trade is not None or n-1-recent_trade['index']<=5):
+        signals['suryavanshi']=dict(signal='BUY' if recent_trade['direction']=='long' else 'SELL',
+            signalAt=recent_trade['timestamp'],entry=recent_trade['entry'],stopLoss=recent_trade['sl'],
+            targets=[recent_trade['tp']],signalState=recent_trade['state'],entryEligible='suryavanshi' in drivers,timeframe={60:'1h',1440:'1d'}.get(interval,f'{interval}m'),
+            signalReason='Structure-break signal. Source stop and target are from the original trade; TARGET, STOP or BOTH means the trade has exited.')
+    if event and n-1-event['detectedIndex']<=10:
+        signals['rsi_divergence']=dict(signal='BUY' if event['direction']=='BULLISH' else 'SELL',
+            signalAt=event['detectedAt'],timeframe={60:'1h',1440:'1d'}.get(interval,f'{interval}m'))
+    execution_cross=golden_cross.calculate(rows)
+    latest=execution_cross['latestCross']
+    if latest:
+        signals['golden_death_cross']=dict(signal=execution_cross['signal'],
+            signalAt=execution_cross['confirmationTime'] or latest['timestamp'],
+            signalState=execution_cross['state'],timeframe={60:'1h',1440:'1d'}.get(interval,f'{interval}m'),
+            signalReason=latest['kind'].replace('_',' ').title()+': '+execution_cross['state'].replace('_',' ').lower()+'. No source entry or stop is defined.')
+    for check in out:
+        check.update(signals.get(check['id'],{}))
     return out,drivers,level
 
 
-def build_plan(rows,daily,five,meta,mode='intraday',now=None,computed=None,instrument_type='STOCK'):
+def build_plan(rows,daily,five,meta,mode='intraday',now=None,computed=None,instrument_type='STOCK',timeframe=None):
     now=now or datetime.now(timezone.utc)
-    frame,interval,maxbars=MODES[mode]
+    frame,interval=execution_frame(mode,timeframe)
+    maxbars=max(1,((120 if mode=='intraday' else 1875)+interval-1)//interval)
     checks,drivers,levels=computed or evidence(rows,daily,five,interval,now)
     last=rows[-1];entry=float(last['close']);blockers=[]
     if not daily or now-utc(daily[-1]['timestamp'])>timedelta(days=7): blockers.append('Daily trend history is stale; refresh daily candles first.')
@@ -121,7 +158,7 @@ def build_plan(rows,daily,five,meta,mode='intraday',now=None,computed=None,instr
                 basis='Source stop from '+('Suryavanshi' if 'suryavanshi' in drivers and drivers['suryavanshi'] is driver else 'Ghost Rider')+'. T1: nearer of 2R or the next Sutradhar barrier; T2: 3R projection. Recalculate if entry changes.')
     # A fresh intraday candle proves an actual session. Weekdays alone never prove a holiday is open.
     asof=utc(last['timestamp']);valid=asof+timedelta(minutes=interval*2,seconds=5)
-    holding=('Review every 15 minutes; maximum 8 bars (2 hours) from entry. Exit by 15:20 IST.' if mode=='intraday' else 'Review every hour; maximum 5 trading sessions from entry.')
+    holding=(f'Monitor stops and targets; review each {frame} candle. '+('Maximum 2 hours from entry. Exit by 15:20 IST.' if mode=='intraday' else 'Maximum 5 trading sessions from entry.'))
     exit_rule='Exit earlier at stop, target, an opposite execution signal, or loss of the Sutradhar daily open. After T1, protect remaining units at entry; no averaging down.'
     description=f"{len(agree)}/4 directional indicators support {'strength' if direction=='BUY' else 'weakness'}; "+('price is above' if levels and entry>levels['O'] else 'price is below' if levels else 'waiting for')+' the daily-open reference.'
     row=dict(instrumentKey=meta['key'],symbol=meta['symbol'],name=meta.get('name',meta['symbol']),instrumentType=instrument_type,mode=mode,timeframe=frame,direction=direction,
@@ -131,8 +168,8 @@ def build_plan(rows,daily,five,meta,mode='intraday',now=None,computed=None,instr
     return gate(row,now)
 
 
-def analyze_snapshot(execution,daily,five,meta,mode,progress=None,now=None):
-    now=now or datetime.now(timezone.utc);frame,interval,_=MODES[mode]
+def analyze_snapshot(execution,daily,five,meta,mode,progress=None,now=None,timeframe=None):
+    now=now or datetime.now(timezone.utc);frame,interval=execution_frame(mode,timeframe)
     def groups(df,tf):
         if df.is_empty(): return {}
         return {g['instrument_key'][0]:completed_rows(g.sort('timestamp').to_dicts(),tf,now) for g in df.partition_by('instrument_key')}
@@ -145,7 +182,7 @@ def analyze_snapshot(execution,daily,five,meta,mode,progress=None,now=None):
         if len(d)<200: coverage['dailyHistory']+=1;continue
         turnover=sum(float(r['close'])*float(r.get('volume') or 0) for r in d[-20:])/20
         if turnover<10_000_000 or e[-1]['close']<20 or not e[-1].get('volume'): coverage['liquidity']+=1;continue
-        row=build_plan(e,d,fg.get(key,[]),dict(m,key=key,liquidity=turnover),mode,now)
+        row=build_plan(e,d,fg.get(key,[]),dict(m,key=key,liquidity=turnover),mode,now,timeframe=frame)
         rows.append(row)
     rows.sort(key=lambda r:(r['action']=='WAIT',not r['qualified'],-r['score'],-r['liquidity'],r['symbol']))
     return dict(mode=mode,timeframe=frame,plans=rows,coverage=coverage,strategies=list(NAMES.values()),scannedAt=now.isoformat(),
@@ -153,23 +190,23 @@ def analyze_snapshot(execution,daily,five,meta,mode,progress=None,now=None):
                 policy='Rule-based, unvalidated trade plans. Holding windows are maximum review limits, not predictions. Levels exclude fees/slippage. WAIT means no new entry. SELL stock setups apply to held shares or permitted intraday shorts; option purchases use separate premium levels.')
 
 
-async def scan(mode,progress=None):
-    frame=MODES[mode][0]
+async def scan(mode,progress=None,timeframe=None):
+    frame,_=execution_frame(mode,timeframe)
     revisions=tuple(await asyncio.gather(*(get_candle_revision(f) for f in ('1d',frame,'5m'))))
     async def load():
         meta={i['key']:i for i in await get_all_active_instruments() if i.get('exchange')=='NSE'}
         if progress: progress('Reading stored daily, execution and 5-minute history')
         daily,execution,five=await asyncio.gather(*(load_recent_candles_polars(f,per_instrument=1000) for f in ('1d',frame,'5m')))
-        return await asyncio.to_thread(analyze_snapshot,execution,daily,five,meta,mode,progress)
-    result=await _cache.get(('five-plan-v1',mode,revisions),45,load)
+        return await asyncio.to_thread(analyze_snapshot,execution,daily,five,meta,mode,progress,timeframe=frame)
+    result=await _cache.get(('five-plan-v4-current-signals',mode,frame,revisions),45,load)
     return dict(result,plans=[gate(r) for r in result['plans']])
 
 
-async def run_job(job_id,mode):
+async def run_job(job_id,mode,timeframe=None):
     job=_jobs[job_id]
     try:
         def progress(stage): job['stage']=stage
-        async with asyncio.timeout(240): result=await scan(mode,progress)
+        async with asyncio.timeout(240): result=await scan(mode,progress,timeframe)
         job.update(status='complete',stage='Trade plans ready',result=result)
     except Exception:
         import logging
@@ -178,8 +215,10 @@ async def run_job(job_id,mode):
 
 
 @router.post('/jobs')
-async def start_job(mode:Literal['intraday','swing']='intraday'):
-    task=_tasks.get(mode)
+async def start_job(mode:Literal['intraday','swing']='intraday',timeframe:FocusTimeframe|None=None):
+    frame,_=execution_frame(mode,timeframe)
+    task_key=(mode,frame)
+    task=_tasks.get(task_key)
     if task and not task[1].done(): return dict(id=task[0])
     while len(_jobs)>=12:
         finished=next((k for k,v in _jobs.items() if v['status']!='running'),None)
@@ -187,7 +226,7 @@ async def start_job(mode:Literal['intraday','swing']='intraday'):
         del _jobs[finished]
     job_id=uuid4().hex
     _jobs[job_id]=dict(id=job_id,status='running',stage='Preparing five-indicator scan',result=None,error='')
-    task=asyncio.create_task(run_job(job_id,mode));_tasks[mode]=(job_id,task)
+    task=asyncio.create_task(run_job(job_id,mode,frame));_tasks[task_key]=(job_id,task)
     return dict(id=job_id)
 
 

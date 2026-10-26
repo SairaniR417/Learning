@@ -184,14 +184,14 @@ export class MarketApiService {
   fnoStocks(): Observable<{ stocks: SelectedStock[]; total: number }> {
     return this.http.get<{ stocks: SelectedStock[]; total: number }>('/api/market/fno-stocks');
   }
-  startFocusedPlans(mode:import('./focused/focused-plans.types').FocusMode):Observable<{id:string}> {
-    return this.http.post<{id:string}>('/api/focused/plans/jobs',{}, {params:{mode}});
+  startFocusedPlans(mode:import('./focused/focused-plans.types').FocusMode,timeframe?:import('./focused/focused-plans.types').FocusTimeframe):Observable<{id:string}> {
+    return this.http.post<{id:string}>('/api/focused/plans/jobs',{}, {params:timeframe?{mode,timeframe}:{mode}});
   }
   focusedPlansJob(id:string):Observable<import('./focused/focused-plans.types').FocusPlansJob> {
     return this.http.get<import('./focused/focused-plans.types').FocusPlansJob>('/api/focused/plans/jobs/'+encodeURIComponent(id));
   }
-  focusedOptionPlan(key:string,mode:import('./focused/focused-plans.types').FocusMode):Observable<import('./focused/focused-plans.types').OptionPlan> {
-    return this.http.get<import('./focused/focused-plans.types').OptionPlan>('/api/focused/plans/options',{params:{instrument_key:key,mode}});
+  focusedOptionPlan(key:string,mode:import('./focused/focused-plans.types').FocusMode,timeframe?:import('./focused/focused-plans.types').FocusTimeframe):Observable<import('./focused/focused-plans.types').OptionPlan> {
+    return this.http.get<import('./focused/focused-plans.types').OptionPlan>('/api/focused/plans/options',{params:timeframe?{instrument_key:key,mode,timeframe}:{instrument_key:key,mode}});
   }
   startFocused(): Observable<{ id: string }> { return this.http.post<{ id: string }>('/api/focused/jobs', {}); }
   focusedJob(id: string): Observable<FocusedJob> { return this.http.get<FocusedJob>(`/api/focused/jobs/${encodeURIComponent(id)}`); }

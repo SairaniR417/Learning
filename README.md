@@ -1,4 +1,4 @@
-﻿# Market Desk
+ï»¿# Market Desk
 
 ## F&O stock scope
 
@@ -151,6 +151,42 @@ strategies continue using completed candles. VWAP resets by exchange-local India
 calendar session. Our 28-day/1,000-bar window, Upstox candles and minute sampling
 can differ from TradingView's warm-up, feed and tick-by-tick execution. Numerical
 parity is not asserted without matching exported input candles from TradingView.
+
+## Focused strategy signals
+
+Focused opens with one row per stock, combining recent usable Ghost Rider,
+Suryavanshi, RSI Divergence and Golden / Death Cross signals. BUY/SELL setup counts
+and entry-check counts lead the view. Stocks passing entry checks rank first,
+then agreement count and signal recency. Ghost Rider keeps the latest crossover direction until an opposite crossover,
+as in Scanner; freshness, stop touches and target touches affect entry eligibility
+separately. Active Suryavanshi trades also retain their direction beyond the
+fresh-entry window. Closed structure trades and invalidated divergences are
+excluded; conflicting strategy directions have no trade levels. Each strategy
+shows its own BUY/SELL, and unconfirmed crosses do not invent a direction. This ranking is not a forecast.
+
+Choose 1 minute, 5 minutes, 15 minutes, 1 hour or 1 day. The timeframe applies to
+signals, charts and option checks independently of Intraday/Swing holding style.
+READY uses the validated stock plan; WATCH shows source reference levels where
+defined and needs a new entry check. Before the next session, this is a watchlist.
+Stored scans do not sync fresh broker candles. Candle dates and coverage identify
+missing/stale history; daily signals use completed candles and retain the existing
+current-session and intraday daily-open entry gates.
+
+Options remain unverified candidates until an explicit check resolves an actual
+contract, premium setup and live liquidity. Stock SELL does not mean selling an
+option; a bearish stock can be evaluated for a separately purchased PUT.
+Strategy evidence, history coverage and methodology are under Details.
+Validation: `python -m unittest tests.test_focused_plans tests.test_focused` and,
+from `frontend`, `node --test tests/focused-signals.test.cjs` and `npm run build`.
+
+To audit every saved stock against the shared engines on identical stored completed
+candles, run `.\.venv\Scripts\python.exe scripts\audit_focused_signals.py`, then
+from `frontend` run `node scripts/audit-focused-signals.cjs`. Reports are saved to
+`data/focused-signal-audit.json` and `data/focused-shortlist-audit.json`.
+The first report lists insufficient history separately; the second verifies actual
+frontend directions, conflict rows, entry gates and source-level ordering.
+These are stored-data checks with default inputs; live/developing candles and
+custom chart settings can still produce different results.
 
 ## Requirements
 

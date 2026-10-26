@@ -12,3 +12,6 @@ data/scheduled-update.json
 data/scheduled-update.lock
 data/bhavcopy-backup-*.json
 data/bhavcopy-import-*.json
+data/focused-signal-audit.json
+data/focused-shortlist-audit.json
+data/focused-signal-audit.md

@@ -31,12 +31,12 @@ def liquid_quote(quote,lot,now):
     except (KeyError,IndexError,TypeError,ValueError): return None,'Option depth or liquidity data is missing.'
 
 
-async def option_plan(key,mode,request,token,now=None):
+async def option_plan(key,mode,request,token,now=None,timeframe=None):
     require_fno_key(key)
     if mode not in plans.MODES: raise HTTPException(400,'Select Intraday or Swing.')
     real_clock=now is None
     now=now or datetime.now(timezone.utc)
-    frame,interval,_=plans.MODES[mode]
+    frame,interval=plans.execution_frame(mode,timeframe)
     local=now.astimezone(plans.INDIA)
     if local.weekday()>4 or not 9*60+15<=local.hour*60+local.minute<15*60:
         return wait('Market closed or outside entry hours. Check a live contract during the next session.')
@@ -47,7 +47,7 @@ async def option_plan(key,mode,request,token,now=None):
     daily=await stock_rows('1d');execution=await stock_rows(frame);five=await stock_rows('5m')
     if len(daily)<200 or len(execution)<60: return wait('Underlying history is incomplete. No option recommendation.')
     meta=next(s for s in get_fno_stocks() if s['key']==key)
-    parent=plans.build_plan(execution,daily,five,meta,mode,now)
+    parent=plans.build_plan(execution,daily,five,meta,mode,now,timeframe=frame)
     if not parent['qualified']: return wait('Underlying setup is not qualified: '+parent['blockers'][0])
     # Swing bearish stocks legitimately have a WAIT cash-short restriction; a PUT
     # can be evaluated, but every other freshness/session restriction still applies.
@@ -80,7 +80,7 @@ async def option_plan(key,mode,request,token,now=None):
     if len(rows)<60 or len(days)<15: return wait('This contract has insufficient premium history for the five-indicator plan.')
     checks,drivers,levels=plans.evidence(rows,days,small,interval,now)
     checks=[dict(c,direction='BUY',state='UNDERLYING_TREND',reason=f"Underlying daily trend supports buying {side}; this is not a cross on the premium chart.") if c['id']=='golden_death_cross' else c for c in checks]
-    result=plans.build_plan(rows,days,small,dict(key=contract['instrument_key'],symbol=contract.get('trading_symbol',f'{meta["symbol"]} {strike} {side}'),name=meta['name']),mode,now,(checks,drivers,levels),'OPTION')
+    result=plans.build_plan(rows,days,small,dict(key=contract['instrument_key'],symbol=contract.get('trading_symbol',f'{meta["symbol"]} {strike} {side}'),name=meta['name']),mode,now,(checks,drivers,levels),'OPTION',timeframe=frame)
     if result['direction']!='BUY' or not result['qualified'] or result['action']=='WAIT':
         return wait('Premium setup is not ready: '+(result['waitReasons'][0] if result['waitReasons'] else 'premium indicators do not support buying.'),evidence=result['evidence'])
     payload=await option_market.limited_request(request,'https://api.upstox.com/v2/market-quote/quotes',headers={'Authorization':f'Bearer {token}'},params={'instrument_key':contract['instrument_key']})

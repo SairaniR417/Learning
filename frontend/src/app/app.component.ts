@@ -40,7 +40,6 @@ export class AppComponent implements OnInit, OnDestroy {
   private clockSubscription?: Subscription;
   private marketSubscription?: Subscription;
   private indexSubscription?: Subscription;
-  private trendKey = '';
   private readonly numberFormat = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
   connected = false;
@@ -49,17 +48,9 @@ export class AppComponent implements OnInit, OnDestroy {
   selectedStock: SelectedStock | null = null;
   openStock(stock: SelectedStock): void { this.selectedStock = stock; this.page = 'Stock Details'; }
   readonly market = 'equities' as const;
-  marketName = 'NSE F&O stocks';
   receivedAt = 0;
   loadingMarket = true;
   marketError = '';
-  trendLoading = false;
-  trendError = '';
-  chartSymbol = 'RELIANCE';
-  chartPath = '';
-  chartAreaPath = '';
-  chartLabels: string[] = [];
-  leaders: DashboardAsset[] = [];
   heatTiles: DashboardAsset[] = [];
   allHeatAssets: DashboardAsset[] = [];
   heatPage = 0;
@@ -136,21 +127,15 @@ export class AppComponent implements OnInit, OnDestroy {
       next: (snapshot) => {
         if (snapshot.market !== this.market) return;
         this.connected = true;
-        this.marketName = snapshot.name;
         this.receivedAt = snapshot.receivedAt;
         this.marketError = '';
         this.loadingMarket = false;
         const assets = snapshot.assets.map((asset, index) => this.toDashboardAsset(asset, index));
-        this.leaders = [...assets]
-          .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
-          .slice(0, 6);
         this.allHeatAssets = [...assets]
           .sort((a, b) => b.volume - a.volume);
         this.heatPage = Math.min(this.heatPage, this.heatPageCount - 1);
         this.showHeatPage();
         this.buildOpportunities(assets);
-        this.chartSymbol = snapshot.chartSymbol;
-        if (snapshot.chartKey && snapshot.chartKey !== this.trendKey) this.loadTrend(snapshot.chartKey);
       },
       error: (error: HttpErrorResponse) => {
         this.loadingMarket = false;
@@ -280,49 +265,6 @@ export class AppComponent implements OnInit, OnDestroy {
       ...(decliners[0] ? [{ title: `${decliners[0].symbol} under pressure`, detail: `${decliners[0].name} · ${decliners[0].changeLabel} today`, tag: 'Decliner' }] : []),
       ...(active[0] ? [{ title: `${active[0].symbol} most active`, detail: `${active[0].name} · ${this.numberFormat.format(active[0].volume)} traded`, tag: 'Volume' }] : []),
     ];
-  }
-
-  private loadTrend(instrumentKey: string): void {
-    this.trendKey = instrumentKey;
-    this.trendLoading = true;
-    this.trendError = '';
-    const end = new Date();
-    const start = new Date(end);
-    start.setDate(start.getDate() - 365);
-    const from = this.isoDate(start);
-    const to = this.isoDate(end);
-    this.api.historical(instrumentKey, 'days', 1, from, to).subscribe({
-      next: ({ candles }) => {
-        const points = candles
-          .filter((candle) => Number.isFinite(candle.close))
-          .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
-        this.trendLoading = false;
-        if (!points.length) {
-          this.trendError = 'No historical chart data is available for this instrument.';
-          return;
-        }
-        const values = points.map((point) => point.close);
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        const span = max - min || 1;
-        const coords = values.map((value, index) => ({
-          x: index * 520 / Math.max(values.length - 1, 1),
-          y: 132 - (value - min) / span * 116,
-        }));
-        this.chartPath = coords.map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
-        this.chartAreaPath = `${this.chartPath} L520 150 L0 150 Z`;
-        const label = (index: number) => new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date(points[index].timestamp));
-        this.chartLabels = [label(0), label(Math.floor((points.length - 1) / 2)), label(points.length - 1)];
-      },
-      error: () => {
-        this.trendLoading = false;
-        this.trendError = 'Chart history is temporarily unavailable.';
-      }
-    });
-  }
-
-  private isoDate(value: Date): string {
-    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
   }
 
   formatPrice(value: number): string {
