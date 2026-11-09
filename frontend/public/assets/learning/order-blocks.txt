@@ -1,0 +1,213 @@
+📗 MODULE 4: FAIR VALUE GAPS (FVGs) & ORDER BLOCKS (OBs)
+
+The Precision Zones Where Institutions Enter and Exit
+
+🧩 4.1 What is a Fair Value Gap (FVG)?
+
+A Fair Value Gap (FVG) is a three-candle pattern that shows imbalance between buyers and sellers.
+
+It’s formed when price moves too quickly, leaving a gap between:
+
+Candle 1’s high and
+
+Candle 3’s low (for bullish FVG) or vice versa for bearish FVG.
+
+📊 Visual: Candle 1–2–3 FVG illustration.
+
+📘 Example:
+
+If price rallies fast with three big green candles, and the middle candle’s body doesn’t overlap with the first and third — that space is an FVG.
+
+That means price moved so fast that no trades happened in between. Later, price returns to fill part or full of that gap.
+
+⚙️ 4.2 Why FVGs Form
+
+Because of Displacement — when one side (buyers/sellers) overpowers the other, leaving behind inefficiency.
+
+Institutions need to rebalance those zones later by revisiting them — that’s why FVGs act like magnets.
+
+🧠 4.3 How to Identify FVGs
+
+Look for three candles: (1) push candle, (2) impulse candle, (3) pullback candle.
+
+Measure gap between candle 1’s high and candle 3’s low.
+
+If there’s space → that’s your FVG zone.
+
+Bullish FVG: between 1’s high and 3’s low. Bearish FVG: between 1’s low and 3’s high.
+
+🧭 4.4 Market Reaction to FVGs
+
+After a displacement:
+
+Price often retraces into the FVG.
+
+Fills the inefficiency (partially or fully).
+
+Continues in the original direction.
+
+This retracement is where Smart Money re-enters the trend.
+
+🔹 4.5 Valid vs Invalid FVGs
+
+✅ Valid FVG:
+
+Created by strong displacement.
+
+Aligns with BOS or CHOCH.
+
+Has clear liquidity grab before formation.
+
+❌ Invalid FVG:
+
+Small candles with overlap.
+
+No liquidity taken before formation.
+
+Occurs in choppy zones.
+
+⚡ 4.6 FVG & Market Structure
+
+FVGs form the core zones where structure continuation happens.
+
+Example:
+
+Price breaks structure (BOS).
+
+Creates displacement (strong move).
+
+Forms FVG → retracement into it → continuation.
+
+This is the Smart Money Continuation Model.
+
+📊 Visual: BOS → FVG → Continuation.
+
+🧱 4.7 What are Order Blocks (OBs)?
+
+An Order Block is the last opposite candle before a major displacement move.
+
+It represents the exact price zone where Smart Money executed large orders to reverse or continue price.
+
+📊 Visual: Bullish and Bearish OB Example.
+
+🔸 Types of Order Blocks:
+
+Type
+
+Definition
+
+Example
+
+Bullish OB
+
+Last bearish candle before upward displacement
+
+Base before big rally
+
+Bearish OB
+
+Last bullish candle before downward displacement
+
+Base before crash
+
+📉 4.8 Why OBs Work
+
+Smart Money uses these candles to place bulk institutional orders. After a displacement, price revisits these OBs to:
+
+Mitigate remaining orders.
+
+Test reaction (buy/sell pressure).
+
+Continue in the same direction.
+
+That’s why OBs often align with FVGs and Fibonacci levels (0.5–0.618 retracements).
+
+🔍 4.9 Rules for Valid Order Blocks
+
+✅ Large displacement follows after OB. ✅ Candle closes strongly beyond structure. ✅ Liquidity is swept before OB forms. ✅ No overlapping structure inside OB. ✅ Price later respects OB during pullback.
+
+If price breaks through the OB → it’s invalidated.
+
+💡 4.10 FVG + OB + Liquidity Confluence
+
+The most powerful setups combine:
+
+Liquidity grab (equal highs/lows taken)
+
+Displacement (clear intent)
+
+FVG zone (imbalance target)
+
+Order Block (institutional re-entry)
+
+Fibonacci 0.5–0.618 (confirmation zone)
+
+That’s the DeltaToDharma Institutional Entry Model.
+
+📊 Visual: Full Confluence Trade Setup.
+
+⚙️ 4.11 How to Trade FVGs and OBs
+
+🔹 Bullish Scenario:
+
+Identify liquidity sweep below lows.
+
+Look for displacement up → FVG + Bullish OB.
+
+Wait for pullback into FVG or OB near 0.5–0.618 zone.
+
+Enter long with confirmation candle.
+
+Stop below OB, target next liquidity high.
+
+🔹 Bearish Scenario:
+
+Liquidity grab above highs.
+
+Displacement down → FVG + Bearish OB.
+
+Pullback to OB or 61.8 zone.
+
+Enter short with confirmation.
+
+Stop above OB, target next low.
+
+🧘‍♂️ 4.12 The Institutional Mindset
+
+Smart Money never chases price — they let price return to their footprints (OB & FVG).
+
+As a trader, your role is not to predict — but to wait for price to return to value zones.
+
+“Retail traders chase candles. Smart Money waits at their own orders.”
+
+✅ Summary of Module 4
+
+Concept
+
+What It Means
+
+Function
+
+Displacement
+
+Strong one-sided move
+
+Confirms control
+
+Imbalance / FVG
+
+Inefficiency zone
+
+Acts as magnet
+
+Order Block
+
+Last opposite candle before displacement
+
+Smart Money entry
+
+Retracement
+
+Price returning to fill inefficiency
+
+Entry opportunity

@@ -1,0 +1,539 @@
+RATIO SPREAD
+
+A Ratio Spread is an advanced directional options strategy where the trader:
+
+Buys 1 option,
+
+Sells more than 1 option at another strike,
+
+Creating a ratio (like 1:2 or 1:3).
+
+It gives limited risk on one side but unlimited risk on the other side (depending on type).
+
+Used when you want to capture direction + controlled premium income.
+
+Let’s break it the right way 👇
+
+1️⃣ What is a Ratio Spread?
+
+A Ratio Spread is created when:
+
+You BUY 1 option
+
+You SELL 2 or more options of another strike
+
+Like:
+
+Buy 1 ATM
+
+Sell 2 OTM
+
+Example: Buy 22,000 CE Sell 2× 22,200 CE
+
+This creates a 1:2 Call Ratio Spread.
+
+Same logic applies for Puts.
+
+2️⃣ Why is it called a Ratio Spread?
+
+Because the number of buy vs sell options is in a ratio. Example:
+
+Buy 1, sell 2 = 1:2 ratio
+
+Buy 1, sell 3 = 1:3 ratio
+
+The “spread” comes from using different strikes.
+
+3️⃣ Why do traders use Ratio Spread?
+
+To get:
+
+Directional exposure
+
+Reduced cost or ZERO cost trade
+
+Theta advantage (because more options sold)
+
+Volatility edge (favors IV drop)
+
+High reward if market moves to target, NOT beyond
+
+Ratio spread is like:
+
+“I want direction, but I don’t want to pay full premium.”
+
+4️⃣ When should you create a Ratio Spread?
+
+✔ 1. IV High → Expected to Fall
+
+Because you SALE more options → you want IV to cool.
+
+✔ 2. When you know the TARGET zone
+
+Ratio spread profits the MOST when price moves towards your sold strike.
+
+✔ 3. When market moves slowly
+
+Fast moves beyond the sold strikes can hurt.
+
+✔ 4. When breakout direction is clear
+
+You still need direction, but controlled direction.
+
+5️⃣ Types of Ratio Spreads
+
+There are two clean types:
+
+🟩 Bull Call Ratio Spread (Bullish)
+
+Buy 1 ITM / ATM Call
+
+Sell 2 OTM Calls
+
+🟥 Bear Put Ratio Spread (Bearish)
+
+Buy 1 ITM / ATM Put
+
+Sell 2 OTM Puts
+
+Let me explain each separately.
+
+🟩 TYPE 1: BULL CALL RATIO SPREAD
+
+Bullish strategy with reduced cost, best when upside is limited.
+
+✔ What is it?
+
+You expect market to move up slowly. But you don’t want to pay full premium.
+
+So you:
+
+Buy 1 ATM/ITM Call
+
+Sell 2 OTM Calls (where you think price will stall)
+
+✔ Why use it?
+
+Because:
+
+Very cheap (sometimes zero-cost)
+
+Theta positive (you sold more)
+
+Profits if market goes up to a target
+
+Limited loss on downside
+
+High reward if market moves slowly upward
+
+✔ When to use?
+
+IV high
+
+Clear bullish structure
+
+Price expected to reach a zone
+
+Slow uptrend
+
+OI wall above (market may slow down there)
+
+✔ How to create a Bull Call Ratio Spread?
+
+Example: NIFTY 22,000
+
+Buy 22,000 CE
+
+Sell 2× 22,200 CE
+
+This gives a 1:2 Call Ratio Spread → very low debit or even credit.
+
+🟥 TYPE 2: BEAR PUT RATIO SPREAD
+
+Bearish version: profit from slow down move.
+
+✔ What is it?
+
+You expect the market to fall slowly. So you:
+
+Buy 1 ATM/ITM Put
+
+Sell 2 OTM Puts (your target zone)
+
+✔ Why use it?
+
+Low cost
+
+Theta benefit
+
+Works when price moves down slowly
+
+Works when IV falls after spike
+
+✔ When to use?
+
+Breakdown confirmed
+
+IV high
+
+ATR low
+
+Market expected to fall & then slow down
+
+Clean support target identified
+
+✔ How to create a Bear Put Ratio Spread?
+
+Example:
+
+Buy 22,000 PE
+
+Sell 2× 21,800 PE
+
+6️⃣ Risk & Reward in Ratio Spread (Very Important)
+
+✔ Limited Risk (if price moves as expected)
+
+Risk is defined if price stays between long and short strikes.
+
+✔ Unlimited Risk (if price moves beyond the sold strike too far)
+
+Example: If you sell 22,200 CE × 2 and market jumps to 22,600 — your risk increases sharply.
+
+This is why Ratio Spread is for controlled moves, NOT violent ones.
+
+7️⃣ What to check before entering a Ratio Spread?
+
+✔ IV
+
+High IV is best. You sell more → want IV to fall.
+
+✔ OI Walls
+
+Sell where there is big OI, market slows here.
+
+✔ Delta Behavior
+
+Buy leg around Delta 0.50
+
+Sold legs around Delta 0.20
+
+✔ Trend
+
+Directional bias needed.
+
+✔ Target Level
+
+Your sold strike must be your expected stop point for the move.
+
+8️⃣ Advantages of Ratio Spread
+
+Very cheap or zero-cost
+
+Limited risk inside zone
+
+Big profit if price moves slowly to target
+
+High Theta benefit
+
+Perfect for calm directional markets
+
+Good for expiry where price gravitates to strikes
+
+9️⃣ Disadvantages / When NOT to use Ratio Spread
+
+❌ Trending days
+
+Price may blast beyond sold strikes.
+
+❌ Event days
+
+Ratio = disaster in event spikes.
+
+❌ When you don’t know target
+
+If price overshoots → risk increases exponentially.
+
+❌ When IV is low
+
+Selling more options in low IV = no edge.
+
+🔟 Example – Perfect Bull Call Ratio Spread Setup
+
+NIFTY @ 22,000 Breakout confirmed Target: 22,200 (big OI wall) IV high → falling Delta drift visible Slow uptrend
+
+Create:
+
+Buy 22,000 CE
+
+Sell 2× 22,200 CE
+
+Cheap, high-probability trade.
+
+🧘 Essence of Ratio Spread
+
+Ratio Spread = Low cost + Direction + Target zone. Buy 1, sell 2 when IV is high and move is controlled.
+
+BACKSPREAD (REVERSE RATIO SPREAD)
+
+“Explosive Move Strategy — Unlimited Profit, Limited Risk.”
+
+This is the opposite of a normal Ratio Spread. Instead of selling more options, here you BUY more options than you sell.
+
+Used when you expect a BIG, FAST, EXPLOSIVE MOVE in one direction.
+
+1️⃣ What is a Backspread?
+
+A Backspread is a strategy where:
+
+You SELL 1 option
+
+You BUY 2 or more options at another strike
+
+So the ratio becomes 1 : 2 (or 1 : 3) but BUYING dominates.
+
+Example (Call Backspread):
+
+Sell 1 ATM CE
+
+Buy 2 OTM CE
+
+Example (Put Backspread):
+
+Sell 1 ATM PE
+
+Buy 2 OTM PE
+
+This creates long Gamma, long Vega, and explosive payoff.
+
+2️⃣ Why is it called a “Reverse Ratio Spread”?
+
+Because normal ratio spread = Buy 1, Sell 2 Backspread = Sell 1, Buy 2
+
+The ratio is reversed → Hence, Reverse Ratio Spread.
+
+3️⃣ Why do traders use a Backspread?
+
+For two Important Reasons:
+
+✔ 1. To capture a violent breakout/breakdown
+
+When price moves very fast in your direction → Backspread explodes in profit (unlimited upside).
+
+✔ 2. Risk becomes limited or zero-cost
+
+Because you SELL ATM and BUY OTM, sometimes the entire structure becomes zero debit.
+
+4️⃣ When should you create a Backspread?
+
+This is VERY important.
+
+Backspread is only for blast moves.
+
+Use it when:
+
+✔ IV Low → Expected to EXPLODE
+
+This is a long Vega strategy. Best before:
+
+Major news
+
+Breakouts
+
+Breakdowns
+
+Events (Budget, Fed, RBI, NIFTY expiry after compression)
+
+✔ Strong Trend Structure
+
+CHoCH
+
+BOS
+
+Higher High / Lower Low
+
+Imbalance breakout
+
+✔ Delta Drift Visible
+
+ATM Delta moves rapidly:
+
+0.48 → 0.52 → 0.58 → 0.65 Trend is gaining strength.
+
+✔ OI Unwind on opposite side
+
+Call unwinding → Bullish Backspread
+
+Put unwinding → Bearish Backspread
+
+This confirms explosive move.
+
+✔ Gamma Expansion (volatility spike expected)
+
+Backspreads LOVE Gamma.
+
+5️⃣ Types of Backspreads
+
+There are two:
+
+Call Backspread → Used when expecting upside explosion
+
+Put Backspread → Used when expecting downside crash
+
+Let’s break them clearly.
+
+🟦 TYPE 1: CALL BACKSPREAD (Bullish Explosion Strategy)
+
+✔ What is it?
+
+Directional bullish strategy with unlimited upside profit.
+
+✔ How to create a Call Backspread?
+
+Example: NIFTY at 22,000
+
+Sell 1 ATM CE
+
+Buy 2 OTM CE
+
+Example: Sell 22,000 CE Buy 2× 22,200 CE
+
+✔ Why this works?
+
+ATM premium is high
+
+OTM options cheap
+
+If breakout happens → both OTMs explode
+
+Sell ATM reduces your cost
+
+Buy 2 OTM gives unlimited upside
+
+✔ When to use Call Backspread?
+
+Big gap-up expected
+
+Strong breakout area
+
+IV likely to rise
+
+Event approaching
+
+Short covering visible
+
+High Call unwinding
+
+🟥 TYPE 2: PUT BACKSPREAD (Bearish Crash Strategy)
+
+✔ What is it?
+
+Directional bearish strategy with unlimited profit on downside.
+
+✔ How to create a Put Backspread?
+
+Example: Sell 22,000 PE Buy 2× 21,800 PE
+
+✔ When to use Put Backspread?
+
+Breakdown about to happen
+
+IV low & rising
+
+Long unwinding visible
+
+Aggressive selling
+
+Market entering liquidity pocket
+
+Crash-like movement possible
+
+6️⃣ Risk & Reward Logic
+
+✔ PROFIT
+
+Unlimited in the direction of the move
+
+Maximum profit when breakout is VIOLENT
+
+✔ LOSS
+
+Limited on opposite side
+
+If price stays between long and short strikes
+
+Or if IV does NOT expand
+
+✔ Break-even is F A R (good)
+
+Backspreads have wide break-even zones.
+
+7️⃣ What to check before entering a Backspread?
+
+✔ IV
+
+Must be LOW → going to rise.
+
+✔ Gamma
+
+Needs to be HIGH → moves explode.
+
+✔ OI
+
+Opposite side unwinding.
+
+✔ Delta
+
+Rapid drift.
+
+✔ Price Structure
+
+No consolidation. Must expect VOLATILE MOVE.
+
+8️⃣ Advantages of Backspread
+
+Unlimited profit potential
+
+Low or zero cost
+
+Much safer than naked buying
+
+Great for events
+
+High Vega exposure
+
+Superb when volatility explodes
+
+9️⃣ Disadvantages / When NOT To Use
+
+❌ Not for range
+
+Backspread loses in sideways market.
+
+❌ Not for low ATR
+
+Needs movement.
+
+❌ Not for expiry (Gamma risk too high)
+
+Only use early week/month.
+
+❌ Avoid in high IV
+
+You need IV to expand.
+
+🔟 Perfect Backspread Example
+
+NIFTY @ 22,000 Market compressed for 2 days Delta rising 0.51 → 0.58 ATM IV low Event tomorrow OI unwinding on the call side Breakout likely
+
+Create Call Backspread
+
+Sell 22,000 CE
+
+Buy 2× 22,200 CE
+
+Cheap. Explosive. Safe on downside.
+
+🧘 Essence in One Line
+
+Backspread = Buy 2, Sell 1 for explosive breakouts or breakdowns when IV is LOW and volatility will EXPLODE.

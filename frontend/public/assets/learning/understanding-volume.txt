@@ -1,0 +1,163 @@
+DELTA TO DHARMA
+
+The Volume Bible
+
+1. What is Volume?
+
+Definition: Volume is the number of contracts (in derivatives) or shares (in equities) traded during a specific time period (1-min, 5-min, daily, etc.).
+
+Why Important? Price shows “where” the market is moving, but volume shows “how strong” that move is.
+
+Think of price as the vehicle and volume as the fuel.
+
+👉 Example: If a stock rises ₹10 in price but with very low volume → it’s like a car moving uphill with little fuel — may not sustain. If it rises ₹10 with very high volume → it has momentum and stronger conviction.
+
+2. Volume in Charts
+
+Usually plotted as vertical bars under price candles.
+
+Each bar = total contracts/shares traded in that candle’s duration.
+
+Volume color coding (common platforms):
+
+Green bar: More trades happened on up-ticks (price closed higher than open).
+
+Red bar: More trades happened on down-ticks (price closed lower than open).
+
+Neutral/Gray bar: Mixed or platform default.
+
+⚠️ Important:
+
+Volume bar color ≠ candle color.
+
+A green candle can sometimes show red volume (depending on tick-based calculation).
+
+But generally:
+
+Green candle + Green volume = bullish confirmation.
+
+Red candle + Red volume = bearish confirmation.
+
+Candle vs. volume mismatch = caution, may signal exhaustion or trap.
+
+3. Relationship Between Candles & Volumes
+
+Price Rising + Rising Volume = Strong bullish momentum.
+
+Price Rising + Falling Volume = Weak rally, possible exhaustion.
+
+Price Falling + Rising Volume = Strong bearish momentum (distribution/selling pressure).
+
+Price Falling + Falling Volume = Weak decline, possible pullback/reversal.
+
+📌 Golden rule: Volume must expand in the direction of trend for the trend to sustain.
+
+4. Momentum & Volume
+
+Rising Momentum + Rising Volume: Healthy trend, strong continuation.
+
+Rising Momentum + Dropping Volume: Trend losing steam, may reverse or consolidate.
+
+Flat/Sideways Price + Rising Volume: Market is absorbing supply/demand, possible accumulation/distribution zone.
+
+Breakout Candles + High Volume: Valid breakout.
+
+Breakout Candles + Low Volume: Fake breakout / false move trap.
+
+5. Volume in Breakouts
+
+True Breakout: Large green candle + much higher-than-average volume (at least 1.5x – 2x average volume of past 20 bars).
+
+False Breakout: Price crosses support/resistance but with thin volume — easy for smart money to trap retail.
+
+Retest: After breakout, price comes back to test old level. Volume usually declines on retest → then rises again on continuation.
+
+👉 Rule of thumb: “No volume = No trust in breakout.”
+
+6. Volume in Bases & Consolidation
+
+Low, drying volume: Market is waiting, no strong buyer/seller → base building.
+
+Sudden spike in volume inside consolidation: Smart money accumulating/distributing quietly.
+
+Tight range + Rising volume near support/resistance: Explosion likely coming.
+
+Pro Trick: Volume inside bases gives a clue of who is controlling (buyers or sellers).
+
+7. Volume in Support & Resistance
+
+At support:
+
+Price bounces with high volume → demand strong.
+
+Price breaks support with high volume → strong breakdown.
+
+At resistance:
+
+Price rejects with high volume → supply dominant.
+
+Price breaks resistance with high volume → breakout confirmed.
+
+8. Volume in Consolidation
+
+Healthy consolidation: Volume decreases gradually.
+
+Accumulation phase: Flat price, but volume rises slowly → big players building positions.
+
+Distribution phase: Flat price, but heavy volume spikes with upper wicks → smart money unloading before fall.
+
+👉 Wyckoff Method (Advanced) relies heavily on this volume–price relationship.
+
+9. Volume in Options
+
+Options behave differently because volume shows trading activity in a particular strike price, not the underlying.
+
+Volume in options = liquidity + interest.
+
+High volume + High OI (Open Interest) = strong activity, reliable levels.
+
+High volume but no OI rise = intraday speculation.
+
+OI rising + Volume rising = trend building.
+
+OI falling + Volume rising = short covering / long unwinding.
+
+👉 Example:
+
+If NIFTY 18000 CE has huge volume + rising OI → strong resistance.
+
+If NIFTY 18000 PE has huge volume + rising OI → strong support.
+
+10. Advanced Volume Tools
+
+Volume Moving Average – Compare current bar with average (20-bar average volume).
+
+Volume Profile – Plots volume by price levels, shows strong support/resistance zones.
+
+On-Balance Volume (OBV) – Indicator to track cumulative money flow.
+
+VWAP + Volume – Confirms intraday institutional buying/selling.
+
+Accumulation/Distribution (A/D) Line – Measures flow of money into or out of an asset.
+
+11. Pro-Level Concepts
+
+Climactic Volume: Extremely high volume after a big trend → signals trend exhaustion (either top or bottom).
+
+Volume Divergence: Price makes higher highs but volume doesn’t → weak rally, possible reversal.
+
+Spring/Shakeout (Wyckoff): Price dips below support on high volume, quickly recovers → strong bullish signal.
+
+Effort vs. Result: High volume but little price movement = absorption; smart money is absorbing supply/demand.
+
+12. Quick Checklist for Reading Volume
+
+✅ Is volume confirming the trend? ✅ Is breakout supported by above-average volume? ✅ Is consolidation drying volume or hidden accumulation? ✅ Are supports/resistances respected with strong volume? ✅ Is momentum matching with volume?
+
+13. Mindset for Traders Using Volume
+
+Never trust price without checking volume.
+
+Volume is the voice of smart money.
+
+Beginners often only see candles. Pros listen to the noise behind candles = volume.

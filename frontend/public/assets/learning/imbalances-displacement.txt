@@ -1,0 +1,151 @@
+MODULE 3: IMBALANCE & DISPLACEMENT
+
+The Real Footprint of Institutional Activity
+
+🧩 3.1 What is an Imbalance?
+
+An imbalance occurs when price moves too quickly in one direction, leaving behind a zone where very few or no transactions took place between buyers and sellers.
+
+This is also known as a price inefficiency — meaning the market moved away before enough buy/sell orders could fill at that level.
+
+In simple terms:
+
+“Imbalance = an area where Smart Money left unfilled orders.”
+
+Price often comes back to these zones later to rebalance and fill those pending orders.
+
+📉 Example:
+
+If a large bullish candle forms with almost no overlap with the previous or next candle, that’s an imbalance. Price later returns to that zone, fills pending sell orders, and resumes upward.
+
+⚙️ 3.2 Why Imbalances Occur
+
+Institutional Aggression – When Smart Money executes heavy orders, the market moves fast before enough opposite orders appear.
+
+Liquidity Voids – One side (buyers or sellers) is temporarily absent.
+
+News or High Volatility Events – Triggers sudden displacements.
+
+Stop Hunts – Sweeping liquidity creates unbalanced movement.
+
+🧠 3.3 The Core Idea
+
+Price always seeks balance. When imbalance occurs, the market will naturally return to fill that gap.
+
+So, after every strong push, expect a retracement into the imbalance zone, before continuation.
+
+This is what makes imbalances powerful retracement targets.
+
+⚡ 3.4 What is Displacement?
+
+Displacement is the strong, aggressive move that creates imbalance.
+
+It’s the visual confirmation that one side of the market — buyers or sellers — is in complete control.
+
+📌 Definition:
+
+Displacement is a powerful, one-sided move in price action, showing clear dominance of one party.
+
+🧭 Characteristics of Displacement:
+
+Candles have large real bodies.
+
+Little or no wicks — showing directional strength.
+
+Comes right after liquidity sweep or CHOCH.
+
+Creates Fair Value Gaps (FVGs) as price moves rapidly.
+
+📊 Visual Reference: Green and red displacement candles with FVGs inside.
+
+🔍 3.5 Why Displacement Matters
+
+Displacement is the market’s confirmation of intent.
+
+If it happens after taking out sell-side liquidity → bullish intent.
+
+If it happens after taking out buy-side liquidity → bearish intent.
+
+So displacement is your first sign that Smart Money has taken control.
+
+🔄 3.6 Displacement → Fair Value Gap → Pullback
+
+A displacement candle sequence usually leads to:
+
+Fair Value Gap (FVG) creation
+
+Market Structure Shift (BOS/CHOCH)
+
+Retracement back into the imbalance
+
+Continuation in the dominant direction
+
+That’s the entire cycle Smart Money uses to build entries.
+
+📊 Visual: BOS → Displacement → FVG → Retracement.
+
+📘 3.7 Types of Imbalances
+
+Type
+
+Description
+
+Effect
+
+Price Gap
+
+Gap between close of one candle and open of next
+
+Quick rebalance
+
+Volume Imbalance
+
+More volume traded at one side of candle
+
+Creates attraction
+
+Lack of Liquidity
+
+Few counter orders available
+
+Sharp spike or void
+
+Displacement Imbalance
+
+Created by strong impulsive candles
+
+Institutional footprints
+
+📊 Visual: 5 Imbalance Types Chart.
+
+🎯 3.8 How to Trade with Imbalances
+
+Identify displacement move after liquidity sweep.
+
+Mark the imbalance zone (FVG) using candle wicks.
+
+Wait for price to retrace into that zone.
+
+Look for confirmation (CHOCH/OB) before entering.
+
+Stop-loss: below/above imbalance or OB. Target: next liquidity pool or imbalance.
+
+🧘‍♂️ 3.9 Mindset: What Imbalances Reveal
+
+Imbalances are footprints of where Smart Money acted with conviction. They are not random gaps; they’re proof of institutional presence.
+
+Whenever you see displacement, think:
+
+“This move isn’t random — it’s Smart Money marking territory.”
+
+Summary of Module 3
+
+Displacement = Energy
+
+Imbalance = Footprint
+
+Retracement = Refill point
+
+FVG = Entry zone
+
+Liquidity grab before displacement = Confirmation of Smart Money intent

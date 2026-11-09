@@ -1,0 +1,441 @@
+OPTIONS DAY 3: The Greeks — The DNA of Option Behavior
+
+🎓 Title: Reading the Invisible — Understanding How Greeks Shape Option Movement
+
+🎯 Objective of Day 3
+
+By the end of this session, learners will:
+
+Understand what each Greek represents and how it impacts an option’s price.
+
+Recognize how Greeks interact dynamically with moneyness, time, and volatility.
+
+Learn to anticipate an option’s behavior — not react to it.
+
+Understand how Implied Volatility (IV) silently influences option pricing through Vega.
+
+💡 Core Idea
+
+“Greeks are not math. They are the hidden market forces that control how every option breathes, reacts, and decays.”
+
+They tell us why an option gains or loses value even when the market seems quiet.
+
+⚙️ 1️⃣ Delta (Δ) — The Directional Compass
+
+🔍 Concept:
+
+Delta measures how much an option’s price changes for a ₹1 change in the underlying.
+
+[ \Delta = \frac{\text{Change in Option Price}}{\text{Change in Underlying Price}} ]
+
+Call Options → Delta between 0 and +1
+
+Put Options → Delta between 0 and –1
+
+🧠 Intuition:
+
+Delta shows:
+
+Sensitivity – how fast your option reacts to movement
+
+Probability – chance of finishing in-the-money at expiry
+
+📈 Example: NIFTY = 22,000
+
+Strike
+
+Option
+
+Delta
+
+Meaning
+
+21,800 CE
+
+Call
+
++0.80
+
+80% chance to finish ITM
+
+22,000 CE
+
+Call
+
++0.50
+
+50% probability; reacts moderately
+
+22,200 CE
+
+Call
+
++0.25
+
+25% probability; slow response
+
+💬 Trader Insights:
+
+High Delta → Predictability (behaves like futures)
+
+Low Delta → Leverage (cheap but low odds)
+
+ATM Delta (≈ 0.5) = equilibrium point — where acceleration begins.
+
+⚙️ 2️⃣ Theta (Θ) — The Clock That Eats Premium
+
+🔍 Concept:
+
+Theta measures how much an option loses daily just because time passes — assuming price and volatility remain unchanged.
+
+[ \Theta = \frac{\text{Change in Premium}}{\text{Change in Time}} ]
+
+Always negative for buyers (they lose time value)
+
+Always positive for sellers (they gain from decay)
+
+📊 Example: NIFTY ATM 22,000 CE (₹180 premium)
+
+Days to Expiry
+
+Approx. Theta
+
+Expected Decay per Day
+
+5 days
+
+–10
+
+₹10/day loss
+
+3 days
+
+–18
+
+₹18/day loss
+
+1 day
+
+–35
+
+₹35/day loss
+
+🧠 Insight: Time decay is non-linear — gentle early, brutal near expiry. That’s why sellers dominate during the last 2 days of the week.
+
+💬 Trader Insights:
+
+Buyers must be right in direction and in time.
+
+Sellers can be right just by waiting.
+
+Theta = patience premium.
+
+⚙️ 3️⃣ Gamma (Γ) — The Accelerator of Delta
+
+🔍 Concept:
+
+Gamma measures the speed at which Delta changes when the underlying moves.
+
+[ \Gamma = \frac{\text{Change in Delta}}{\text{Change in Underlying Price}} ]
+
+If Delta is your car’s speed, Gamma is its acceleration.
+
+📈 Example:
+
+ATM 22,000 CE has:
+
+Δ = 0.50
+
+Γ = 0.02
+
+If NIFTY rises ₹50 → New Δ = 0.50 + (0.02 × 50) = 0.60 → Option becomes more sensitive to next moves.
+
+💬 Behavior:
+
+High Gamma = faster reaction, more volatility in option P/L.
+
+ATM options have maximum Gamma, especially near expiry.
+
+Sellers fear Gamma; buyers love it.
+
+⚙️ Gamma Across Moneyness
+
+Moneyness
+
+Gamma
+
+Nature
+
+Deep ITM
+
+Low
+
+Delta stable
+
+ATM
+
+High
+
+Delta changes rapidly
+
+Deep OTM
+
+Low
+
+Barely responsive
+
+⚙️ 4️⃣ Vega (ν) — The Volatility Valve
+
+🔍 Concept:
+
+Vega measures how much the option’s price changes for a 1% change in Implied Volatility (IV).
+
+[ \nu = \frac{\text{Change in Premium}}{\text{Change in IV (%)}} ]
+
+High Vega → more sensitive to volatility shocks.
+
+Vega is highest for ATM options, lowest for deep ITM/OTM.
+
+🧩 Example:
+
+NIFTY 22,000 CE @ ₹180, Vega = 8 → IV rises from 15% → 16% → Premium ≈ ₹188 (+₹8)
+
+Even without price movement, the premium increased — that’s Vega power.
+
+🧠 Volatility Interpretation:
+
+IV (Implied Volatility) = Market’s forecast of future movement.
+
+High IV = Fear, uncertainty, or event risk (like Budget, Fed, results).
+
+Low IV = Calm markets, low option prices.
+
+⚙️ Vega Across Moneyness
+
+Moneyness
+
+Vega
+
+Behavior
+
+ITM
+
+Low–Medium
+
+Mostly intrinsic value
+
+ATM
+
+High
+
+Maximum volatility sensitivity
+
+OTM
+
+Low
+
+Cheap but reactive to IV spikes
+
+💬 Trader Insights:
+
+Option Buyers want IV to rise after entry (they gain from inflated Vega).
+
+Option Sellers want IV to collapse (they profit from Vega crush).
+
+🧠 Rule:
+
+“Buy when IV is low and expected to rise. Sell when IV is high and expected to fall.”
+
+📉 Volatility in Context (Intro to VIX):
+
+The India VIX is a volatility index derived from NIFTY options.
+
+Rising VIX = rising fear → costlier options.
+
+Falling VIX = calm → cheaper options.
+
+👉 This sets the stage for Week 8, where you’ll quantify IV Rank, Percentile, and Volatility Crush events.
+
+⚙️ 5️⃣ Rho (ρ) — The Interest Rate Sensitivity
+
+🔍 Concept:
+
+Rho measures how much an option’s price changes for a 1% change in interest rates.
+
+Call → Positive Rho (benefits from rising rates)
+
+Put → Negative Rho (benefits from falling rates)
+
+🧠 Impact is minimal for weekly/monthly options, but relevant for long-term LEAPS.
+
+🧩 6. Greek Behavior by Moneyness
+
+Greek
+
+ITM
+
+ATM
+
+OTM
+
+Delta
+
+High
+
+0.5
+
+Low
+
+Theta
+
+Slow
+
+Fastest
+
+Moderate
+
+Gamma
+
+Low
+
+Highest
+
+Low
+
+Vega
+
+Medium
+
+Highest
+
+Low
+
+Rho
+
+Moderate
+
+Moderate
+
+Low
+
+⚙️ 7. The Greek Lifecycle – How They Change Over Time
+
+Time to Expiry
+
+Delta
+
+Theta
+
+Gamma
+
+Vega
+
+Behavior
+
+5 Days
+
+Stable
+
+Mild decay
+
+Low
+
+High
+
+Ideal for trend trades
+
+3 Days
+
+Faster
+
+Noticeable
+
+Medium
+
+Lower
+
+Mixed zone
+
+1 Day
+
+Wild
+
+Rapid
+
+Explosive
+
+Very low
+
+Expiry-day chaos
+
+🧠 Interpretation:
+
+Gamma spikes → intraday explosions.
+
+Theta bleeds → sellers’ paradise.
+
+Vega fades → IV meaningless near expiry.
+
+⚙️ 8. How Greeks Combine to Define Edge
+
+Trader Type
+
+Seeks
+
+Loves
+
+Fears
+
+Buyer
+
+Delta + Vega + Gamma
+
+Movement, Volatility
+
+Theta decay
+
+Seller
+
+Theta
+
+Time, Stability
+
+Vega expansion, Gamma spikes
+
+Hedger
+
+Balanced
+
+Neutral Delta
+
+Imbalance risk
+
+💬 9. Practical Trader Exercises
+
+🎯 Exercise 1: Greek Comparison
+
+Pick 3 strikes (ITM, ATM, OTM) for NIFTY CE. Record: Delta, Theta, Vega, Gamma. Compare sensitivity difference.
+
+🎯 Exercise 2: Observe IV Behavior
+
+Note IV changes across 3 days. Does Vega amplify or neutralize your P/L? Observe how IV fall hurts buyers & benefits sellers.
+
+🎯 Exercise 3: Reflection
+
+“Which Greek matches my mindset?”
+
+If you love volatility → Vega player (event trader).
+
+If you love precision → Delta trader (trend scalper).
+
+If you love patience → Theta trader (option seller).
+
+🧘 10. Closing Insight
+
+“Greeks are the DNA of the option chain. Price is just the body. Volatility is the soul.”
+
+When you see Greeks, you stop guessing direction — you start reading probability.
+
+🔑 Day 3 Summary
+
+✅ Delta → Direction & probability ✅ Theta → Time decay ✅ Vega → Volatility impact ✅ Gamma → Momentum & acceleration ✅ Rho → Interest rate backdrop ✅ Together → They define your edge before you enter the trade

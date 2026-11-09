@@ -35,6 +35,11 @@
   <app-watchlist *ngIf="page === 'Watchlist'" (stockSelected)="openStock($event)" />
   <app-fno-stocks *ngIf="page === 'F&O Stocks'" (stockSelected)="openStock($event)" />
   <app-trade-journal *ngIf="page === 'Trade Journal'" />
+  @defer (when page === 'Learning') {
+    <app-learning *ngIf="page === 'Learning'" />
+  } @placeholder {
+    <section class="terminal-placeholder page-shell" *ngIf="page === 'Learning'"><h1>Loading Learning…</h1></section>
+  }
   <app-option-market *ngIf="page === 'Option Chains'" />
 </main>
 

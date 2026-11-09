@@ -1,5 +1,36 @@
 ï»¿# Market Desk
 
+## Learning library & trading checklist
+
+Open **Learning** for 41 chapters imported from the seven supplied Word documents
+and both supplied ZIPs. Each archived document is its own chapter. The full body
+text, headings, lists, 84 tables, eight Word equations and the embedded image are
+included, with original source names. Search covers the full text; each chapter
+has section links and a downloadable text copy. Mark chapters as read to save
+progress in this browser.
+
+**Trading checklist** covers preparation, risk, entry, optional options-contract
+checks, trade management and review. Each item links to a source chapter. Checks,
+options mode and trade-plan notes persist in browser storage. Reset checks for a
+new trade; notes and reading progress remain. This is a manual process record,
+not an automated approval or a profitability score. Source examples and claims
+are preserved as study material, without validating their trading performance.
+
+The library is bundled as static files under `frontend/public/assets/learning`,
+so reading and the checklist need no broker login or database. Existing saved tab
+orders gain the Learning tab automatically. Restart `npm start` if it was already
+running when the static-assets configuration changed. Production hosting needs
+the new frontend build, including its `assets/learning` directory.
+
+To regenerate from the original Downloads folder without changing source files:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\import_learning_materials.py --source-dir 'C:\Users\SISASairaniR\Downloads' --imported-on 2026-11-09
+```
+
+Validation: `.venv/Scripts/python.exe -m unittest discover -s tests -p test_learning_import.py`
+and `node --test tests/learning.test.cjs tests/navigation-order.test.cjs` from `frontend`.
+
 ## F&O stock scope
 
 Stock views use `data/fno/current_fno_stocks.csv` as the shared stock list (currently

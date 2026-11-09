@@ -1,0 +1,43 @@
+<section class="learning-page" aria-labelledby="learning-title">
+  <header class="learning-header"><div><span class="learning-eyebrow">YOUR TRADING HANDBOOK</span><h1 id="learning-title">Learning</h1><p>Read the chapters. Write your plan. Check your process.</p></div><div class="learning-progress" *ngIf="manifest"><strong>{{ read.size }} / {{ chapters.length }} chapters read</strong><div class="learning-progress-track" role="progressbar" aria-label="Reading progress" [attr.aria-valuenow]="progress" aria-valuemin="0" aria-valuemax="100"><i [style.width.%]="progress"></i></div><small>Progress is saved in this browser.</small></div></header>
+  <nav class="learning-tabs" aria-label="Learning views"><button type="button" [class.active]="view === 'chapters'" [attr.aria-pressed]="view === 'chapters'" (click)="changeView('chapters')">Chapters <span *ngIf="manifest">{{ chapters.length }}</span></button><button type="button" [class.active]="view === 'checklist'" [attr.aria-pressed]="view === 'checklist'" (click)="changeView('checklist')">Trading checklist</button></nav>
+  <p *ngIf="storageError" class="learning-warning" role="status">Browser storage is unavailable. You can use this page, but progress and notes may not be saved.</p>
+  <p *ngIf="loading" class="learning-message" role="status">Opening your learning library…</p>
+  <div *ngIf="error" class="learning-warning" role="alert">{{ error }} <button type="button" (click)="loadLibrary()">Retry</button></div>
+  <ng-container *ngIf="manifest as library">
+    <div class="learning-library" *ngIf="view === 'chapters'">
+      <aside class="learning-sidebar" aria-label="Chapter navigation">
+        <label class="learning-search"><span>Find a topic</span><input type="search" [value]="search" (input)="search = $any($event.target).value" placeholder="Search all chapter content…"></label>
+        <label class="learning-category"><span>Topic</span><select [value]="category" (change)="category = $any($event.target).value"><option value="">All topics</option><option *ngFor="let topic of categories" [value]="topic">{{ topic }}</option></select></label>
+        <div class="learning-search-count" aria-live="polite">{{ filteredChapters.length }} chapters <button *ngIf="search || category" type="button" (click)="clearSearch()">Clear filters</button></div>
+        <div class="learning-chapter-list"><section *ngFor="let group of chapterGroups"><h2>{{ group.title }}</h2><button class="learning-chapter-link" type="button" *ngFor="let chapter of group.chapters; trackBy: trackChapter" [class.selected]="selectedId === chapter.id" [attr.aria-current]="selectedId === chapter.id ? 'page' : null" (click)="openChapter(chapter.id)"><span class="learning-chapter-number" [class.read]="read.has(chapter.id)">{{ read.has(chapter.id) ? '✓' : chapter.number }}</span><span><strong>{{ chapter.title }}</strong><small>{{ chapter.minutes }} min read{{ read.has(chapter.id) ? ' · Read' : '' }}</small><small class="learning-search-excerpt" *ngIf="search">{{ excerpt(chapter) }}</small></span></button></section><p *ngIf="!filteredChapters.length" class="learning-message">No chapters match. Try another term or clear the filters.</p></div>
+      </aside>
+      <main #reader class="learning-reader" *ngIf="selected as chapter">
+        <header class="learning-chapter-header"><span class="learning-eyebrow">CHAPTER {{ chapter.number }} · {{ chapter.category }}</span><h2>{{ chapter.title }}</h2><div class="learning-chapter-meta"><span>{{ chapter.words | number }} words · {{ chapter.minutes }} min read</span><button type="button" class="learning-read-button" [class.is-read]="read.has(chapter.id)" [attr.aria-pressed]="read.has(chapter.id)" (click)="toggleRead()">{{ read.has(chapter.id) ? '✓ Read — mark unread' : 'Mark as read' }}</button><a [href]="assetBase + chapter.id + '.txt'" download>Download chapter text</a></div><p class="learning-source">Source: {{ chapter.source }}</p></header>
+        <p class="learning-source-note">Full text from your supplied document. Examples and claims belong to the source material; they are not validated trade signals.</p>
+        <p *ngIf="chapterLoading" class="learning-message" role="status">Loading chapter…</p>
+        <div *ngIf="chapterError" class="learning-warning" role="alert">{{ chapterError }} <button type="button" (click)="openChapter(selectedId)">Retry chapter</button></div>
+        <ng-container *ngIf="content">
+          <details class="learning-toc" *ngIf="sections.length"><summary>In this chapter · {{ sections.length }} sections</summary><div><button type="button" *ngFor="let heading of sections" [class.subsection]="heading.level > 2" (click)="jumpTo(heading.id)">{{ heading.title }}</button></div></details>
+          <article #chapterBody class="learning-doc-content" [innerHTML]="content.html" aria-label="Chapter content"></article>
+          <footer class="learning-reader-footer"><button type="button" (click)="nextChapter(-1)" [disabled]="selectedIndex <= 0">← Previous chapter</button><button type="button" (click)="toggleRead()">{{ read.has(selectedId) ? '✓ Chapter read' : 'Mark as read' }}</button><button type="button" (click)="nextChapter(1)" [disabled]="selectedIndex + 1 >= chapters.length">Next chapter →</button></footer>
+        </ng-container>
+      </main>
+    </div>
+    <div class="learning-checklist" *ngIf="view === 'checklist'">
+      <header class="learning-checklist-header"><div><span class="learning-eyebrow">PLAN BEFORE THE TRADE</span><h2>Trading checklist</h2><p>A manual checklist adapted from your chapters. Check an item only after reviewing it for this trade.</p></div><div class="learning-checklist-tools"><label><input type="checkbox" [checked]="optionsTrade" (change)="setOptions($any($event.target).checked)"> Include options checks</label><button type="button" (click)="resetChecks()">Reset checks</button></div></header>
+      <div class="learning-check-summary" [class.all-checked]="requiredLeft === 0" role="status"><strong>{{ completedChecks }} / {{ checkCount }} checks marked</strong><span>{{ requiredLeft ? requiredLeft + ' pre-entry checks still need review.' : 'All pre-entry checks marked. This is a process record, not an entry recommendation.' }}</span></div>
+      <div class="learning-check-layout"><div class="learning-check-groups">
+        <section class="learning-check-group" *ngFor="let group of checklistGroups; let index = index" [class.completed]="groupDone(group) === group.items.length"><header><span class="learning-stage">{{ index + 1 }}</span><div><h3>{{ group.title }}</h3><p>{{ group.description }}</p></div><b>{{ groupDone(group) }} / {{ group.items.length }}</b></header><div class="learning-check-row" *ngFor="let item of group.items" [class.checked]="checked.has(item.id)"><label><input type="checkbox" [checked]="checked.has(item.id)" (change)="check(item.id, $any($event.target).checked)"><span><strong>{{ item.title }}</strong><small>{{ item.detail }}</small></span></label><button class="learning-check-reference" type="button" (click)="openChapter(item.chapter)" [attr.aria-label]="'Read ' + chapterTitle(item.chapter)">Read: {{ chapterTitle(item.chapter) }} ↗</button></div></section>
+      </div><aside class="learning-plan-notes"><h3>My trade plan</h3><p>Write the symbol, direction, entry, stop, target, position size and the reason for the trade.</p><label for="learning-trade-notes">Plan &amp; notes</label><textarea id="learning-trade-notes" rows="14" maxlength="10000" [value]="notes" (input)="setNotes($any($event.target).value)" placeholder="Symbol / contract:
+Setup and direction:
+Entry:
+Stop-loss:
+Target:
+Maximum planned loss:
+Quantity / lots:
+What would make me skip this trade?"></textarea><small>Checks and notes stay in this browser. Reset checks before reviewing a new trade. Notes remain until you edit them.</small><button type="button" (click)="openChapter('risk-position-sizing')">Review risk &amp; position sizing →</button></aside></div>
+    </div>
+    <details class="learning-sources"><summary>{{ library.sources.length }} source files · {{ library.totalDocuments }} documents · {{ library.totalWords | number }} words imported</summary><p>Imported {{ library.importedOn | date:'dd MMM yyyy' }}. ZIP documents are assigned their own chapters. Original files in Downloads were left in place.</p><ul><li *ngFor="let source of library.sources">{{ source.name }}</li></ul></details>
+  </ng-container>
+</section>

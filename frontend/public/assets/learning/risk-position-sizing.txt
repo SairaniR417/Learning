@@ -1,0 +1,143 @@
+DELTA TO DHARMA
+
+Capital Warfare: Risk & Position Sizing Battle Plan
+
+Title: Protect the Base, Expand the Frontline Objective: Master risk per trade & position sizing so you stay in the game long enough to win big.
+
+Opening Analogy — The Army General’s Secret
+
+You’re the general. Your army is your capital.
+
+If you send your entire army into the first battle and lose, the war is over.
+
+If you send too few soldiers, you might miss the victory because you didn’t commit enough.
+
+The art is in sending the right number — enough to win, but not enough to cripple you if it fails.
+
+In trading: Every rupee you risk is a soldier. Risk management = deciding how many soldiers fight each battle.
+
+1. Position Sizing — Your Ammo Control System
+
+Method 1 — Fixed % Risk
+
+Decide a fixed % of your account to risk per trade.
+
+Example: Account ₹5,00,000, Risk 2% = ₹10,000 per trade.
+
+Formula:
+
+Position Size=Risk /Stop Loss Distance
+
+Example: Stop-loss is ₹50 away → ₹10,000 ÷ ₹50 = 200 shares.
+
+✅ Hack: Start with 1% risk until you have 50+ trades of consistent performance. Increase only if your drawdowns are small.
+
+Method 2 — Volatility-Based (ATR Method)
+
+Uses Average True Range to adapt to market volatility.
+
+Formula:
+
+Stop Loss Distance =ATR×Multiplier
+
+Position Size=Risk /Stop Loss Distance ​
+
+Example: Risk ₹10,000, ATR ₹25, Multiplier 2 → Stop ₹50 → 200 shares.
+
+✅ Hack: In volatile markets, set multiplier higher (e.g., 2.5× ATR) to avoid being stopped out by noise.
+
+Method 3 — Hybrid
+
+Risk % decides the ₹ amount at risk,
+
+ATR decides stop distance. This way your risk stays constant, and your stop adapts to market volatility.
+
+2. Stop-Loss Placement — The Safety Fence
+
+Technical Stop: Place beyond support/resistance, swing highs/lows, trendlines.
+
+Volatility Stop: Place beyond ATR-based buffer.
+
+Time Stop: Exit after X bars if trade stagnates.
+
+Example: If stock is at ₹1,000, support is at ₹980, ATR = ₹10:
+
+Technical Stop: ₹978 (just below support)
+
+ATR Stop (2×): ₹980 - ₹20 = ₹960
+
+✅ Hack: Never place stops exactly at obvious levels (e.g., ₹1,000 or ₹980). Smart money hunts liquidity there. Hide it a little deeper.
+
+3. R-Multiples & Expectancy — Your Scoreboard
+
+R = Risk Unit.
+
+If risk ₹10,000 = 1R.
+
+Profit ₹20,000 = +2R, Loss ₹5,000 = -0.5R.
+
+Expectancy: E=(Win%×Avg Win)−(Loss%×Avg Loss)
+
+Example: Win rate = 40%, Avg Win = 2R, Loss rate = 60%, Avg Loss = 1R:E=(0.4×2)−(0.6×1)=0.8−0.6=0.2R
+
+✅ Hack: Track trades in R, not ₹, to remove emotional bias from P&L.
+
+4. The 2% Rule — Don’t Worship It
+
+Rule says: “Don’t risk more than 2% of capital per trade.”
+
+Truth: 2% is an upper limit, not a default setting.
+
+For new traders: start with 0.5–1% risk per trade.
+
+Increase gradually only if:
+
+Drawdowns stay <10%.
+
+You have 100+ trades with stable expectancy.
+
+5. Adjusting for Market Conditions
+
+Volatile Market: Reduce position size → price moves are bigger, so less size keeps risk constant.
+
+Calm Market: You can slightly increase size → stops are tighter, so exposure is smaller.
+
+Example:
+
+Calm day ATR = ₹5, Risk ₹10,000 → 2,000 shares.
+
+Volatile day ATR = ₹20, Risk ₹10,000 → 500 shares.
+
+Practical Tips, Hacks, and Tricks
+
+Hacks:
+
+Stop-loss Cushion: Add 0.2–0.5× ATR beyond your technical stop to avoid stop hunting.
+
+Half-Size Entry: If unsure about volatility, start with 50% position and add later if trade confirms.
+
+Kill Switch Rule: If you lose 3R in a day, stop trading — market is not aligned with your strategy today.
+
+ATR Alert: Use alerts when ATR spikes → indicates regime change, adjust position sizing.
+
+Mindset Tips:
+
+Think like a casino: You decide bet size, not the game.
+
+Surviving is winning — most blow-ups happen from over-leveraging, not bad setups.
+
+Capital is like oxygen — you don’t think about it until it’s running out.
+
+Mini-Exercise
+
+Given:
+
+Account: ₹4,00,000
+
+Risk per trade: 1.5%
+
+ATR: ₹15, Multiplier: 2
+
+Entry: ₹1,000
+
+Solution: Risk ₹ = ₹4,00,000 × 0.015 = ₹6,000 Stop distance ₹ = ATR × 2 = ₹30 Position Size = ₹6,000 ÷ ₹30 = 200 shares

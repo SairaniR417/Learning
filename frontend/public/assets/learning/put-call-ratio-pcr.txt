@@ -1,0 +1,241 @@
+Put–Call Ratio (PCR)
+
+Understanding Market Bias Through Option Writers’ Positioning
+
+🧩 1️⃣ What is PCR?
+
+PCR (Put–Call Ratio) =Put Open Interest\Call Open Interest
+
+It tells you whether more puts are written or more calls are written.
+
+Why is this important?
+
+Because option writers are smart money. They take risk only when they are confident.
+
+Put writers are bullish.
+
+Call writers are bearish.
+
+So PCR reveals whether smart money is leaning bullish or bearish.
+
+🧩 2️⃣ What PCR Actually Measures
+
+PCR measures the confidence of writers, not buyers.
+
+✔️ More Put writing → PCR ↑ → Writers expect market not to fall
+
+✔️ More Call writing → PCR ↓ → Writers expect market not to rise
+
+🧩 3️⃣ PCR Zones & Interpretation
+
+PCR Value
+
+Meaning
+
+Market Condition
+
+0.40 – 0.60
+
+Call-heavy
+
+Overbought; upside limited; caution
+
+0.70 – 1.00
+
+Balanced
+
+Healthy, stable
+
+1.00 – 1.30
+
+Put-heavy
+
+Bullish bias; strong support
+
+> 1.30 – 1.50
+
+Excessive puts
+
+Oversold; possible bounce/reversal
+
+🔥 Golden Logic:
+
+PCR ↑ = Market strengthening (because put writers are confident)
+
+PCR ↓ = Market weakening (because call writers are confident)
+
+🧩 4️⃣ PCR + IV + OI = True Bias
+
+PCR alone ≠ complete truth. PCR combined with IV + OI = institutional map.
+
+🔹 Bullish Setup (Strong)
+
+PCR rising
+
+IV stable or rising
+
+OI shifting to Puts
+
+Delta drifting upward
+
+🔹 Bearish Setup (Strong)
+
+PCR falling
+
+IV rising
+
+OI shifting to Calls
+
+Delta drifting downward
+
+🔹 Range Setup
+
+PCR around 1
+
+IV falling
+
+OI building both sides (strangles written)
+
+Delta stable
+
+🧩 5️⃣ PCR For Intraday Traders
+
+Intraday = watch PCR change, not absolute number.
+
+✔️ PCR Rising Intraday → Put writing → Bullish short-term
+
+✔️ PCR Falling Intraday → Call writing → Bearish short-term
+
+Use with structure:
+
+PCR rising + BOS → strong intraday uptrend
+
+PCR falling + CHoCH down → strong intraday downtrend
+
+Avoid buying when:
+
+PCR extremely high (>1.4) → reversal danger
+
+IV dropping → premiums die
+
+Avoid selling when:
+
+PCR extremely low (<0.6) → reversal possible
+
+IV rising → volatility explosion possible
+
+🧩 6️⃣ PCR for Swing Traders
+
+Swing traders rely on PCR of monthly expiries.
+
+PCR 0.9–1.2 → safe zone for positional trades
+
+PCR > 1.3 → market oversold; prepare for rally
+
+PCR < 0.7 → market overbought; prepare for dip
+
+PCR trend is more important than value:
+
+Rising PCR → accumulation phase
+
+Falling PCR → distribution phase
+
+🧩 7️⃣ PCR for Expiry & Weekly Options
+
+Weekly PCR is extremely useful because:
+
+Gamma is high
+
+Writers aggressively defend levels
+
+Max Pain interacts with PCR
+
+Reversal traps happen when PCR extremes occur
+
+Expiry Day Logic:
+
+PCR near 1 → market likely to stay in range
+
+PCR < 0.7 → expiry may drift down
+
+PCR > 1.2 → expiry may drift up (short covering rally)
+
+🧩 8️⃣ Automatic PCR vs Manual PCR
+
+✔️ Automatic PCR
+
+Uses OI from ALL strikes
+
+Good for overall sentiment
+
+Works best on NIFTY/BankNIFTY
+
+✔️ Manual PCR
+
+Select ATM ± 3 strikes
+
+Removes far OTM noise
+
+Very powerful for intraday trend
+
+More accurate than Automatic PCR
+
+🧩 9️⃣ PCR Traps & How to Avoid Them
+
+⚠️ PCR High (1.3–1.5) Trap
+
+If IV rising → Put writers in trouble → big move can come.
+
+⚠️ PCR Low (<0.6) Trap
+
+If IV rising → Call writers in trouble → upside spike possible.
+
+🧠 So rule is:
+
+PCR extreme + IV rising = strong move coming
+
+PCR extreme + IV falling = range compression
+
+🧩 🔟 PCR + Max Pain = Expiry Prediction
+
+PCR high → Puts strong → expiry tends to drift upward
+
+PCR low → Calls strong → expiry tends to drift downward
+
+PCR ≈ 1 → expiry tends to pin near Max Pain
+
+Max Pain + PCR trend is one of the best expiry tools.
+
+🧩 1️⃣1️⃣ PCR + Delta Drift
+
+This is where true reversal detection comes in.
+
+PCR
+
+Delta Drift
+
+Signal
+
+PCR ↑ + Δ ↑
+
+Strong bullish buildup
+
+PCR ↓ + Δ ↓
+
+Strong bearish continuation
+
+PCR ↑ + Δ ↓
+
+Divergence → Uptrap or trend exhaustion
+
+PCR ↓ + Δ ↑
+
+Bull trap → trend shift possible
+
+Delta shows conviction. PCR shows writer bias.
+
+Together they show where money is flowing.
+
+🧘 Essence of Day X — PCR Understanding
+
+“PCR is not a directional indicator — it’s a confidence indicator. Option writers show where they feel safe. And markets tend to move in the direction where writers show conviction.”

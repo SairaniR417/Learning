@@ -1,0 +1,505 @@
+DELTA TO DHARMA
+
+Candlestick Chart Patterns
+
+Candlestick chart patterns are one of the most widely used tools in technical analysis, offering traders visual insights into price action and market psychology. Originating in 18th-century Japan, candlesticks summarize price behavior within a specific time period, helping traders predict possible reversals or trend continuations in stocks, forex, and cryptocurrencies.
+
+Anatomy of a Candlestick
+
+Candlesticks are the visual language of price action. Each candlestick compresses a unit of market activity—whether a minute, an hour, a day, or more—into a single, easy-to-read bar. While they may look simple at first glance, every part of a candlestick carries meaning about the struggle between buyers and sellers. Understanding the anatomy of a candlestick is the first step in learning how to read the market’s psychology.
+
+The Body
+
+At the center of the candlestick lies the real body, which represents the range between the opening price and the closing price for that time period.
+
+A bullish (green/white) body means the close is higher than the open—buyers were in control.
+
+A bearish (red/black) body means the close is lower than the open—sellers dominated the session.
+
+The length of the body tells us about conviction: a long body signals strong directional pressure, while a short body suggests hesitation or balance.
+
+The Shadows (Wicks/Tails)
+
+Above and below the body are thin lines called shadows (also called wicks or tails). These mark the extremes of the session:
+
+The upper shadow shows the highest price reached.
+
+The lower shadow shows the lowest price reached.
+
+The length of the shadows is equally important.
+
+A long upper shadow indicates that buyers pushed the price higher, but sellers pushed it back down.
+
+A long lower shadow shows that sellers dragged the price lower, but buyers managed to recover it.
+
+Very short or absent shadows often mean the market moved with conviction in one direction without much resistance.
+
+The Open and Close
+
+The opening and closing prices form the foundation of every candlestick. They are not just numbers; they reflect the shift of sentiment within that period.
+
+If the close is far above the open, buyers gained decisive control.
+
+If the close is far below the open, sellers held the advantage.
+
+When the open and close are nearly the same, the market is said to be in a state of indecision, often creating patterns like the Doji.
+
+High and Low
+
+Every candlestick also records the highest and lowest points of the session. These extremes are important because they reveal rejections and tests of certain price levels. For instance, if a candlestick shows a sharp move down to a low but closes well above it, traders interpret that as rejection of lower prices. Conversely, a high that could not be sustained reflects rejection of higher prices.
+
+The Story Within
+
+A candlestick is more than just a shape; it is a compressed story of market psychology. The body tells us who controlled the session, the shadows reveal the battles fought along the way, and the open and close show where the market ultimately settled. One candle alone may not always give a definitive answer, but when read together with others, candlesticks form patterns that map the emotional rhythm of the market—optimism, fear, greed, hesitation, and conviction.
+
+Body – the rectangular section, showing the range between the opening and closing price.
+
+Bullish (close > open) → usually green or white.
+
+Bearish (close < open) → usually red or black.
+
+Wicks (Shadows) – the thin lines extending above and below the body.
+
+Upper wick shows the session’s high.
+
+Lower wick shows the session’s low.
+
+Together, these elements reveal the tug-of-war between buyers and sellers within a given time frame.
+
+Types of Candlestick Patterns
+
+Candlestick patterns are generally divided into two groups:
+
+Single Candlestick Patterns – signals formed by one candle.
+
+Multiple Candlestick Patterns – signals requiring 2 or more candles.
+
+Patterns typically suggest one of three things:
+
+Bullish reversal
+
+Bearish reversal
+
+Continuation of the trend
+
+Note: Patterns never guarantee a reversal. They are tools for probability, best combined with trend analysis, volume, and support/resistance zones.
+
+SINGLE CANDLESTICK PATTERNS
+
+Single candlestick patterns are crucial for traders because they provide quick, visual cues about potential market behavior. However, these patterns should be used with caution. It’s essential to confirm signals from single candlestick patterns with other indicators, patterns, or technical analysis tools. For example, a Hammer in a strong downtrend might not lead to a reversal if other indicators suggest continued bearish sentiment.
+
+1. Doji
+
+The Doji is the most well-known single candlestick pattern, often appearing as a thin cross or plus sign. It forms when the opening and closing prices are nearly identical, leaving little or no body. The wicks may be short or long, but the essence of a Doji is indecision: buyers try to push higher, sellers attempt to drag lower, yet neither succeeds. The Doji itself is neutral, but when it appears after a strong uptrend or downtrend, it may hint at a possible shift in momentum. Within sideways markets, however, it often represents nothing more than hesitation.
+
+Anatomy: Open ≈ Close, small body, wicks may vary.
+
+Psychology: Market indecision, neither buyers nor sellers in control.
+
+Tips: Stronger after a strong trend — can hint at exhaustion.
+
+Valid when: Appears near strong support/resistance.
+
+Invalid when: Market is ranging (just noise).
+
+2. Long-Legged Doji
+
+The Long-Legged Doji is a variation of the standard Doji, but with very long upper and lower shadows. This shape tells a stronger story of uncertainty: during the session, buyers managed to push the price far higher and sellers forced it far lower, but in the end, the market closed near its opening price. It is a classic picture of a fierce tug-of-war with no winner. The Long-Legged Doji often carries more weight than a simple Doji, especially if it appears after a strong directional move, where it may signal that the prevailing trend is losing conviction
+
+Anatomy: Long upper & lower wicks, tiny body.
+
+Psychology: Extreme tug-of-war, both sides tested.
+
+Tips: If it happens at the end of a strong trend, expect reversal.
+
+Valid when: Confirmed by next candle in opposite direction.
+
+Invalid when: Appears in low volume sideways market.
+
+3. Cross DojiThe Cross Doji is the “purest” form of the Doji, where the candle looks like a neat cross (+) on the chart. In this case, the wicks are typically balanced, and the open and close are almost identical. It represents the highest level of market indecision—neither side able to move price significantly away from the open. Like other Dojis, the Cross Doji’s meaning depends heavily on context: after a strong rally, it may suggest exhaustion of buyers; after a sharp decline, it could reflect that sellers are losing strength. In periods of consolidation, it often simply marks a pause.
+
+Anatomy: Open = Close, cross-shaped.
+
+Psychology: Pure indecision.
+
+Tips: Look for breakout direction after the doji.
+
+Valid when: With high volume or at key price levels.
+
+Invalid when: Too frequent in choppy markets.
+
+4. Hammer
+
+The Hammer is a classic bullish reversal signal, typically emerging after a sustained downtrend. It is characterized by a small body at the top of the price range with a long lower wick at least twice the size of the body. This shape tells a powerful story: sellers drove the price significantly lower during the session, but buyers returned with strength, forcing the price back near the open. The market, therefore, leaves behind the image of a “hammer,” striking at the lows and suggesting that buyers may soon take control.
+
+Anatomy: Small body on top, long lower wick, little/no upper wick.
+
+Psychology: Sellers pushed price down, buyers fought back strongly.
+
+Tips: Bullish reversal at the end of a downtrend.
+
+Valid when: Next candle is bullish + near support.
+
+Invalid when: Appears in middle of trend (not at bottom).
+
+5. Hanging ManThe Hanging Man shares its appearance with the Hammer but occurs after a rally rather than a decline. A small body forms near the top of the range with a long lower wick, showing that sellers were able to drag the market sharply lower during the session before buyers recovered. Though the session closes without major damage, the message is clear: cracks are forming in the uptrend. As with many candlestick patterns, confirmation from the following sessions is essential before acting.
+
+Anatomy: Same shape as Hammer, but at the top of an uptrend.
+
+Psychology: Sellers showed strength, warning sign of weakness.
+
+Tips: Bearish reversal only if confirmed by next red candle.
+
+Valid when: After long uptrend, with volume.
+
+Invalid when: Next candle is bullish strong (trend continues).
+
+6. Inverted Hammer
+
+Closely related to the Hammer, the Inverted Hammer also appears after a decline but carries a different message. It has a small body at the lower end of the range and a long upper wick. This wick represents an attempt by buyers to push higher, even though sellers ultimately resisted. On its own, the Inverted Hammer is only a hint of potential reversal, but if the next candle confirms buying strength, it often marks the early stages of a bullish turn.
+
+Anatomy: Small body bottom, long upper wick.
+
+Psychology: Buyers tried to push up, sellers fought back, but shows interest from bulls.
+
+Tips: Needs confirmation candle up.
+
+Valid when: At bottom of a downtrend, confirmed next day.
+
+Invalid when: Appears mid-trend.
+
+7. Shooting StarThe Shooting Star is the bearish twin of the Inverted Hammer, found at the end of an uptrend. Its body rests near the low of the session, while a long upper wick shows that bulls attempted another push upward but lost control to the bears. The very name “Shooting Star” reflects the image of a final burst of brightness before fading away. It signals that bullish momentum may be exhausted, opening the door to a downward reversal.
+
+Anatomy: Small body bottom, long upper wick.
+
+Psychology: Bulls pushed price high, sellers rejected strongly.
+
+Tips: Bearish reversal at the top of an uptrend.
+
+Valid when: Confirmed by next bearish candle.
+
+Invalid when: Market still closes above resistance.
+
+8. Marubozu (Bullish / Bearish, Opening / Closing)Few candles express conviction as clearly as the Marubozu. Unlike most candles, it has no wicks, meaning the session opened at one extreme and closed at the other. A bullish Marubozu opens at the low and closes at the high, revealing relentless buying throughout the day. A bearish Marubozu does the opposite, opening at the high and closing at the low under continuous selling pressure. The Marubozu is a candle of certainty—it does not whisper but rather shouts the prevailing sentiment, often signaling continuation of the existing trend.
+
+Anatomy: Full body candle, no wicks (or very small).
+
+Psychology: Strong conviction from one side.
+
+Tips: Best as continuation signals.
+
+Valid when: Appears after breakout or trend acceleration.
+
+Invalid when: In choppy sideways zones.
+
+9. Spinning TopThe Spinning Top is a candle of balance and uncertainty. With a small body and long wicks on both sides, it portrays a market caught in a tug of war. Buyers pushed prices higher, sellers pushed them lower, yet both lost ground as the candle closed near its midpoint. The Spinning Top is not decisive on its own, but when it emerges after a strong trend, it can mark the beginning of a slowdown or reversal. In sideways periods, it reinforces the lack of direction.
+
+Anatomy: Small body, both wicks present.
+
+Psychology: Balance of buyers/sellers, indecision.
+
+Tips: Watch for breakout direction.
+
+Valid when: At key levels or after extended moves.
+
+Invalid when: Appears in consolidation, adds no value.
+
+MULTIPLE CANDLESTICK PATTERNS
+
+Multiple candlestick formations build upon the interaction of two or more candles. Unlike single candlestick patterns, which represent a single battle between buyers and sellers, these patterns reveal the continuation of that struggle across sessions. They often serve as more reliable signals, because they show follow-through and confirmation of market sentiment.
+
+1. Bullish Engulfing
+
+This two-candle pattern appears after a decline. A small bearish candle is followed by a large bullish candle that completely engulfs the prior body. It represents a decisive shift in control—sellers lose momentum, and buyers step in with force. The stronger and larger the engulfment, the more significant the bullish reversal signal.
+
+Anatomy: Small red candle → Large green candle engulfing it.
+
+Psychology: Bears tried, bulls overwhelmed.
+
+Tips: Stronger on high volume + near support.
+
+Valid when: In downtrend.
+
+Invalid when: In sideways chop.
+
+2. Bearish Engulfing
+
+The opposite of its bullish counterpart, this pattern emerges after an uptrend. A small bullish candle is followed by a large bearish candle that engulfs the prior body. It signals that buyers are exhausted and sellers are asserting dominance, often marking the start of a bearish reversal.
+
+Anatomy: Small green → Large red engulfing.
+
+Psychology: Bulls tried, sellers crushed them.
+
+Tips: Stronger at top of an uptrend.
+
+Valid when: On resistance with volume.
+
+Invalid when: Inside range.
+
+3. Piercing PatternA bullish two-candle reversal pattern seen after a decline. The first candle is long and bearish, followed by a bullish candle that opens lower but closes above the midpoint of the first. This sudden recovery reflects renewed buying pressure and the potential end of the downtrend.
+
+Anatomy: Red candle → Green candle closes above midpoint of red.
+
+Psychology: Bears lost control, bulls stepping in.
+
+Tips: Bullish reversal.
+
+Valid when: After a strong downtrend.
+
+Invalid when: Green candle is weak.
+
+4. Dark Cloud Cover
+
+
+
+The bearish counterpart of the Piercing Pattern, this appears after an uptrend. The first candle is bullish, followed by a bearish candle that opens higher but closes below the midpoint of the first. It suggests that buyers attempted to push higher but were overcome by strong selling, warning of a possible reversal.
+
+Anatomy: Green candle → Red candle closes below midpoint of green.
+
+Psychology: Bulls lost momentum.
+
+Tips: Bearish reversal.
+
+Valid when: At top resistance.
+
+Invalid when: Next candle breaks higher.
+
+5. Harami (Bullish / Bearish)
+
+Bullish Harami
+
+A two-candle pattern where a large bearish candle is followed by a much smaller bullish candle contained within its body. The pattern reflects hesitation and signals that selling pressure may be weakening. While not as strong as the engulfing pattern, it suggests a potential bottom if confirmed by further bullish action.
+
+Bearish Harami
+
+The bearish variation of the Harami. After an uptrend, a large bullish candle is followed by a smaller bearish candle nestled within its body. It signals that bullish momentum may be losing steam, often appearing near market tops.
+
+Anatomy: Small candle inside body of previous large candle.
+
+Psychology: Market uncertainty, potential trend shift.
+
+Tips: Needs confirmation candle.
+
+Valid when: At extreme levels.
+
+Invalid when: In sideways chop.
+
+6. Morning Star
+
+A classic three-candle bullish reversal. It begins with a long bearish candle, followed by a small-bodied candle (a Doji or Spinning Top) reflecting hesitation, and ends with a strong bullish candle that closes well into the first candle’s body. The Morning Star depicts selling exhaustion, indecision, and then renewed buying strength.
+
+Anatomy: Large red → Small indecision → Strong green.
+
+Psychology: Downtrend exhaustion, bulls step in.
+
+Tips: Bullish reversal, stronger with volume.
+
+Valid when: At support.
+
+Invalid when: Middle of trend.
+
+7. Evening Star
+
+The bearish mirror of the Morning Star. After an uptrend, it starts with a strong bullish candle, followed by a small-bodied candle showing indecision, and concludes with a long bearish candle that closes deep into the body of the first. It is a reliable bearish reversal signal.
+
+Anatomy: Large green → Small indecision → Strong red.
+
+Psychology: Uptrend exhaustion, sellers take over.
+
+Tips: Bearish reversal.
+
+Valid when: At resistance.
+
+Invalid when: Low volume.
+
+8. Abandoned Baby (Bullish / Bearish)
+
+Bullish Abandoned Baby
+
+A rare but powerful bullish reversal pattern. It resembles the Morning Star, but the middle candle is a Doji that gaps away from both the first and the third candles. The isolation of the Doji represents extreme indecision and rejection of lower prices, often marking a sharp reversal upward.
+
+Bearish Abandoned Baby
+
+The bearish counterpart, occurring at market tops. After a long bullish candle, a Doji forms with a gap above, followed by a long bearish candle that gaps lower. The isolation of the Doji signals exhaustion of buyers and the likelihood of a downward reversal.
+
+Anatomy: Gap down/up with isolated doji, followed by reversal candle.
+
+Psychology: Extreme exhaustion, gap traps traders.
+
+Tips: Rare but very strong reversal.
+
+Valid when: With gaps + volume.
+
+Invalid when: No clear gap.
+
+9. Rising / Falling Three Method
+
+Falling Three Methods
+
+A continuation pattern within a downtrend. It begins with a long bearish candle, followed by several small bullish candles that stay within the range of the first, and ends with another strong bearish candle. The pattern signals that sellers are in control, and the brief bullish correction was only a pause before the downtrend resumes.
+
+Rising Three Methods
+
+The bullish counterpart. It starts with a long bullish candle, followed by several small bearish candles confined within the first candle’s range, and concludes with another strong bullish candle. This formation shows that the bulls remain in control, and the short-lived pullback was merely a pause before the uptrend continues.
+
+Anatomy: Big trend candle → Series of smaller opposite candles → Another big candle continuing trend.
+
+Psychology: Trend paused, then resumed.
+
+Tips: Continuation pattern, not reversal.
+
+Valid when: In strong trend.
+
+Invalid when: Trend is weak or exhausted.
+
+General Hacks / Psychology Keys
+
+Patterns are context dependent (work better near support/resistance, trendlines, or with volume confirmation).
+
+Always wait for confirmation candle — never trade a pattern in isolation.
+
+Invalid if pattern appears in sideways chop (lots of false signals).
+
+Stronger signals when combined with RSI/MACD divergence or volume spikes.
+
+Key Factors to Consider
+
+Trend Context – Patterns are only meaningful after strong moves. Ignore inside chop.
+
+Higher Timeframes – Daily/weekly candles carry more weight than intraday.
+
+Volume Confirmation – A reversal on high volume is stronger than one on low volume.
+
+Support & Resistance – Patterns near key levels are far more reliable.
+
+Confirmation Candles – Always wait for the next candle to confirm.
+
+Final Takeaway
+
+Candlestick patterns are powerful because they combine price action + psychology into a simple visual form. Single-candle patterns reveal quick shifts in sentiment, while multi-candle patterns provide stronger confirmation of reversals or trend continuations.
+
+However, candlestick signals should never be traded in isolation. They are most effective when combined with trend analysis, volume studies, and support/resistance zones.
+
+Trading is about probabilities, not certainties. Mastering candlestick patterns gives traders an edge — but discipline and context are what make them profitable.
+
+Multiple Candle Patterns – The Market’s Conversations
+
+1. Introduction
+
+While single candlesticks whisper short messages about market mood, multiple candle patterns tell full stories. They show the struggle between bulls and bears over time, revealing whether a trend is likely to continue or reverse. Think of each multi-candle setup as a scene in a play, where buyers and sellers act, react, and sometimes deceive.
+
+2. Key Multi-Candle Patterns
+
+A. Engulfing Pattern
+
+Bullish Engulfing The Setup: Appears after a downtrend. A small red candle is followed by a large green candle that fully covers (engulfs) the previous one. The Story: Imagine sellers celebrating a small win, only for buyers to storm in the next day, overwhelming them with a larger, louder voice. It’s like a weak king being overthrown overnight by a powerful ruler. Psychology: Sellers lose confidence, buyers gain momentum.
+
+Bearish Engulfing The Setup: Appears after an uptrend. A small green candle is engulfed by a large red candle. The Story: Bulls are rejoicing at the top, but suddenly bears stage a coup, overpowering them and seizing control. Psychology: Buyers start doubting, profit-taking begins, and selling pressure grows.
+
+B. Harami (Inside Candle)
+
+Bullish Harami The Setup: After a downtrend, a large red candle is followed by a small green one contained inside its body. The Story: The big red candle is like a storm. But instead of another storm, the market gives a small calm candle—a child hiding in the arms of the giant. The storm is losing energy. Psychology: Fear is fading; buyers are quietly testing waters.
+
+Bearish Harami The Setup: After an uptrend, a large green candle is followed by a small red one inside it. The Story: The party is still going, but the next candle shows hesitation—like music fading at midnight. Psychology: Buyers hesitate; sellers prepare their move.
+
+C. Morning Star (Bullish Reversal)
+
+The Setup: Three candles – a big red, then a small candle (indecision, doji or spinning top), followed by a big green.
+
+The Story: Imagine the night sky—darkness (big red candle), then a small star appears (indecision candle), and finally the sunrise (big green). The new day begins.
+
+Psychology: Bears lose steam, bulls rise with confidence.
+
+D. Evening Star (Bearish Reversal)
+
+The Setup: Big green candle, small candle (indecision), then big red candle.
+
+The Story: The day is bright (green), then twilight arrives (small indecision candle), and finally night falls (red).
+
+Psychology: Bulls’ energy fades, sellers dominate.
+
+E. Three Soldiers & Three Crows
+
+Three White Soldiers (Bullish) The Setup: Three consecutive long green candles, each opening within or near the previous body and closing higher. The Story: Like three victorious generals marching forward after a war, signaling strength and unity. Psychology: Strong buyer confidence, trend reversal confirmed.
+
+Three Black Crows (Bearish) The Setup: Three consecutive red candles, each opening within the previous body and closing lower. The Story: Like three ravens circling a battlefield, announcing doom for the bulls. Psychology: Selling pressure builds, downtrend gains control.
+
+F. Tweezer Tops & Bottoms
+
+Tweezer Top – Appears at highs, with two candles showing equal highs. Story: Bulls tried twice to break through resistance, but failed both times—like a warrior hitting a wall with no cracks.
+
+Tweezer Bottom – Appears at lows, with equal lows. Story: Bears tried twice to push lower but were blocked—like waves crashing against a rock that won’t move.
+
+G. Doji + Confirmation Patterns
+
+Alone, a Doji shows indecision. But when paired with trend candles, it becomes powerful:
+
+After a long green run → Doji + red candle = reversal.
+
+After a long red run → Doji + green candle = reversal. Story: A Doji is like a council meeting—everyone argues but no one decides. The next candle is the verdict.
+
+3. Summary Table
+
+Pattern
+
+Candles
+
+Signal
+
+Market Story
+
+Bullish Engulfing
+
+2
+
+Reversal (Up)
+
+Bears lose to sudden bull power
+
+Bearish Engulfing
+
+2
+
+Reversal (Down)
+
+Bulls crushed by bear takeover
+
+Morning Star
+
+3
+
+Reversal (Up)
+
+Darkness → Pause → Sunrise
+
+Evening Star
+
+3
+
+Reversal (Down)
+
+Day → Twilight → Night
+
+Three Soldiers
+
+3
+
+Strong Uptrend
+
+Bulls march in unity
+
+Three Crows
+
+3
+
+Strong Downtrend
+
+Bears dominate with force
+
+Tweezer Top/Bottom
+
+2
+
+Reversal
+
+Repeated failed attempts

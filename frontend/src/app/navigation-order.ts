@@ -1,4 +1,4 @@
-export const DEFAULT_PAGES = ['Overview', 'Market Scanner', 'Focused', 'F&O Stocks', 'Stock Details', 'Option Chains', 'Watchlist', 'Trade Journal'];
+export const DEFAULT_PAGES = ['Overview', 'Market Scanner', 'Focused', 'F&O Stocks', 'Stock Details', 'Option Chains', 'Watchlist', 'Trade Journal', 'Learning'];
 export const NAVIGATION_ORDER_KEY = 'traders-gita-navigation-order';
 
 /** Keep saved tabs once, ignore removed tabs and append newly introduced tabs. */

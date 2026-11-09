@@ -1,0 +1,169 @@
+DELTA TO DHARMA
+
+The Mind of a Trader-Understanding Your Inner Market
+
+“Markets don’t make you, they reveal you. Our work is to see what’s revealed and then choose better.”
+
+Chapter 1 — The Market Mirror Effect
+
+Objective: experience and name the physical & emotional signals the market triggers in you.
+
+“Markets are neutral. They don’t reward or punish you — they simply mirror back what’s inside your head. When price moves, your body and story move first. Our job today is to learn to notice that internal motion before it becomes an action we regret.”
+
+Key points
+
+Market = mirror — price movement reveals fear, greed, impatience, arrogance.
+
+Triggers are physical first — heart racing, chest tightness, shallow breathing, checking the P&L obsessively, aggressive typing. Teach students to notice the first physical signal.
+
+Response window — there’s typically a 3–8 second window between physical signal and action; if they can notice the signal, they can choose the action.
+
+examples
+
+Example A (panic exit): A trader sees a 0.6% dip → feels fluttering chest → exits at breakeven → market reverses → trader blames system, not their panic.
+
+Example B (opportunity): Same dip, another trader breathes, recognizes pullback, enters at support, holds — profits.
+
+Mini exercise (2–3 minutes)
+
+“Close your eyes. Think of the last time the market startled you. What did you feel physically — where? Describe in one word.” (chest, sweat, breath, anger). Make a note of patterns.
+
+Chapter 2 — The 4 Trading Personalities
+
+Objective: Help traders identify their dominant type, strengths, and blind spots.
+
+Overview of types
+
+The Gambler
+
+Behaviour: Frequent entries, seeks excitement, doubles down.
+
+Strength: Fast reaction to momentum.
+
+Blind spot: Overtrading, ruin risk.
+
+Coaching line: “You need structure: fixed sizing and a daily max-loss.”
+
+The Sniper
+
+Behaviour: Waits for perfect setups, small number of trades.
+
+Strength: High precision, low drawdown.
+
+Blind spot: Missed opportunity, fear of committing.
+
+Coaching line: “Add a ‘B-trade’ plan to capture good but not perfect setups.”
+
+The Farmer
+
+Behaviour: Long-term holds, incremental entries, compounding focus.
+
+Strength: Strong compounding, low churn.
+
+Blind spot: Letting losses grow too long.
+
+Coaching line: “Use defined trailing rules and weekly reviews.”
+
+The Observer
+
+Behaviour: Learns a lot, trades little.
+
+Strength: Low risk, high learning.
+
+Blind spot: Execution paralysis.
+
+Coaching line: “Commit to a small size and schedule a ‘practice trade’ day.”
+
+Chapter 3 — Mental Models & Execution
+
+Objective: realize which mental models you use and how those models change your risk management.
+
+“Every trader uses mental shorthand — models — to interpret the market. Those models are useful, until they aren’t. Our work is to detect the model, test it, and decide when to switch or hold it.”
+
+Common trading mental models
+
+Trend-following (“Trend is your friend”) → favors breakouts; may fail badly in choppy markets.
+
+Mean-reversion (“Price returns to mean”) → favors counter-trend entries; dangerous in trending markets.
+
+Risk-parity / fixed% position sizing → stable capital preservation; may underperform high volatility regimes.
+
+Event-driven (news makes trends) → reactive; profits when events are directional, loses when noise.
+
+Volatility / statistical edge (ATR/vol sizing) → dynamic sizing; requires discipline in stop placement.
+
+Example: how model affects SL/TP
+
+A mean-reverter will place tight SLs and small TPs. If market turns trending, those SLs get stopped out repeatedly.
+
+A trend follower uses wider SLs and larger targets; during choppiness, drawdowns will be deeper.
+
+Chapter 4 — Guided “First Market Memory”
+
+Objective: Surface a core memory that drives your money/risk behavior; convert it into an actionable belief-change step.
+
+“Close your eyes. Take 3 slow breaths. Think back — what is your earliest memory involving money or trade? It might be a piggy bank, a parent arguing about bills, a lottery win — anything. Picture the scene: where were you, who was there, what was said? Now ask yourself — what did that experience teach you about money?”
+
+Pause 60–90 seconds for silent reflection.
+
+Questions
+
+What happened?
+
+How did I feel then?
+
+What rule about money did I adopt from that event?
+
+Is that rule helping my trading today?
+
+Chapter 5 — Trade Reflection Journal
+
+Objective: Provide you a simple, repeatable template to catch emotional patterns.
+
+The template
+
+Date/Time:
+
+Instrument / Direction / Size:
+
+Entry Price / Exit Price / SL:
+
+Plan: Why I entered (1 sentence).
+
+Trigger: What technical/strategy condition triggered entry.
+
+Emotions Before: (1–3 words)
+
+Emotions During: (1–3 words)
+
+Emotions After: (1–3 words)
+
+Did I follow my plan? (Yes/No) + Why not
+
+What I learned: (1–2 bullets)
+
+Action for next time: (1 small habit to change)
+
+Sample filled entry
+
+Date: 2025-08-10, 09:45
+
+Instrument: NIFTY futures / Long / 1 lot
+
+Entry: 22,450 Exit: 22,520 SL: 22,420
+
+Plan: Enter pullback to VWAP on 5-min confluence for intraday scalp.
+
+Trigger: Price touched VWAP + bullish divergence on RSI.
+
+Emotions Before: Slight anxiousness (because yesterday had big loss)
+
+Emotions During: Tight chest at break-even (fear of losing again)
+
+Emotions After: Relief + regret (took profit early)
+
+Did I follow plan? No — exited at +8 instead of target +20 because of anxiety.
+
+What I learned: Anxiety from previous day forced early exit.
+
+Action for next time: Before entering, do 3 deep breaths; if anxiety present, halve position size.

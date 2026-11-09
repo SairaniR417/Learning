@@ -1,0 +1,439 @@
+Delta To Dharma
+
+VWAP
+
+1. What is VWAP?
+
+VWAP (Volume Weighted Average Price) is a dynamic indicator that shows the average price of a security, weighted by traded volume, over a given period.
+
+Formula: VWAPt=∑(Pricei×Volumei)∑VolumeiVWAP_t = \frac{\sum (Price_i \times Volume_i)}{\sum Volume_i}
+
+It represents the “true fair value” where most trading happened, unlike a simple moving average which only uses price.
+
+2. Who Invented VWAP?
+
+VWAP was introduced in 1984 by James A. Abbot and Peter Steidlmayer (CME traders).
+
+It was first used by institutions as an execution benchmark:
+
+If they bought below VWAP, they did better than the “average buyer.”
+
+If they sold above VWAP, they did better than the “average seller.”
+
+Over time, traders adopted VWAP as a technical indicator for intraday trend, mean reversion, and institutional footprints.
+
+3. Why VWAP Matters
+
+For Institutions: Benchmark to judge order execution.
+
+For Retail Traders: Helps identify trend bias, support/resistance, liquidity zones.
+
+For Options Traders: Serves as magnet or polarity zone where price often gravitates intraday.
+
+VWAP = bridge between retail psychology and institutional flow.
+
+4. Types of VWAP
+
+🔹 1. Standard Daily VWAP
+
+Resets each day at market open.
+
+Most common for intraday scalping & option expiry plays.
+
+🔹 2. Anchored VWAP (AVWAP)
+
+Trader chooses the starting “anchor point.”
+
+Useful for swing & positional trades.
+
+Anchor to:
+
+Swing high/low
+
+Gap day
+
+Event candle (earnings, news, Fed day)
+
+Monthly/Yearly open
+
+🔹 3. Rolling VWAP
+
+VWAP applied over rolling windows (5D, 20D, etc).
+
+Like a VWAP-based moving average.
+
+Shows longer-term institutional value drift.
+
+🔹 4. Higher-Timeframe VWAPs
+
+Weekly, Monthly, Quarterly, Yearly VWAP.
+
+Institutions use these to track macro fair price zones.
+
+5. VWAP + Standard Deviations (VWAP Bands)
+
+VWAP can be combined with standard deviation bands (like Bollinger Bands on VWAP).
+
+1σ (first deviation): Intraday range (68% of volume).
+
+2σ (second deviation): Extremes (95% of volume).
+
+3σ (third deviation): Very rare extremes → mean reversion.
+
+Strategies:
+
+Mean Reversion Fade
+
+Long at -1σ / -2σ → Target VWAP.
+
+Short at +1σ / +2σ → Target VWAP.
+
+Trend Continuation
+
+Price holds above VWAP → Buy pullbacks near VWAP / +1σ.
+
+Price below VWAP → Sell rallies near VWAP / -1σ.
+
+Breakout Expansion
+
+VWAP flat → Breakout beyond ±2σ with volume → Ride the trend.
+
+Std Dev Compression → Expansion
+
+Bands narrow → volatility squeeze → breakout coming.
+
+6. Anchored VWAP (AVWAP): Selection & Strategies
+
+How to Select Anchor:
+
+Swing high/low → institutional footprints.
+
+Major event candle → Budget, Fed, Elections, Earnings.
+
+All-time high/low → Long-term zones.
+
+Monthly/Yearly open → Track accumulation zones.
+
+How to Use:
+
+If price bounces repeatedly at AVWAP → confirmation of institutional defense.
+
+AVWAP clusters (multiple anchors overlapping) = strong demand/supply zones.
+
+Swing/positional traders use AVWAP as dynamic stop placement tool.
+
+7. Rolling VWAP Strategies
+
+5D / 20D Rolling VWAP: Institutional bias filter.
+
+If price > rolling VWAP → bullish structure.
+
+If price < rolling VWAP → bearish structure.
+
+Combine with Daily VWAP for short-term alignment with long-term flow.
+
+8. Multi-Timeframe VWAP Application
+
+Intraday (Scalping/Options intraday)
+
+Daily VWAP + Std Dev bands.
+
+Trade fades & breakouts around VWAP.
+
+Swing Trading
+
+Weekly VWAP + Anchored VWAP (last swing).
+
+Look for pullback to VWAP cluster zones.
+
+Positional / Investing
+
+Monthly VWAP + Rolling VWAP + Yearly VWAP.
+
+Identify long-term accumulation zones.
+
+9. VWAP in Options Trading
+
+Directional Options:
+
+Calls only if price > VWAP.
+
+Puts only if price < VWAP.
+
+Non-Directional / Expiry Day:
+
+VWAP acts like a magnet.
+
+Sell straddles/strangles when price oscillates around VWAP.
+
+Fade ±2σ moves for scalping options.
+
+Theta Plays:
+
+Expiry day → price often returns to VWAP → sell premium away from VWAP.
+
+10. VWAP Confluences
+
+With Volume Profile
+
+VWAP = average price.
+
+Profile = value area.
+
+VWAP + HVN confluence = strong support/resistance.
+
+With Moving Averages
+
+VWAP + 20 EMA = intraday alignment.
+
+VWAP + 200 EMA = institutional confirmation.
+
+With Smart Money Concepts (SMC)
+
+AVWAP overlaps with Order Blocks.
+
+VWAP deviations = liquidity sweeps.
+
+11. VWAP Trading Regimes
+
+Trending Market → VWAP pullbacks = continuation.
+
+Range-Bound Market → Fade ±1σ / ±2σ → Target VWAP.
+
+Breakout Market → VWAP expansion beyond ±2σ.
+
+Event Days (Budget, Fed, Earnings) → Anchor VWAP from event candle.
+
+12. Practical Delta2Dharma Framework
+
+Intraday Setup: Daily VWAP + SD bands. Fade & breakout trades.
+
+Swing Setup: Weekly VWAP + AVWAP from swing low/high.
+
+Positional Setup: Monthly VWAP + Rolling VWAP + Yearly VWAP.
+
+Options Setup: Directional only with VWAP bias. Non-directional expiry scalp near VWAP.
+
+13. Key Takeaways
+
+VWAP is not just an indicator, it’s a market compass.
+
+Use Standard VWAP for intraday, Anchored VWAP for swing/positional, Rolling VWAP for institutional bias, and Higher-Timeframe VWAP for big picture.
+
+Standard deviation bands around VWAP = ready-made mean reversion + trend tools.
+
+Confluence with Volume Profile, EMAs, and SMC = high-probability zones.
+
+VWAP + Standard Deviations (VWAP Bands)
+
+±1σ = Range zones (~68% of activity).
+
+±2σ = Extremes (~95%).
+
+±3σ = Rare overextensions.
+
+Strategies:
+
+Mean Reversion (Fade)
+
+Long at -1σ/-2σ → Target VWAP.
+
+Short at +1σ/+2σ → Target VWAP.
+
+Trend Continuation
+
+Above VWAP → Buy dips to VWAP/1σ.
+
+Below VWAP → Sell rallies to VWAP/-1σ.
+
+Breakout Expansion
+
+VWAP flat → Expansion beyond ±2σ with volume → Trend ride.
+
+Compression–Expansion
+
+Narrow SD bands → Prepare for breakout.
+
+VWAP + Indicator Frameworks
+
+🔹 VWAP + RSI Divergence
+
+When RSI diverges near VWAP ±2σ → strong reversal setup.
+
+Options angle:
+
+Buy Calls if bullish divergence + price reclaim VWAP.
+
+Buy Puts if bearish divergence + rejection from VWAP.
+
+🔹 VWAP + ORB (Opening Range Breakout)
+
+Mark first 15/30-min high & low.
+
+If ORB breakout aligns with VWAP direction → strong continuation.
+
+Options angle:
+
+Intraday momentum → Long ATM calls if breakout above VWAP & ORH.
+
+Long ATM puts if breakdown below VWAP & ORL.
+
+🔹 VWAP + CPR (Central Pivot Range)
+
+CPR = Institutional pivot framework.
+
+Confluence: If VWAP aligns with CPR → high-value level.
+
+Options angle:
+
+Straddle selling if CPR narrow + VWAP magnet.
+
+Directional play if CPR wide + price trending with VWAP.
+
+🔹 VWAP + ATR (Stops & Targets)
+
+Use ATR to size stops beyond VWAP/σ band.
+
+If ATR high → breakout trades.
+
+If ATR low → mean reversion.
+
+Options angle:
+
+Low ATR + VWAP fade = option selling.
+
+High ATR + VWAP expansion = option buying.
+
+Advanced Anchored VWAP Framework
+
+Anchor Selection:
+
+Major swing high/low.
+
+Event candle (Budget, Fed, Earnings, Election).
+
+All-time high/low.
+
+Monthly/Yearly open.
+
+Advanced Uses:
+
+Cluster AVWAPs: Anchor from multiple events → overlap = institutional zone.
+
+Trailing AVWAPs: Re-anchor each new HL/LH in trend to follow smart money.
+
+Swing AVWAPs: Anchor from prior swing → use as dynamic stop.
+
+Rolling VWAP Deep Dive
+
+Concept: VWAP that continuously averages over 5, 10, 20 days.
+
+Use:
+
+Price > 20D Rolling VWAP → bullish long-term bias.
+
+Price < 20D Rolling VWAP → bearish bias.
+
+Options angle:
+
+Rolling VWAP trend alignment + Daily VWAP break = strong directional option play.
+
+Opposite = avoid trades or scalp only.
+
+VWAP Confluences
+
+🔹 Volume Profile
+
+VWAP (fair price) + HVN/LVN (value zones).
+
+Confluence = strong demand/supply.
+
+🔹 Moving Averages
+
+VWAP + 20 EMA = Intraday trend.
+
+VWAP + 200 EMA = Institutional confirmation.
+
+🔹 Smart Money Concepts
+
+VWAP overlap with Order Blocks / Fair Value Gaps.
+
+±σ levels act as liquidity sweep zones.
+
+🔹 Fibonacci
+
+VWAP + Fib retracement alignment → sniper entries.
+
+Multi-Timeframe VWAP Usage
+
+Intraday: Daily VWAP + σ bands + ORB.
+
+Swing: Weekly VWAP + Anchored VWAP.
+
+Positional: Monthly VWAP + Rolling VWAP + Yearly VWAP.
+
+Options:
+
+Intraday bias = Daily VWAP.
+
+Swing options = Weekly AVWAP.
+
+Positional options = Monthly/Yearly VWAP.
+
+Institutional Psychology & Trader Mindset
+
+Why VWAP works:
+
+Institutions defend VWAP zones to maintain execution quality.
+
+Algos buy below VWAP, sell above VWAP → creates natural magnet.
+
+Retail psychology:
+
+Chasing far from VWAP = trap.
+
+VWAP returns = profit-taking zones.
+
+Trader mindset:
+
+Treat VWAP as compass, not trigger.
+
+Trade only when bias + structure + confluence align.
+
+Delta2Dharma VWAP Playbook
+
+Intraday:
+
+Daily VWAP + σ bands + ORB → scalp/fade/expansion.
+
+Swing:
+
+Weekly VWAP + Anchored VWAP clusters.
+
+Positional:
+
+Monthly VWAP + Rolling VWAP + Yearly VWAP.
+
+Options:
+
+Directional = Only with VWAP bias.
+
+Non-directional = VWAP magnet expiry play.
+
+Straddle/strangle setups near ±2σ extremes.
+
+Key Takeaways
+
+VWAP is not just an indicator — it’s an institutional benchmark & trading compass.
+
+Standard VWAP → Intraday.
+
+Anchored VWAP → Swing/Positional.
+
+Rolling VWAP → Long-term institutional bias.
+
+Higher TF VWAPs → Big money zones.
+
+Add RSI/ORB/CPR/ATR for confirmation.
+
+Always align trades with VWAP psychology & institutional behavior.

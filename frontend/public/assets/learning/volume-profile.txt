@@ -1,0 +1,1189 @@
+DELTA TO DHARMA
+
+Volume Profile
+
+1. What is Volume Profile?
+
+Definition: Volume Profile is a charting tool that plots traded volume at each price level, instead of just showing volume by time (the standard volume bars at bottom of chart).
+
+It gives a horizontal histogram across price levels, showing where market participants are most active.
+
+Unlike traditional volume, it tells us “at what prices” volume occurred, not just “how much volume per candle.”
+
+👉 Think of it as the footprint of buyers and sellers across price.
+
+2. Key Components of Volume Profile
+
+a) Point of Control (POC)
+
+The price level with the highest traded volume in that session/period.
+
+Acts like a magnet for price (mean-reversion) but also a strong support/resistance zone.
+
+b) Value Area (VA)
+
+The region where 70% of the total volume has occurred.
+
+Two levels form:
+
+Value Area High (VAH)
+
+Value Area Low (VAL)
+
+Traders often use VAH as resistance and VAL as support.
+
+c) Nodes (Volume Nodes)
+
+High Volume Node (HVN):
+
+Areas where a lot of trading happened.
+
+Market has accepted this price = "fair value zone."
+
+Price tends to consolidate here.
+
+Low Volume Node (LVN):
+
+Areas with little trading activity.
+
+Market rejected these prices quickly.
+
+Price tends to move through LVNs fast, often used for breakout/imbalance trades.
+
+3. Characteristics of HVN & LVN
+
+HVN (Acceptance Zones):
+
+Act like “magnets” pulling price.
+
+Price slows down, consolidates, or chops here.
+
+Good for range trades.
+
+LVN (Rejection Zones):
+
+Act like barriers or “walls.”
+
+Price often bounces or slices quickly through them.
+
+Good for breakout trades.
+
+4. Market Profile vs Volume Profile (Quick Clarification)
+
+Market Profile: Based on time at price (letters/TPO).
+
+Volume Profile: Based on actual traded volume.
+
+Volume Profile is considered more accurate for modern trading (since institutions move volume, not just time).
+
+5. Shapes & Structures of Volume Profile
+
+Each day/session leaves behind a shape that tells a story of auction (buyer-seller battle).
+
+a) D-Shape (Balanced Profile)
+
+Volume centered around POC.
+
+Market is in balance/fair value.
+
+Next day expectation: Range-bound until breakout.
+
+b) P-Shape Profile (Short Covering / Bullish Bias)
+
+Looks like letter “P” → more volume at higher prices.
+
+Indicates shorts trapped and covering → bullish bias.
+
+Next day expectation: Continuation upward or at least stay above VAH.
+
+c) b-Shape Profile (Long Liquidation / Bearish Bias)
+
+Looks like letter “b” → more volume at lower prices.
+
+Indicates longs trapped and exiting → bearish bias.
+
+Next day expectation: Continuation downward or at least stay below VAL.
+
+d) Double Distribution Profile
+
+Two distinct peaks (two HVNs).
+
+Market couldn’t agree → price accepted at two different zones.
+
+Next day expectation: Price may oscillate between the two HVNs.
+
+6. How to Use Volume Profile in Trading
+
+a) Intraday Trading
+
+POC re-tests: Price often revisits POC during the day.
+
+VAH/VAL rejections: Watch for rejection at Value Area edges.
+
+LVN breakouts: Price moves quickly through LVN zones.
+
+b) Swing Trading
+
+Identify bigger HVNs (weekly/monthly) → these are institutional accumulation zones.
+
+Buy near VAL in uptrends, sell near VAH in downtrends.
+
+c) Long-Term Investing
+
+Monthly/quarterly profiles show institutional footprints.
+
+HVNs on higher timeframes often act as long-term support/resistance.
+
+7. How It Helps Predict Next Move
+
+If price accepts above VAH → expect bullish continuation.
+
+If price rejects VAH → mean reversion to POC.
+
+If profile forms P-shape → bullish short covering.
+
+If profile forms b-shape → bearish long liquidation.
+
+If double distribution → watch the LVN between two HVNs as key decision zone.
+
+8. Institutional Insights (Why This Works)
+
+Institutions accumulate/distribute large orders at HVNs.
+
+LVNs represent imbalances → big moves happened there.
+
+Volume Profile shows you where institutions are active vs where market rejected price.
+
+9. Practical Steps for You
+
+Add Volume Profile (Visible Range or Session) in TradingView.
+
+Focus on:
+
+POC
+
+VAH/VAL
+
+HVN/LVN zones
+
+Note the profile shape each day.
+
+Build a rulebook:
+
+D-Shape → range play.
+
+P-Shape → bullish continuation.
+
+b-Shape → bearish continuation.
+
+Double Distribution → oscillation zones.
+
+✅ By mastering these, you’ll be able to:
+
+Predict likely next-day bias.
+
+Identify high-probability trade zones.
+
+Trade like institutions — by focusing on where volume is, not just where price is.
+
+D-Shape Profile
+
+1. What is a D-shape?
+
+Structure: Symmetrical, like a “bell curve.”
+
+POC sits in the middle, with roughly equal distribution above and below.
+
+Psychology: Market is in balance / fair value. Buyers and sellers agree → price is accepted.
+
+Bias: Neutral until breakout.
+
+👉 Institutions accumulate and distribute here → it’s often a pause before a trend.
+
+2. Key Characteristics
+
+Balanced distribution = no side dominates.
+
+POC is central = magnet for price the next day.
+
+Price often oscillates between VAH (Value Area High) and VAL (Value Area Low).
+
+Breakouts from D-shape → powerful moves (market moving from balance to imbalance).
+
+3. Levels to Mark
+
+POC (central magnet).
+
+VAH / VAL (edges of balance).
+
+Watch for LVNs just outside VAH/VAL → potential breakout zones.
+
+4. Next-Day Expectation
+
+Base case: Price rotates around POC, staying range-bound between VAH and VAL.
+
+Key opportunity: When price breaks out of VAH or VAL → trend day possible.
+
+5. Opening Scenarios & Trade Playbook
+
+A — Open inside Value Area
+
+Bias: Neutral. Expect oscillation.
+
+Plan:
+
+Long near VAL → target POC/VAH.
+
+Short near VAH → target POC/VAL.
+
+Avoid trading in the middle (chop zone).
+
+Stops: Just beyond VAH/VAL with buffer.
+
+B — Open above VAH (gap up)
+
+Bias: bullish if price holds above VAH.
+
+Plan:
+
+If acceptance above VAH → buy continuation.
+
+If rejection and fall back into VA → fade short toward POC.
+
+C — Open below VAL (gap down)
+
+Bias: bearish if price holds below VAL.
+
+Plan:
+
+If acceptance below VAL → short continuation.
+
+If reclaim back inside VA → fade long toward POC.
+
+6. Entry, Stop, Target Logic
+
+Entry:
+
+Fades at VAH/VAL edges (when inside balance).
+
+Breakout retest at VAH/VAL (when imbalance begins).
+
+Stop:
+
+Just outside VAH/VAL.
+
+For breakouts: just inside the balance area.
+
+Targets:
+
+Inside VA = opposite edge (VAL or VAH).
+
+Breakouts = next LVN or HVN outside.
+
+7. Confirmation
+
+Inside VA: Low volume, oscillating trade → fading edges works best.
+
+Breakout: Need strong volume outside VAH/VAL → confirms trend move.
+
+Invalidation: Breakout fails → expect sharp reversal back into balance.
+
+8. Multi-Day / Swing View
+
+Consecutive D-shapes → prolonged accumulation/distribution.
+
+Once broken, bigger directional move expected (balance → imbalance transition).
+
+Weekly/monthly D-shapes = major institutional positioning zones.
+
+9. Example Trade (NIFTY-style)
+
+Suppose today formed D-shape: POC = 25,000, VAH = 25,100, VAL = 24,900.
+
+Tomorrow, open = 25,020 (inside VA).
+
+Plan: If price rises to VAH (25,100) and rejects → short at 25,095.
+
+Stop = 25,120.
+
+Target 1 = POC (25,000).
+
+Target 2 = VAL (24,900).
+
+Risk/Reward ≈ 1:4.
+
+10. Quick Checklist for D-shape Day After
+
+✔ Mark POC, VAH, VAL. ✔ Expect sideways unless breakout. ✔ Inside VA → fade edges (VAH short, VAL long). ✔ Above VAH → continuation if accepted, fade if rejected. ✔ Below VAL → continuation if accepted, fade if rejected. ✔ Use volume to confirm breakout vs rejection.
+
+🔑 Wrap
+
+D-shape = balance day → next day usually range trading around POC.
+
+Best trades = fade edges inside balance or catch breakout outside VAH/VAL.
+
+Invalidation = strong volume acceptance beyond VAH/VAL → trend begins.
+
+B-shape
+
+1) Quick recap — what a B-shape tells you
+
+B-shape = heavy volume concentrated at lower prices (the “belly” is low).
+
+Classic interpretation: long liquidation / selling pressure → short-term bearish bias.
+
+Price accepted lower levels during that session (HVN at lower prices) and likely leaves less volume above (LVNs above) — so upward moves can be rejected, downward moves can continue faster.
+
+Important: B-shape gives probability not certainty. Use confirmation (price action + volume) before putting on large trades.
+
+2) First things to draw before market open (the essentials)
+
+Previous day POC (highest volume price) — primary magnet.
+
+Previous day VAH / VAL (Value Area High / Low — 70% VA).
+
+Main HVN(s) and LVN(s) — mark HVN zones (wider) and LVN gaps (thin).
+
+Daily high / low and any visible overnight gaps.
+
+Higher-TF HVNs (weekly/monthly) if they’re close — they can override intraday signals.
+
+Add VWAP and a couple of short EMAs (e.g., 20 EMA on 5/15m) for confluence.
+
+3) Expectation map for tomorrow
+
+Base case (most likely): bearish continuation or at least retest & rejection of higher prices.
+
+How it usually plays out:
+
+Price may pop up early (retest upper LVN/HVN or POC) then sell off once supply absorbs that retest.
+
+Or price may gap down and move quickly through LVNs toward next HVN / support.
+
+Watch volume: strong volume on downward moves = validated continuation.
+
+4) Concrete trade plans — 3 opening scenarios & what to do
+
+A — Opens above previous VAH (gap up / strong open)
+
+Bias: neutral → small bullish edge intraday, but B-shape says the underlying session was distribution — be cautious.
+
+Aggressive: fade the open if price rallies toward previous POC/HVN and shows rejection (pin bar, bearish engulfing) — enter short on rejection.
+
+Entry: limit on rejection candle close (or market if momentum breaks).
+
+Stop: just above the recent rejection wick or slightly above HVN (POC) + buffer.
+
+Target 1: previous day POC or VAL. Target 2: next structural support / weekly HVN.
+
+Conservative: wait for price to fall back into the Value Area. If price fails to hold above VAH and falls below POC, look to short on the break of POC/VAL.
+
+B — Opens inside previous Value Area (most common)
+
+Bias: bearish (because B-shape), but action depends on how price behaves around POC.
+
+Plan:
+
+If price retests POC/HVN and shows bearish PA → short with stop above POC.
+
+If price slides below VAL with pickup in selling volume → short continuation (enter on break or retest as resistance).
+
+If price instead accepts above POC (sustained above VAH on strong volume), discard bearish bias and wait for clear flip — treat as failed B-shape.
+
+C — Opens below previous VAL (gap down)
+
+Bias: strongly bearish — high probability for continuation.
+
+Options:
+
+Trend follow: enter on pullback to the broken VAL/LVN (now resistance) or on continuation breakdowns to new LVN.
+
+Momentum entry: if the gap down is accompanied by heavy selling volume and price accelerates away from the gap, enter with a tight stop (aggressive).
+
+Targets: first target = nearest HVN / high-volume pocket below (POC of the earlier distribution). If that breaks, look to weekly support/HVN.
+
+5) Entry types, stop placement & target logic (practical rules)
+
+Entry signals (use one or more for confluence):
+
+Bearish price action at POC/HVN (rejection candle, bearish engulfing).
+
+Breakdown below VAL or LVN with above-average volume.
+
+Pullback to broken support (VAH/VAL/HVN) turning into resistance.
+
+Stop placement:
+
+Conservative: beyond the HVN/POC or the high of the rejection candle + a volatility buffer.
+
+Tighter/aggressive: beyond recent swing high or wick (smaller size, for scalp).
+
+Never place stop right at a node — give a few ticks/points buffer for spread/noise.
+
+Targets:
+
+Target 1 = previous session POC or nearest HVN below.
+
+Target 2 = next structural support (daily low / weekly HVN).
+
+Consider scaling out: take 50% at T1, trail stop to breakeven, let remainder run toward T2.
+
+6) Volume confirmation & how to read it
+
+Good confirmation for continuation: price moves through a LVN or VAL with increasing volume (shows aggressive selling).
+
+Warning sign / false breakout: price breaks level on low volume or breaks and immediately returns above (a wick back into area) → likely a false move.
+
+POC behavior:
+
+POC holding as resistance after retest suggests continuation lower.
+
+POC being reclaimed on strong buying volume invalidates short bias.
+
+7) Timeframes & tools (what to watch live)
+
+Intraday: 1m/5m/15m for entries; use session (daily) Volume Profile.
+
+Swing: 1h/4h and daily profiles — use weekly profile to see where institutions sit.
+
+Indicators to combine: VWAP (short term fair price), 20 EMA for trend, ATR for volatility (position sizing), and support/resistance.
+
+Profiles: use daily session profile for immediate zones; overlay visible range for multiple session clusters; check weekly for major HVNs.
+
+8) Example trade (numbers + position sizing calculation)
+
+Example scenario (generic stock/asset — adapt to your instrument):
+
+Account size = ₹200,000.
+
+Risk per trade = 1% → risk amount = 200000 × 0.01 = 2000.
+
+(Digit by digit: 2 0 0 0 0 0 × 0.01 = 2 0 0 0) = ₹2,000.
+
+Say you plan a short with entry ₹1,000 and stop loss at ₹1,010 → risk per share = ₹10.
+
+Position size = risk amount / risk per share = 2000 / 10 = 200 shares.
+
+(Digit by digit: 2000 ÷ 10 = 200)
+
+If targeting 20 points (₹20) → gross reward = 200 × 20 = ₹4,000 (R:R = 2:1).
+
+Adjust numbers for futures/options (use tick value and lot size) or for indices — compute the same way but convert tick/lot to monetary risk.
+
+9) Swing / multi-day interpretation (how B-shape affects longer term)
+
+If B-shape repeats across multiple sessions → institutional distribution → higher probability of a larger downtrend.
+
+Single B-shape in an otherwise bullish higher TF market = short-term opportunity only — treat as a scalp/trade, not a position reversal.
+
+Use weekly/monthly HVNs as filters: if weekly HVN is far below and B-shape forms, larger TF support may slow/stop the fall.
+
+10) Common traps & rules to avoid mistakes
+
+Don’t short only because of the B-shape — require confirmation (POC rejection, breakdown below VAL/LVN, or volume spike).
+
+Avoid large size on the open without confirmation — the open is noisy.
+
+Respect higher TF context: a daily B in a clear multi-week uptrend has lower success for big short trades.
+
+Mind news / events — session-defining prints around economic data can invalidate patterns.
+
+11) Quick morning checklist (copy/paste for tomorrow)
+
+Mark yesterday’s POC, VAH, VAL, HVNs and LVNs.
+
+Note where overnight/weekly HVNs lie.
+
+Note the open relative to VA (above/inside/below).
+
+Watch first 30–60 minutes: is POC retested? rejection or acceptance?
+
+If retest + rejection at POC/HVN → consider short with stop above HVN.
+
+If break below VAL/LVN on high volume → trend short (enter on break or retest).
+
+Size per risk rules and place stops with buffer beyond nodes/wicks.
+
+Take partial profits at POC/HVN below; trail remainder.
+
+12) Post-trade journal prompts (what to record)
+
+Setup type (open scenario A/B/C), entry price, stop, target, size.
+
+Which node or POC acted as support/resistance?
+
+Volume behavior during trade (expanding/contracting).
+
+Outcome and lesson: was bias right? Was move validated by volume? Did you respect higher TF?
+
+Short wrap & final notes
+
+B-shape = bearish edge tomorrow, but trade with structure: mark POC/VAH/VAL/HVNs/LVNs, wait for price action + volume confirmation, size properly, and use stops beyond nodes.
+
+P-Shape Profile
+
+1. What does a P-shape mean?
+
+P-shape profile has a wide upper distribution (like the belly of P) and a thin lower tail.
+
+It tells you:
+
+Shorts (sellers) were trapped and forced to cover → creating strong upward movement.
+
+Buyers then accepted higher prices (volume built at the top).
+
+Market psychology: Long liquidation is over, sellers gave up, buyers are in control.
+
+Bias: Bullish / Short-covering continuation.
+
+2. Key Characteristics of P-shape
+
+Thin lower tail = rejected lower prices quickly.
+
+Wide high-volume zone near top = acceptance at higher levels.
+
+POC sits toward the upper part of the profile, unlike B-shape where it sits low.
+
+👉 Interpretation: Market is finding fair value higher. Next day has upward continuation bias unless proven otherwise.
+
+3. Levels to Mark (before next day)
+
+Previous day POC (important, strong support).
+
+VAH / VAL (Value Area High & Low).
+
+The single prints / LVN in the lower tail (important rejection zones).
+
+Daily High/Low.
+
+Weekly HVN/POC if nearby.
+
+4. Next-Day Expectation Map
+
+Bias: bullish.
+
+Common behavior next day:
+
+Price dips early toward POC/VAL → then bounces strongly (longs defend, shorts trapped again).
+
+Price can gap up and continue trending higher.
+
+If price opens inside VA but holds above POC → expect upside extension.
+
+If price fails and breaks below VAL → bullish thesis weakens (caution: trend reversal).
+
+5. Opening Scenarios & Trading Plans
+
+A — Opens above VAH (gap up)
+
+Bias: continuation of bullish move.
+
+Aggressive plan: Buy pullback into VAH/POC zone.
+
+Conservative plan: Wait for acceptance above VAH (consolidation or retest holding) → then buy breakout continuation.
+
+Stops: Below VAH or below POC.
+
+Targets: First resistance (swing high / weekly HVN). Scale out on strength.
+
+B — Opens inside previous Value Area
+
+Bias: bullish, but expect dip into POC/VAL.
+
+Plan: Buy dip into POC/VAL zone if defended with strong rejection candles/volume pickup.
+
+Invalidation: If price sustains below VAL → bullish scenario fails → step aside or prepare for short reversal.
+
+C — Opens below VAL (gap down)
+
+Bias: tricky. If quick reclaim of VAL → strong bullish continuation (short trap extended).
+
+Plan:
+
+If quick reclaim of VAL → aggressive buy, stop below gap low.
+
+If sustain below VAL → invalidation → market has shifted bearish → avoid longs.
+
+6. Entry & Exit Playbook
+
+Entry signals:
+
+Rejection candle / pin bar at POC or VAL.
+
+Breakout retest of VAH.
+
+Acceptance above VAH on high volume.
+
+Stop placement:
+
+Conservative: below VAL (for POC/VAH entries).
+
+Aggressive: below rejection wick.
+
+Add a small buffer for volatility.
+
+Targets:
+
+T1 = previous day high or VAH retest.
+
+T2 = next HVN / resistance (daily/weekly).
+
+Scale partial profits at T1, trail stop for remainder.
+
+7. Volume Confirmation
+
+Good bullish confirmation: Volume rises on up moves, falls on pullbacks.
+
+Warning sign: Price above VAH but volume low → breakout may fail.
+
+POC defense: Strong bounce from POC = buyers in control.
+
+8. Multi-Day / Swing View
+
+Repeated P-shapes = sustained accumulation / short squeezes → higher timeframe uptrend likely.
+
+A single P-shape in a sideways/weak higher timeframe = short-term bullish play only.
+
+Always check weekly/monthly HVNs — if close, they act like magnets.
+
+9. Example Trade (NIFTY-style case)
+
+Assume today formed P-shape, POC = 24,950, VAH = 25,100, VAL = 24,900.
+
+Tomorrow, if open at 25,020 (inside VA):
+
+Price dips to 24,950 (POC), shows bullish engulfing on 5m chart.
+
+Entry: Buy at 24,955.
+
+Stop: 24,930 (25 points risk).
+
+Target 1: 25,100 (145 pts reward).
+
+Target 2: 25,250 (additional swing target).
+
+Risk/Reward = ~1:5 if partials scaled.
+
+10. Quick Checklist for P-shape Day After
+
+✔ Mark POC, VAH, VAL, rejection tail LVN. ✔ Expect bullish bias → buy dips into POC/VAL. ✔ If opens above VAH → continuation play. ✔ If opens inside VA → dip-buy POC/VAL zone. ✔ If opens below VAL → wait for reclaim (bullish) or avoid (invalid). ✔ Confirmation = strong rejection candle + volume. ✔ Scale out partials, trail stops on remainder.
+
+✨ Short Wrap
+
+P-shape = bullish short-covering → next day bias up.
+
+Trade plan = buy dips to POC/VAL or breakout above VAH with volume confirmation.
+
+Invalidation = sustained break below VAL.
+
+Best use = intraday continuation → can also hint at swing accumulation if repeated.
+
+Double Distribution Profile
+
+1. What is a Double Distribution Profile (DDP)?
+
+Structure: Two clear “bellies” (two HVNs) separated by a thin area (LVN).
+
+Psychology: Market first accepted one zone, then shifted strongly to another, creating a second acceptance area.
+
+Bias: Neutral-to-directional, depending on which side of the LVN gets accepted the next day.
+
+👉 Think of it like the market saying: “Old fair value was here, but now we’re also accepting trades up/down here.”
+
+2. Key Characteristics
+
+Two HVNs (value zones).
+
+LVN in between = weak spot / decision zone.
+
+If price stays in upper distribution → bullish.
+
+If price falls back into lower distribution → bearish.
+
+If it oscillates between both → range between HVNs.
+
+3. Levels to Mark
+
+Upper HVN (upper belly).
+
+Lower HVN (lower belly).
+
+LVN in between = battle zone.
+
+Day High/Low.
+
+Weekly POC/HVNs for confluence.
+
+4. Next-Day Expectation Map
+
+Bias depends on where price opens relative to LVN:
+
+Above LVN, inside upper HVN → bullish continuation.
+
+Below LVN, inside lower HVN → bearish continuation.
+
+Inside LVN zone → chop early, breakout later.
+
+5. Opening Scenarios & Trade Playbook
+
+A — Open inside upper HVN
+
+Market already accepted higher prices.
+
+Plan:
+
+Buy dips inside upper HVN.
+
+Stop = below LVN.
+
+Target = day high or next resistance above.
+
+B — Open inside lower HVN
+
+Market rejected higher zone, back to lower acceptance.
+
+Plan:
+
+Short rallies inside lower HVN.
+
+Stop = above LVN.
+
+Target = day low or next support below.
+
+C — Open inside LVN (middle zone)
+
+Tricky zone, expect volatility.
+
+Plan:
+
+If price accepts above LVN into upper HVN → go long.
+
+If price rejects and falls into lower HVN → go short.
+
+Don’t hold trades blindly in the middle.
+
+6. Entry, Stop, Target Logic
+
+Entry:
+
+Buy dips in upper HVN.
+
+Short rallies in lower HVN.
+
+Trade LVN break/acceptance.
+
+Stop:
+
+Opposite side of LVN or HVN boundary.
+
+Targets:
+
+Opposite side of HVN.
+
+Next daily/weekly node outside distribution.
+
+7. Volume Confirmation
+
+Strong acceptance = rising volume in HVN.
+
+Weak breakout = low volume through LVN → likely false.
+
+Valid breakout = strong volume surge through LVN with continuation.
+
+8. Multi-Day / Swing View
+
+Double distribution is often a trend day marker:
+
+Day starts in one balance → then drives into another balance.
+
+If next day also accepts new zone → trend continuation.
+
+If not → price reverts back to original HVN.
+
+9. Example Trade (NIFTY-style)
+
+Suppose today’s DDP:
+
+Lower HVN = 24,800–24,900
+
+LVN = 24,950–24,970
+
+Upper HVN = 25,020–25,120
+
+Tomorrow open = 25,030 (inside upper HVN).
+
+Plan: Buy dip into 25,020–25,040.
+
+Stop = below 24,970 (LVN).
+
+Target 1 = 25,100.
+
+Target 2 = 25,250 (swing).
+
+10. Quick Checklist for Double Distribution Day After
+
+✔ Mark lower HVN, LVN, upper HVN. ✔ If open in upper HVN → bullish continuation. ✔ If open in lower HVN → bearish continuation. ✔ If open in LVN → wait for breakout → trade acceptance direction. ✔ Stops just outside LVN/HVN. ✔ Volume confirms acceptance vs rejection.
+
+🔑 Wrap
+
+Double Distribution = two acceptance zones + decision LVN.
+
+Next day = bias comes from which HVN gets accepted.
+
+Trade = fade edges inside HVNs, breakout at LVN.
+
+Invalidation = failed acceptance (wick into LVN then reversal).
+
+Cheat sheet
+
+D-shape (Balanced / “D”)
+
+Quick recap
+
+Volume concentrated around the middle (POC) → market in balance / fair value.
+
+Expect range trading or consolidation; breakouts are lower-probability unless volume confirms.
+
+What to draw before open
+
+Prev day POC, VAH, VAL, HVN/LVN, daily high/low, overnight gaps.
+
+Weekly HVNs for context, VWAP, and 20 EMA on 5/15m.
+
+Expectation map
+
+Base: range bound between VAL ⇄ VAH.
+
+Less likely: clean directional continuation without strong breakout volume.
+
+Opening scenarios & plans
+
+A — Open above VAH
+
+Bias: neutral–slightly bullish intraday but expect sellers near VAH/POC.
+
+Aggressive: fade move back into VA (short on rejection at VAH/POC).
+
+Conservative: wait for clear acceptance above VAH with strong buying volume before long.
+
+B — Open inside VA
+
+Bias: neutral.
+
+Plan: trade the range — buy near VAL, sell near VAH, use POC as intraday magnet. Prefer short timeframes (5–15m).
+
+C — Open below VAL
+
+Bias: neutral–slightly bearish (if sellers continue).
+
+Trade: if price retests VAL and rejects → short (stop above VAL/POC). If price quickly reclaims VA and stays above POC → treat as failed range and avoid shorts.
+
+Entries / Stops / Targets
+
+Entries: rejection candles at VAH/VAL/POC; fades into extremes; breakout only on high volume.
+
+Stops: beyond the node (HVN/POC) + buffer for conservative trades; for scalps use recent wick + small buffer.
+
+Targets: first target = POC or opposite VA boundary; second = daily high/low or nearest HVN.
+
+Volume confirmation
+
+Breakouts must have expanding volume to be valid.
+
+Low volume breakout → fade scenario likely.
+
+Timeframes & tools
+
+1m/5m/15m for entries, use session profile for day, weekly for bias. VWAP + EMAs help identify micro-trend inside the range.
+
+Swing / multi-day
+
+Repeated balanced days → market building base; larger TF breakout required for directional trades.
+
+Common traps
+
+Chasing breakouts with low volume.
+
+Over-sizing in range fade picks when news hits.
+
+Morning checklist (copy/paste)
+
+Mark POC, VAH, VAL, HVNs/LVNs.
+
+Note open relative to VA.
+
+If price respects VA boundaries → range plays.
+
+Only trade breakouts with volume confirmation.
+
+Journal prompts
+
+Did price respect the range? Why/why not? Volume behavior? What node acted?
+
+P-shape (Short-covering / Bullish)
+
+Quick recap
+
+Profile shows high volume at upper prices (bulge on top) — often created by shorts getting squeezed / buyers stepping in.
+
+Bullish bias in next session(s) is likely.
+
+What to draw before open
+
+Prev day POC, VAH, VAL, HVN above POC, any tail/unused volume above (LVN below), daily high/low, weekly HVN, VWAP, short EMAs.
+
+Expectation map
+
+Base: upside continuation or at least support at upper HVN/POC.
+
+Price may retest lower (POC) to gather liquidity, then continue up.
+
+Opening scenarios & plans
+
+A — Open above VAH
+
+Bias: bullish.
+
+Aggressive: buy on dip to POC/POC retest or on strong push above VAH with volume.
+
+Conservative: wait for retest of POC/HVN turning into support.
+
+B — Open inside VA
+
+Bias: bullish lean.
+
+Plan: look for price moving toward upper HVN/POC; buy retest of POC with rejection candle or sustained stay above POC.
+
+C — Open below VAL
+
+Bias: weakened — treat as possible short-term shakeout.
+
+Plan: if price climbs quickly back into VA with good volume → buy the reclaim. If price stays below with selling volume, treat as failed P-shape.
+
+Entries / Stops / Targets
+
+Entries: long on retest + bullish PA at POC/HVN or breakout above VAH on volume.
+
+Stops: below POC/HVN or recent swing low + buffer.
+
+Targets: first target = short term resistance / prior high; second = measured move equal to width from LVN to HVN or next weekly HVN.
+
+Volume confirmation
+
+Upside moves should occur with strong buying volume. Short squeezes often show spikes in volume and price gaps.
+
+Timeframes & tools
+
+5m/15m for entries; check 1h/4h for where weekly HVN sits. Combine with RSI/ADX for momentum.
+
+Swing / multi-day
+
+Single P-day in a bull trend = continuation; repeated P shapes → strong accumulation and multi-day trend likely.
+
+Common traps
+
+Buying a P-shape without volume (false bullish).
+
+Ignoring large TF resistance (weekly HVN) above.
+
+Morning checklist
+
+Mark POC/HVNs, VAH/VAL.
+
+Is open above VAH? If yes, bias long but wait for retest/volume.
+
+Use VWAP and POC as confluence for longs.
+
+Journal prompts
+
+Was upside move confirmed by volume? Where were shorts likely trapped?
+
+b-shape / B-shape (Long-liquidation / Bearish) — recap
+
+(Short recap since you already had the deep B-shape playbook.)
+
+Quick recap
+
+HVN concentrated low → longs were exited / distribution → bearish bias for the next session.
+
+Key rules (summary)
+
+Mark POC, VAH, VAL, HVNs/LVNs.
+
+Open above VAH? fade rallies to POC/HVN.
+
+Inside VA? short retest to POC or breakdown below VAL.
+
+Below VAL? trend-follow shorts on continuation.
+
+Stops beyond HVN/POC; targets = POC below & weekly HVN; confirm with selling volume.
+
+(All the full step-by-step rules you already have apply here.)
+
+Double Distribution (Two distinct peaks / two HVNs)
+
+Quick recap
+
+Two clear HVNs separated by a low volume area (LVN) between them → market accepted two price regions in same session (two auctions).
+
+Ambiguous bias until price chooses a side; the LVN between peaks is a decision zone.
+
+What to draw before open
+
+Both HVNs + the LVN (the gap between them), POCs of each distribution (if using session split), VAH/VAL per distribution if available, higher TF HVNs.
+
+Expectation map
+
+Market may oscillate between the two HVNs (if both remain supported) OR resolve by breaking the LVN with volume → directional continuation to that side.
+
+Opening scenarios & plans
+
+A — Open above upper HVN
+
+Bias: slightly bullish if acceptance continues above.
+
+Trade: look for acceptance above the upper HVN; if price drops into LVN then rejects → long.
+
+B — Open between the two HVNs (in the LVN)
+
+Bias: key decision moment.
+
+Plan: watch whether LVN acts as fast passage (quick move to either HVN) or as a magnet — trade the first clear directional breakout with volume confirmation. Avoid fading inside the LVN.
+
+C — Open below lower HVN
+
+Bias: bearish if price continues below lower HVN.
+
+Trade: short on retest to lower HVN or POC.
+
+Entries / Stops / Targets
+
+Entries: trade the break of LVN with volume, or trade rejections at HVNs.
+
+Stops: beyond the opposite HVN or beyond POC + buffer.
+
+Targets: first target = the other HVN (if trading between peaks) or measured move beyond HVN equal to width of LVN (for breakout).
+
+Volume confirmation
+
+Breaks through LVN with expanding volume → high probability continuation.
+
+If break happens on low volume, expect failure and reversion to the other HVN.
+
+Timeframes & tools
+
+5m/15m for intraday; check session-split profiles to see which peak formed earlier (time sequencing helps predict next move — older distribution vs newer).
+
+Swing / multi-day
+
+If double distributions persist across days → market is switching between two perceived fair values; wait for higher TF resolution.
+
+Common traps
+
+Jumping into LVN fades — LVNs often cause quick moves, so sizing must be smaller and stops tight.
+
+Misreading which peak is dominant (recent HVN has more weight).
+
+Morning checklist
+
+Mark both HVNs and the LVN in between.
+
+Note which HVN is the newer (more recent) peak.
+
+Trade break of LVN only with volume; trade rejection at HVN with clear PA.
+
+Journal prompts
+
+Did the LVN break on volume or fail? Which HVN dominated and why?
+
+Universal practical rules (apply to all shapes)
+
+Always mark POC, VAH, VAL, HVNs & LVNs before the open.
+
+Volume confirms — without volume, treat breakouts as low-probability.
+
+Stops beyond nodes (give buffer). Nodes are not razor-thin lines; respect a few ticks.
+
+Scale out: take partial profits at first HVN/POC and trail the rest.
+
+Respect higher-TF bias: weekly/monthly HVNs can override day signals.
+
+Position size to risk (use your 1% rule). Example recap (digit-by-digit):
+
+Account ₹200,000 × risk 0.01 = ₹2,000.
+
+Entry ₹1,000, stop ₹1,010 → risk/share = ₹10 → position = 200 shares.
+
+Quick combined morning checklist (copy/paste)
+
+Mark yesterday’s POC, VAH, VAL, HVNs, LVNs and weekly HVNs.
+
+Note where the open is (above / inside / below VA).
+
+Identify profile shape (D / P / b / Double).
+
+Set bias & trade plan for the three opening scenarios.
+
+Only trade breakouts with expanding volume or clean retest + PA.
+
+Size per risk rule; stops beyond node + buffer; take partials at POC/HVNs.
+
+Profile Shape
+
+Market Psychology
+
+What to Mark / Draw
+
+Expectations (Next Day Bias)
+
+Trade Plans
+
+D-Shape (Balanced Profile)Looks like “D” with fat middle
+
+Market found fair value. Both buyers & sellers agreed. Range day.
+
+- Previous day POC (center of D)- VAH & VAL (edges of balance)- HVN (middle zone)
+
+- Market may stay range-bound until breakout- Expansion happens only if price accepts outside VAH/VAL
+
+- Range trades: Short VAH, Long VAL, target POC.- Breakout: Trade only on acceptance beyond VAH/VAL with volume.
+
+P-Shape (Short Covering / Bullish Bias)Fat top, thin bottom
+
+Shorts got trapped → covered positions → bullish pressure.
+
+- POC (upper half)- VAH (likely higher than usual)- LVN below profile (thin area)
+
+- Bias is bullish if price holds above VAH/POC- If fails back below POC → weakness
+
+- If above VAH/POC: Buy pullbacks to VAH/POC.- If back below POC: Short for mean reversion to VAL.
+
+b-Shape (Long Liquidation / Bearish Bias)Fat bottom, thin top
+
+Longs liquidated → selling pressure → bearish bias.
+
+- POC (lower half)- VAL (very near POC)- LVN above profile
+
+- Bias is bearish if price holds below POC- If reclaims POC → squeeze higher
+
+- If below POC/VAL: Short on pullbacks to POC.- If above POC: Go long for mean reversion to VAH.
+
+Double DistributionTwo fat bellies (two HVNs) with thin LVN in between
+
+Market had 2 acceptance zones; indecision day
+
+- Both HVNs- The LVN between them (key decision zone)
+
+- Price may oscillate between 2 HVNs- LVN acts as breakout/rejection zone
+
+- If price accepts above LVN → target upper HVN.- If price rejects LVN → trade back to lower HVN.
+
+Timeframes & tools (what to watch live)
+
+Intraday: 1m/5m/15m for entries; use session (daily) Volume Profile.
+
+Swing: 1h/4h and daily profiles — use weekly profile to see where institutions sit.
+
+Indicators to combine: VWAP (short term fair price), 20 EMA for trend, ATR for volatility (position sizing), and support/resistance.
+
+Profiles: use daily session profile for immediate zones; overlay visible range for multiple session clusters; check weekly for major HVNs.

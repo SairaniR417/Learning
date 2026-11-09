@@ -1,0 +1,497 @@
+Advanced Options Structures
+
+1. Why Multi-Leg Structures Matter
+
+Single options = fast P/L, but also fast damage. Multi-leg = controlled risk, defined behaviour, predictable Greeks. You basically shift from gambling → engineering.
+
+2. Main Advanced Structures We Use
+
+Keep it simple. These are the only ones you need to master:
+
+a) Ratio Spreads
+
+Example: Buy 1 ATM, Sell 2 OTM
+
+Best for: Directional + expecting IV crush
+
+Advantage: Cheap entry, high reward if price stalls near sold strike
+
+Risk: Sharp move beyond the 2nd short leg → unlimited loss
+
+When I use it: Trending markets, but close to exhaustion.
+
+b) Diagonal Spreads
+
+Front-month + Next-month combination
+
+Buy long-dated option, sell short-dated option
+
+Best for: Directional but slow move + theta income
+
+Why it works: Front month decays faster → pays you to wait
+
+Perfect for monthly trend trades.
+
+c) Calendar Spreads
+
+Same strike, different expiries
+
+Best for: Low IV environments
+
+Works when: IV is expected to rise + price stays near strike
+
+Why it works: You buy low IV, sell high IV later
+
+Used for mean-reversion or range-bound conditions.
+
+d) Double Diagonals
+
+A calendar + a diagonal combined
+
+Best for: Range-bound view with IV expansion expected
+
+Safest way to play uncertain news/event weeks.
+
+3. How These Behave in Weekly vs Monthly Expiry
+
+Weekly Expiries
+
+Fast theta decay
+
+Violent gamma movement
+
+Short legs become risky very fast
+
+Ratio spreads + calendars behave sharper
+
+Good for small, quick directional bets
+
+Monthly Expiries
+
+Smooth theta
+
+More stable Greek curves
+
+Pricing more logical
+
+Diagonals, double diagonals shine
+
+Good for traders who want controlled P/L curve
+
+4. How to Pick Strikes the Smart Way
+
+Most traders randomly choose strikes. Professionals use Delta, IV, and structure behavior:
+
+For Ratio Spreads
+
+Buy: 0.40–0.50 delta
+
+Sell: 0.20–0.25 delta (x2)
+
+For Diagonals
+
+Buy: 0.35–0.45 delta next-monthly
+
+Sell: 0.20–0.25 delta weekly
+
+For Calendars
+
+Always pick ATM or closest to ATM
+
+Because calendars want price to stay near strike
+
+5. When to Use Which Strategy
+
+Very simple rulebook:
+
+Strong trend: Diagonal, Ratio
+
+Range-bound: Calendar, Double Diagonal
+
+IV Low: Calendar
+
+IV High: Diagonal (only when expecting contraction)
+
+Before events: Double Diagonal
+
+After events: Ratio Spread (IV crash play)
+
+6. Micro Case Studies (NIFTY)
+
+Case 1 — Trending NIFTY
+
+View: Slow uptrend
+
+Market: Low IV, grinding trend Strategy: Bullish Diagonal
+
+Risk fixed, theta supports, slow directional reward
+
+Case 2 — Sideways NIFTY
+
+Market hovering around a level
+
+IV at lows Strategy: Calendar or Double Diagonal
+
+Perfect environment for decay + IV expansion
+
+Case 3 — Near big event
+
+Budget week / Election week Strategy: Double Diagonal
+
+Plays IV expansion + buffers large move
+
+7. Mistakes to Avoid
+
+Using debit spreads in low IV
+
+Using ratio spreads when VIX is already high
+
+Selling too close to ATM in weekly expiry
+
+Not planning exit when short leg goes ITM
+
+Holding adjustments too late
+
+Not tracking Greek drift (especially delta)
+
+ADJUSTMENTS MASTERCLASS
+
+Lock Profits • Reduce Risk • Convert Losing Trades • Manage Delta Drift
+
+1. The 3 Reasons We Adjust
+
+Every adjustment falls into one of these:
+
+A) Price moved fast (Delta drift)
+
+→ Your strikes are now wrong.
+
+B) IV changed (Vega shock)
+
+→ Your structure is overpriced/underpriced.
+
+C) Time passed (Theta decay)
+
+→ Your longs weakened / shorts strengthened.
+
+If you know which is happening, you know how to adjust.
+
+**2. First Rule: Never Adjust for “Ego”
+
+Adjust only for “Risk–Reward Shift.”**
+
+If your structure is already giving 1:3+ RR, then:
+
+trail aggressively
+
+reduce exposure
+
+lock-in from short legs
+
+Never adjust to “prove your view right.”
+
+3. Universal Adjustment Tools
+
+You only need these tools:
+
+1️⃣ Roll Up / Roll Down
+
+Shift strikes to bring Delta back to target.
+
+2️⃣ Add Wings
+
+Convert naked risk → defined risk.
+
+3️⃣ Convert Single Leg → Spread
+
+Reduce exposure / lock partial profits.
+
+4️⃣ Convert Spread → Iron Structure
+
+Double hedge both sides.
+
+5️⃣ Book Shorts, Keep Longs
+
+Instant risk reduction + keep potential reward.
+
+6️⃣ Reduce Quantity
+
+Most underrated but most powerful.
+
+4. How to Lock Profits (Simple Rules)
+
+✔ If you’re directional and price moved in your favour:
+
+→ Roll the short leg closer. This increases credit and locks profit.
+
+Example: Bought 18400 CE, sold 18600 CE Price rallies → shift short 18600 → 18700 → lock.
+
+✔ If the structure is already 60–70% max profit:
+
+→ Cut the position to half Keep only runners.
+
+✔ If IV crashed and you’re in debit spreads:
+
+→ Close spread, leave runner long You already got the IV crush.
+
+✔ When your long option doubles:
+
+→ Sell 30–50% of quantity Reduce stress → lock reward.
+
+5. How to Reduce Risk (Gold Rules)
+
+✔ Add Wings (Convert to Iron)
+
+If your short strike is too close or markets volatile:
+
+Debit spread → Iron Fly
+
+Credit spread → Iron Condor
+
+Risk becomes fixed.
+
+✔ Roll out to next expiry
+
+If your view is right but time is killing:
+
+Roll long option to next expiry
+
+Roll short strike with it
+
+✔ Move to lower delta
+
+Shift to safer zones:
+
+From 0.50 delta to 0.35 delta long
+
+Short leg from 0.25 delta to 0.15 delta
+
+✔ Convert naked long → Vertical
+
+Lowers theta burn.
+
+6. Adjustments For Each Strategy
+
+● A) Debit Spreads (Bull Call / Bear Put)
+
+When profit comes:
+
+✔ Sell short leg & convert into naked long for runner ✔ Or roll the short leg closer to reduce cost ✔ Trail the long leg with stop-loss on premium
+
+When going wrong:
+
+✔ Roll down the long leg (for calls) to reduce cost ✔ Convert into butterfly to reduce loss ✔ Exit early — debit spreads go to zero fast
+
+● B) Credit Spreads (Bear Call / Bull Put)
+
+When profit comes:
+
+✔ Close 50–70% early (credit spreads return fast) ✔ Roll untested side to collect more premium ✔ Convert into Iron Condor (double income)
+
+When going wrong:
+
+✔ Roll tested side further OTM ✔ Add debit hedge on tested side ✔ Don’t average — hedge instead
+
+● C) Ratio Spreads
+
+When profit comes:
+
+✔ Take profit on extra short legs ✔ Add cheap wings (OTM long) to cap unlimited risk ✔ Roll the longs up (for CE ratios) or down (PE ratios)
+
+When going wrong:
+
+✔ Add wing to cap risk ✔ Close 1 short leg to stop unlimited exposure ✔ Roll entire structure to next expiry
+
+● D) Calendar & Diagonals
+
+When profit comes:
+
+✔ Roll the short leg closer to ATM ✔ Increase credit → lower net cost ✔ Keep rolling until long leg has full value
+
+When going wrong:
+
+✔ Roll the short further OTM for breathing space ✔ Shift strike of long leg to reduce delta ✔ Do NOT hold when IV collapses
+
+● E) Iron Condor / Iron Fly
+
+When profit comes:
+
+✔ Book the untested side ✔ Narrow the wings of untested side → lock profits ✔ Keep rolling short legs inward
+
+When going wrong:
+
+✔ Roll the losing side away ✔ Convert to broken-wing condor ✔ Add debit hedge
+
+7. Easiest Visual Rule (Follow This)
+
+If price moves → Adjust Delta (roll strikes)
+
+If IV moves → Adjust Wings (add hedges)
+
+If Time moves → Adjust Short Legs (roll or close)
+
+This is the cleanest, simplest universal framework.
+
+8. Extreme Simplicity: 1 Sentence Adjustments
+
+Price going in your favour:
+
+Lock profit by rolling shorts closer.
+
+Price going against:
+
+Reduce damage by rolling tested strike away.
+
+IV rising:
+
+Protect by adding wings.
+
+IV falling:
+
+Book spreads early—IV crush is your money.
+
+Theta hurting longs:
+
+Roll out to next expiry.
+
+The Adjustment Engine
+
+How to protect capital, lock profits, and control risk — every time.
+
+**1. Start With This:
+
+“What changed?”**
+
+Before adjusting, ask only one question:
+
+Did Price Change? → Delta problem
+
+Did IV Change? → Vega problem
+
+Did Time Pass? → Theta problem
+
+This tells you the correct adjustment instantly.
+
+2. The “Delta Drift” Adjustment Rules (Price Movement)
+
+A) Price moves in your favour
+
+✔ Roll shorts closer → lock profits ✔ Trail longs with premium stop ✔ Cut quantity by 30–50% at 60–70% profit ✔ Move shorts to keep Delta near your target
+
+Example: 18400 CE (long) + 18600 CE (short) Price moved up → move short to 18700 → lock gains.
+
+B) Price moves against you
+
+✔ Roll tested side away ✔ Add debit hedge (cheap long) ✔ Shift structure to lower delta ✔ Exit quickly if debit spread (they die fast)
+
+Example: Bull Put spread hit → roll 18500 PE to 18450 PE to create space.
+
+3. The “Vega Shock” Adjustments (IV Changes)
+
+A) IV crashes (after event)
+
+✔ Book debit spreads ✔ Keep runners only ✔ Don’t re-enter immediately—premiums will be cheap ✔ Convert calendar → long option runner
+
+B) IV rises (before event)
+
+✔ Add wings to protect ✔ Avoid ratio spreads ✔ Roll short legs further OTM ✔ Turn spreads into iron condor/iron fly for defined risk
+
+4. The “Theta Drain” Adjustments (Time Damage)
+
+A) For Long Options
+
+✔ Roll out (next expiry) ✔ Convert naked long → debit spread to reduce decay ✔ Book early if theta killing your view
+
+B) For Short Options
+
+✔ Roll short leg closer as time decays ✔ Close 50–70% early ✔ Convert credit spread → iron condor and take extra premium
+
+5. Structure-wise Adjustment Playbook
+
+A) Debit Spreads
+
+If in Profit:
+
+✔ Remove short leg → run with long ✔ Roll short leg closer → reduce cost ✔ Convert to Butterfly → lock profit
+
+If in Loss:
+
+✔ Close quickly (don’t fight theta) ✔ Roll long to lower strike ✔ Cut half quantity to reduce decay
+
+B) Credit Spreads
+
+If in Profit:
+
+✔ Book 50–70% early ✔ Roll untested side closer ✔ Convert into Iron Condor for extra premium
+
+If in Loss:
+
+✔ Roll tested strike away ✔ Add opposite-direction debit hedge ✔ Don’t average — hedge only
+
+C) Ratio Spreads
+
+If in Profit:
+
+✔ Square off extra shorts → lock money ✔ Add far OTM long to remove unlimited risk ✔ Roll long strike upward/downward to follow trend
+
+If in Loss:
+
+✔ Add wing immediately ✔ Close one short ✔ Shift entire structure to next expiry
+
+D) Calendar / Diagonal
+
+If in Profit:
+
+✔ Roll short to ATM ✔ Increase credit every roll ✔ Keep the long until it has full value
+
+If in Loss:
+
+✔ Roll short further OTM for space ✔ Shift long strike to reduce delta ✔ Close quickly if IV collapse
+
+E) Iron Fly / Iron Condor
+
+If in Profit:
+
+✔ Book untested side ✔ Tighten wings → lock profit ✔ Roll winning side inward
+
+If in Loss:
+
+✔ Roll tested side away ✔ Add debit hedge (same side) ✔ Convert to broken-wing condor
+
+6. “1-Minute Adjustment Rules” (Your Fast Checklist)
+
+✔ Price moves → Roll strikes
+
+✔ IV moves → Add wings / reduce shorts
+
+✔ Time passes → Roll shorts in / roll longs out
+
+7. Profit Locking (Ultra Simple)
+
+At 40–50% profit:
+
+Lock partial (reduce quantity 30–40%)
+
+At 60–70% profit:
+
+Roll shorts closer
+
+At 80–90% profit:
+
+Exit entire or keep only 1 runner
+
+At 100%:
+
+Do NOT hold — close Premiums die, greed kills.
+
+8. NIFTY Live-Type Example (Explained Simply)
+
+You run a Bull Put Spread:
+
+Sell 22800 PE, Buy 22600 PE
+
+Scenario: Market goes up.
+
+✔ Close 50% ✔ Roll short 22800 → 22900 ✔ Roll long 22600 → 22700 ✔ Net credit increases → risk decreases ✔ Your profit is locked — but upside left
+
+This is how institutional desks manage risk.

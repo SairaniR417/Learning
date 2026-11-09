@@ -1,0 +1,147 @@
+DELTA TO DHARMA
+
+Trendlines, Supply-Demand, Support & Resistance
+
+Introduction
+
+Every chart tells a story. But without the right tools, it’s just noise. Three of the most powerful tools traders use to decode price action are:
+
+Trendlines – showing direction.
+
+Support & Resistance – showing barriers.
+
+Supply & Demand – showing institutional footprints.
+
+Mastering these gives you the foundation to understand where price wants to move and how big players are positioned.
+
+1. Trendlines – The Market’s Guiding Rails
+
+Definition: A straight line connecting at least two price points, extended into the future to act as dynamic support/resistance.
+
+Uptrend Line: Connects higher lows → shows buyers defending.
+
+Downtrend Line: Connects lower highs → shows sellers controlling.
+
+🔹 Key Rules
+
+At least 2 touches; 3rd touch confirms validity.
+
+Wick-to-wick consistency is better than mixing with bodies.
+
+More touches = stronger reliability.
+
+🔹 Advanced Concepts
+
+Channels: Parallel trendlines create rising/falling channels.
+
+Fake Breakouts: Price often pierces trendlines to trap traders before continuing.
+
+Confluence: A trendline aligning with support/resistance or demand zone = high probability.
+
+👉 Think of trendlines as the “roads” along which price prefers to travel.
+
+2. Support & Resistance – The Market’s Invisible Walls
+
+Support: A level where buyers historically defend (floor).
+
+Resistance: A level where sellers historically block (ceiling).
+
+🔹 Types of S&R
+
+Horizontal: Fixed zones (e.g., 22,000 on NIFTY).
+
+Dynamic: Moving averages, VWAP, or trendlines.
+
+Psychological: Round numbers (100, 500, 1000 in stocks; 20,000 in NIFTY).
+
+🔹 Rules of Thumb
+
+Stronger on higher timeframes.
+
+Once broken, support → becomes resistance and vice versa (role reversal).
+
+Zones with high volume carry greater weight.
+
+🔹 Pro Insights
+
+Liquidity Traps: Big players know retail stops lie just beyond obvious S/R. They trigger false breaks to accumulate or distribute.
+
+👉 S&R are like “doors” in the market – price either bounces or breaks through them.
+
+3. Supply & Demand – The Institutional Blueprint
+
+This concept refines S&R by focusing on where institutions placed big orders.
+
+Supply Zone: Region where strong selling started (rally paused → sharp drop).
+
+Demand Zone: Region where strong buying started (drop paused → sharp rally).
+
+🔹 Patterns
+
+Rally–Base–Drop (Supply).
+
+Drop–Base–Rally (Demand).
+
+🔹 Rules
+
+Fresh Zones: First test is strongest.
+
+Retested Zones: Lose strength over time.
+
+Refinement: Mark on higher TF, execute on lower TF.
+
+🔹 Identifying Clues
+
+Large imbalance candles (big body, small wick).
+
+Sudden volume spikes confirming institution entry.
+
+👉 Supply & Demand show the footprints of smart money – where price was “engineered” to move.
+
+4. Blending the Three Concepts
+
+Trendlines = Direction.
+
+Support/Resistance = Barriers.
+
+Supply/Demand = Fuel zones.
+
+Example:
+
+A demand zone that aligns with a trendline and sits at support → triple confirmation for a long trade.
+
+A supply zone sitting near resistance in a downtrend → high-probability short.
+
+👉 The best trades happen where all three concepts overlap.
+
+5. Practical Applications
+
+Breakout Trading: Price smashing through resistance with volume = strong momentum entry.
+
+Bounce Trading: Price holding at trendline + demand zone = reversal entry.
+
+Trap Trading: Price faking a breakout beyond resistance, then reversing down.
+
+Supply-Demand Flip: Demand zone turning to supply after breakdown.
+
+6. Mistakes to Avoid
+
+Drawing too many lines → messy charts.
+
+Ignoring timeframe hierarchy.
+
+Trusting one level forever (markets evolve).
+
+Forgetting volume confirmation.
+
+7. Practical Exercise
+
+Open NIFTY 15-min chart.
+
+Draw trendlines (uptrend & downtrend if visible).
+
+Mark nearest support & resistance levels.
+
+Highlight last supply & demand zones using rectangles.
+
+Watch live market reaction → journal observations.
