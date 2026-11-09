@@ -1,4 +1,5 @@
 import { backendUrl } from './backend-url';
+import { OverviewSignalsComponent } from './overview-signals/overview-signals.component';
 import { loadPageOrder, savePageOrder } from './navigation-order';
 import { CommonModule } from '@angular/common';
 import { OptionMarketComponent } from './option-market/option-market.component';
@@ -30,7 +31,7 @@ interface Opportunity {
   tag: string;
 }
 
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, OptionMarketComponent, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent, FnoStocksComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, OverviewSignalsComponent, OptionMarketComponent, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent, FnoStocksComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
 export class AppComponent implements OnInit, OnDestroy {
   readonly loginUrl = backendUrl('/auth/upstox');
   private readonly api = inject(MarketApiService);
@@ -45,6 +46,7 @@ export class AppComponent implements OnInit, OnDestroy {
   connected = false;
   clock = '';
   page = 'Overview';
+  overviewTab: 'heatmap' | 'signals' = 'heatmap';
   selectedStock: SelectedStock | null = null;
   openStock(stock: SelectedStock): void { this.selectedStock = stock; this.page = 'Stock Details'; }
   readonly market = 'equities' as const;

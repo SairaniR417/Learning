@@ -39,3 +39,52 @@ selected timeframe's candle revision and the 5m revision.
 
 Validation: tests cover Wilder ATR seeding, new BUY, fixed levels while
 waiting, target persistence, opposite SELL/reset, and signal-candle hits.
+
+## Scanner session and entry assessment
+
+Ghost Rider now adds separate columns and a stock-chart summary for session open,
+latest candle close versus open, high/low versus open, position in the day's range,
+nearest SL/target, distance to the stop, next untouched target and remaining R/R.
+These use the selected candle snapshot, not the independently polled live quote.
+Missing 09:15 history does not become a synthetic session open. Intraday extremes
+use the available stored bars, so incomplete sessions can omit an earlier extreme.
+Daily bars use their actual open/high/low. Weekly context has no daily-open estimate.
+
+The original Pine BUY/SELL and target-hit behaviour is unchanged. The new
+**Entry assessment** is a separate conservative screen: a setup at most five bars
+old, at least 35 bars of warm-up, matching recent 5m RSI, ADX strictly above 25,
+at least five of seven directional votes with a three-vote lead, an untouched
+positive stop, and at least 1.5 remaining reward/risk to TP2 or the next untouched
+target beyond TP2. TP1 is a 1R scale-out and is shown separately. Stops touched
+on the signal bar also block a candidate. Developing, stale and incomplete data
+show WAIT with reasons. An opposing held opening range also blocks a candidate.
+The Filters panel can select BUY CANDIDATE, SELL CANDIDATE or WAIT.
+
+Directional votes are the original dashboard's agreement percentage, not a win
+rate. ADX measures strength rather than direction; **WEAK BULLISH** can therefore
+coexist with the original **STRONG BULL** dashboard bias. MACD histogram is main
+minus signal; relative volume is latest volume divided by the 20-bar mean. RSI,
+MACD, EMA, VWAP, ADX, ATR and volume remain selectable as individual columns.
+Near a level means within 0.25 ATR, with a 0.25% price fallback when ATR is absent.
+No costs, slippage, execution fills or profitability are estimated. Bearish stock
+signals do not imply overnight cash-stock short availability.
+
+## Opening Range Breakout
+
+Select **Stock Screener → Opening Range Breakout**, choose a 15-, 30- or 60-minute
+range and scan stored 5m candles. The range starts at 09:15 IST and ends at 09:30,
+09:45 or 10:15. All opening slots must exist and be valid. By default two consecutive
+completed 5m closes above the range high qualify as BULLISH; below the range low
+qualify as BEARISH. A wick, one close, missing bar or return inside cannot establish
+that hold. Hold length is configurable from one to six bars. Choose “Include
+waiting / incomplete stocks” to inspect stocks without a confirmed hold.
+
+Results show the actual session date, range levels, hold length, distance beyond
+the range and candle time. Old holds are labelled HISTORICAL. Both scans require
+stored intraday history; neither downloads the full universe during a scan. The
+Ghost chart summary shows the first 15-minute range; the separate scan supports
+all three durations. Opening-range scans are excluded from daily Focused confluence.
+
+Validation: `python -m unittest discover -s tests -p test_scanner_context.py` and,
+from `frontend`, `node --test tests/scanner-context.test.cjs`. Existing Ghost Rider,
+stock workspace, option analysis and Focused regression tests also apply.

@@ -11,6 +11,7 @@ import { CellStyleModule, ClientSideRowModelModule, ColDef, ColumnApiModule, Gri
 import { MarketApiService, MarketAssetQuote, ScannerStrategy, SelectedStock } from '../market-api.service';
 import { OptionAnalysisComponent } from '../option-market/option-analysis.component';
 import { SutradharInputs } from '../option-market/sutradhar.types';
+import { GhostAssessment } from '../option-market/ghost-rider.types';
 
 type FactorField = 'changePct' | 'volume' | 'price';
 interface FactorRule { field: FactorField; min: string; max: string; importance: 'Important' | 'Optional'; }
@@ -19,6 +20,22 @@ interface SignalMetric { label: string; value: number; compareToClose: boolean; 
 interface SignalBadge { label: string; passed?: boolean; tone?: 'positive' | 'negative' | 'neutral'; }
 interface ScreenResult { entry?: number; stopLoss?: number; tp1?: number; tp2?: number; tp3?: number; tp4?: number; tp5?: number; setupState?: string; instrumentKey: string; exchange: string; symbol: string; name: string; price: number; changePct: number | null; volume: number; status: string; signal?: string; state?: string; divergenceType?: string; source: 'database' | 'strategy'; detail?: string; signalMetrics?: SignalMetric[]; signalBadges?: SignalBadge[]; sector: string; }
 interface GridColumnOption { id: string; label: string; visible: boolean; }
+interface ScreenResult extends Partial<GhostAssessment> { asOf?: string; orbMinutes?: number; orbHeldBars?: number; orbGapPct?: number | null; vwapPosition?: string; }
+const CONTEXT_COLUMNS = [
+  ['decision', 'Entry assessment'], ['sessionDate', 'Session (IST)'], ['dayOpen', 'Day open'],
+  ['fromOpenPct', 'From open %'], ['dayHighPct', 'Day high / open %'], ['dayLowPct', 'Day low / open %'],
+  ['dayRangePosition', 'Day range position %'], ['nearestLevel', 'Nearest SL / target'],
+  ['stopDistancePct', 'To stop %'], ['nextTarget', 'Next untouched target'], ['remainingRR', 'Remaining R/R'], ['rrTarget', 'R/R target'],
+  ['strength', 'Trend strength'], ['strengthScore', 'Directional votes %'], ['orbState', 'Opening range'],
+  ['orbHigh', 'OR high'], ['orbLow', 'OR low'], ['orbMinutes', 'OR minutes'], ['orbHeldBars', 'Held 5m bars'],
+  ['orbGapPct', 'Beyond range %'], ['adx', 'ADX 14'], ['rsi14', 'RSI 14'], ['rsi5m', '5m RSI'],
+  ['macdMain', 'MACD'], ['macdSignal', 'MACD signal'], ['macdHistogram', 'MACD histogram'],
+  ['relativeVolume', 'Relative volume'], ['vwap', 'VWAP'], ['vwapPosition', 'Price vs VWAP'], ['ema9', 'EMA 9'], ['ema21', 'EMA 21'], ['atr', 'ATR 14'],
+  ['pullersPct', 'Pullers %'], ['draggersPct', 'Draggers %'], ['progressR', 'Move from entry (R)'],
+  ['asOf', 'Candle time (IST)'], ['decisionReason', 'Assessment reason']
+] as const;
+const GHOST_DEFAULT_COLUMNS = ['decision', 'sessionDate', 'dayOpen', 'fromOpenPct', 'vwap', 'vwapPosition', 'dayHighPct', 'dayLowPct', 'nearestLevel', 'stopDistancePct', 'nextTarget', 'remainingRR', 'strength', 'strengthScore', 'adx', 'rsi14', 'macdHistogram', 'relativeVolume', 'orbState', 'asOf'];
+const ORB_DEFAULT_COLUMNS = ['decision', 'sessionDate', 'dayOpen', 'fromOpenPct', 'dayHighPct', 'dayLowPct', 'orbState', 'orbHigh', 'orbLow', 'orbMinutes', 'orbHeldBars', 'orbGapPct', 'asOf', 'decisionReason'];
 const STORAGE_KEY = 'traders-gita-saved-screeners';
 ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnApiModule, TextFilterModule, NumberFilterModule, QuickFilterModule, PaginationModule, CellStyleModule]);
 
@@ -73,13 +90,15 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   gridPanel: 'columns' | 'filters' | '' = '';
   private gridApi?: GridApi<ScreenResult>;
   readonly gridColumns: GridColumnOption[] = [
+    ...CONTEXT_COLUMNS.map(([id, label]) => ({ id, label, visible: false })),
     { id: 'status', label: 'Status', visible: true }, { id: 'symbolCompany', label: 'Symbol / Company', visible: true },
     { id: 'changePct', label: 'Change %', visible: false }, { id: 'volume', label: 'Volume', visible: false },
     { id: 'price', label: 'Last price', visible: true }, { id: 'sector', label: 'Sector', visible: false },
     { id: 'detail', label: 'Signal details', visible: true },
     ...['setupState', 'entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5'].map(id => ({ id, label: id === 'setupState' ? 'Setup' : id === 'stopLoss' ? 'Stop loss' : id.toUpperCase(), visible: false })),
   ];
-  rightFilters = { symbol: '', status: '', sector: '', divergence: '', changeMin: '', changeMax: '', volumeMin: '', volumeMax: '', priceMin: '', priceMax: '' };
+  rightFilters = { symbol: '', status: '', decision: '', sector: '', divergence: '', changeMin: '', changeMax: '', volumeMin: '', volumeMax: '', priceMin: '', priceMax: '' };
+  get decisionOptions(): string[] { return [...new Set(this.results.map(r => r.decision).filter((value): value is string => !!value))].sort(); }
   private filteredRowsSource?: ScreenResult[];
   private filteredRowsSettings?: EmaScannerComponent['rightFilters'];
   private filteredRowsSector = '';
@@ -117,6 +136,21 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
     { field: 'sector', headerName: 'Sector', minWidth: 165, filter: 'agTextColumnFilter' },
     { field: 'setupState', headerName: 'Setup', width: 100 },
     ...(['entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5'] as const).map(field => ({ field, headerName: field === 'stopLoss' ? 'Stop loss' : field.toUpperCase(), width: 120, filter: 'agNumberColumnFilter', cellRenderer: (p: ICellRendererParams<ScreenResult>) => { const span = document.createElement('span'); const hit = field.startsWith('tp') && (p.data as unknown as Record<string, unknown>)?.[field + 'Hit']; span.textContent = p.value == null ? '?' : this.formatPrice(Number(p.value)) + (hit ? ' ?' : ''); span.style.color = hit ? '#40e0d0' : field === 'stopLoss' ? '#ec8c91' : '#d4d6dc'; return span; } })),
+    ...CONTEXT_COLUMNS.map(([field, label]): ColDef<ScreenResult> => ({
+      field, headerName: label, width: ['decision', 'strength', 'nearestLevel', 'nextTarget'].includes(field) ? 185 : field === 'asOf' ? 180 : field === 'decisionReason' ? 460 : 145,
+      valueGetter: field === 'vwapPosition' ? p => this.priceVsVwap(p.data) : undefined,
+      tooltipValueGetter: p => p.data?.decisionReason ?? '',
+      filter: ['decision', 'strength', 'nearestLevel', 'nextTarget', 'rrTarget', 'orbState', 'sessionDate', 'asOf', 'decisionReason', 'vwapPosition'].includes(field) ? 'agTextColumnFilter' : 'agNumberColumnFilter',
+      valueFormatter: p => {
+        if (p.value === null || p.value === undefined) return '—';
+        if (field === 'asOf') return new Intl.DateTimeFormat('en-IN', { timeZone:'Asia/Kolkata', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:false }).format(new Date(String(p.value)));
+        if (field === 'nearestLevel') return `${p.value}${p.data?.nearestLevelPct == null ? '' : ' · ' + p.data.nearestLevelPct.toFixed(2) + '%'}`;
+        if (field === 'nextTarget') return `${p.value}${p.data?.nextTargetPct == null ? '' : ' · ' + p.data.nextTargetPct.toFixed(2) + '%'}`;
+        if (field === 'remainingRR') return `${Number(p.value).toFixed(2)} to ${p.data?.rrTarget ?? 'target'}`;
+        return typeof p.value === 'number' ? p.value.toFixed(2) : String(p.value);
+      },
+      cellStyle: p => field === 'vwapPosition' ? {color:p.value === 'Above VWAP' ? '#55c99f' : p.value === 'Below VWAP' ? '#ed8792' : '#a4a8b2'} : field === 'fromOpenPct' || field === 'orbGapPct' ? Number(p.value) > 0 ? {color:'#55c99f'} : Number(p.value) < 0 ? {color:'#ed8792'} : null : field === 'decision' ? {color:String(p.value).includes('BUY') || String(p.value).includes('BULLISH') ? '#55c99f' : String(p.value).includes('SELL') || String(p.value).includes('BEARISH') ? '#ed8792' : '#edc74f'} : null
+    })),
     { field: 'detail', headerName: 'Signal details', minWidth: 520, flex: 2, autoHeight: true, wrapText: true, filter: 'agTextColumnFilter', cellRenderer: (p: ICellRendererParams<ScreenResult, string | undefined>) => this.renderSignalDetails(p.data, p.value) },
   ];
 
@@ -154,6 +188,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
       (this.selectedSector === 'All sectors' || row.sector === this.selectedSector)
       && (!filters.sector || row.sector === filters.sector)
       && (!filters.status || row.status === filters.status)
+      && (!filters.decision || row.decision === filters.decision)
       && (!filters.divergence || row.divergenceType === filters.divergence)
       && (!query || `${row.symbol} ${row.name}`.toLowerCase().includes(query))
       && (!filters.changeMin || (row.changePct !== null && row.changePct >= Number(filters.changeMin)))
@@ -169,6 +204,10 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
     return this.filteredRowsCache;
   }
   get selectedTimeframe(): string { return this.timeframe.toUpperCase(); }
+  private priceVsVwap(row: ScreenResult | undefined): string {
+    if (!row || row.vwap == null || !Number.isFinite(row.vwap) || row.vwap <= 0 || !Number.isFinite(row.price) || row.price <= 0) return 'Unavailable';
+    return row.price > row.vwap ? 'Above VWAP' : row.price < row.vwap ? 'Below VWAP' : 'At VWAP';
+  }
 
   addFactor(): void { this.rules = [...this.rules, { field: 'volume', min: '', max: '', importance: 'Important' }]; }
   removeFactor(index: number): void { this.rules = this.rules.filter((_, i) => i !== index); }
@@ -184,6 +223,14 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   selectStrategy(value: string): void {
     this.scanSubscription?.unsubscribe(); this.loading = false; this.totalScanned = 0;
     this.selectedStrategy = value; this.results = []; this.hasScanned = false; this.error = '';
+    for (const column of this.gridColumns.filter(c => CONTEXT_COLUMNS.some(([id]) => id === c.id))) {
+      column.visible = (value === 'ghost_rider' ? GHOST_DEFAULT_COLUMNS : value === 'opening_range_breakout' ? ORB_DEFAULT_COLUMNS : []).includes(column.id);
+      this.gridApi?.setColumnsVisible([column.id], column.visible);
+    }
+    const detailColumn = this.gridColumns.find(c => c.id === 'detail');
+    if (detailColumn) { detailColumn.visible = !['ghost_rider', 'opening_range_breakout'].includes(value); this.gridApi?.setColumnsVisible(['detail'], detailColumn.visible); }
+    if (value === 'opening_range_breakout') this.timeframe = '5m';
+    this.orderContextColumns();
     for (const column of this.gridColumns.filter(c => ['setupState', 'entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5'].includes(c.id))) { column.visible = value === 'ghost_rider'||(value==='suryavanshi'&&['setupState','entry','stopLoss','tp1'].includes(column.id)); this.gridApi?.setColumnsVisible([column.id], column.visible); }
     if (['ghost_rider','rsi_divergence','golden_death_cross'].includes(value) && !['1d','1h','15m','5m'].includes(this.timeframe)) this.timeframe = '1d';
     if(value==='suryavanshi'&&!['1d','1h','15m','5m'].includes(this.timeframe))this.timeframe='15m';
@@ -195,13 +242,21 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   onGridReady(event: GridReadyEvent<ScreenResult>): void {
     this.gridApi = event.api;
     for (const column of this.gridColumns) event.api.setColumnsVisible([column.id], column.visible);
+    this.orderContextColumns();
+  }
+  private orderContextColumns(): void {
+    const columns = this.selectedStrategy === 'ghost_rider' ? GHOST_DEFAULT_COLUMNS : this.selectedStrategy === 'opening_range_breakout' ? ORB_DEFAULT_COLUMNS : [];
+    if (columns.length) this.gridApi?.moveColumns(['price', ...columns], 4);
+    const status = this.columnDefs.find(c => c.field === 'status');
+    if (status) status.headerName = this.selectedStrategy === 'ghost_rider' ? 'Pine signal' : 'Status';
+    this.gridApi?.refreshHeader();
   }
   setGridColumnVisible(column: GridColumnOption, visible: boolean): void {
     column.visible = visible;
     this.gridApi?.setColumnsVisible([column.id], visible);
   }
   toggleGridPanel(panel: 'columns' | 'filters'): void { this.gridPanel = this.gridPanel === panel ? '' : panel; }
-  clearRightFilters(): void { this.rightFilters = { symbol: '', status: '', sector: '', divergence: '', changeMin: '', changeMax: '', volumeMin: '', volumeMax: '', priceMin: '', priceMax: '' }; }
+  clearRightFilters(): void { this.rightFilters = { symbol: '', status: '', decision: '', sector: '', divergence: '', changeMin: '', changeMax: '', volumeMin: '', volumeMax: '', priceMin: '', priceMax: '' }; }
   setRightFilter(key: keyof EmaScannerComponent['rightFilters'], value: string): void { this.rightFilters = { ...this.rightFilters, [key]: value }; }
 
   scan(): void {
@@ -247,7 +302,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
           const numeric = (key: string) => Number(row[key] ?? 0);
           return { instrumentKey: String(row['instrumentKey'] ?? ''), exchange: String(row['exchange'] ?? 'NSE'), symbol: String(row['symbol'] ?? row['instrumentKey'] ?? '—'), name: String(row['name'] ?? row['symbol'] ?? ''),
             price: numeric('close'), changePct: row['changePct'] == null ? null : numeric('changePct'), volume: numeric('volume'), status: this.getScannerStatus(row), signal: String(row['signal'] ?? ''), state: String(row['state'] ?? ''), divergenceType: row['divergenceType'] ? String(row['divergenceType']) : undefined,
-            ...Object.fromEntries(['entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5', 'tp1Hit', 'tp2Hit', 'tp3Hit', 'tp4Hit', 'tp5Hit'].map(key => [key, row[key]])), setupState: ['ghost_rider','suryavanshi'].includes(String(row['strategyId'])) ? String(row['state']) : undefined, source: 'strategy', detail: this.describeStrategyResult(row), signalMetrics: this.strategySignalMetrics(row), signalBadges: this.strategySignalBadges(row), sector: this.classifySector(String(row['symbol'] ?? ''), String(row['name'] ?? '')) };
+            ...Object.fromEntries([...CONTEXT_COLUMNS.map(([id]) => id), 'nearestLevelPct', 'nextTargetPct', 'orbReason', 'stale', 'stopTouched', 'entry', 'stopLoss', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5', 'tp1Hit', 'tp2Hit', 'tp3Hit', 'tp4Hit', 'tp5Hit'].map(key => [key, row[key]])), setupState: ['ghost_rider','suryavanshi'].includes(String(row['strategyId'])) ? String(row['state']) : undefined, source: 'strategy', detail: this.describeStrategyResult(row), signalMetrics: this.strategySignalMetrics(row), signalBadges: this.strategySignalBadges(row), sector: this.classifySector(String(row['symbol'] ?? ''), String(row['name'] ?? '')) };
         });
         this.loading = false;
       }, error: (error: HttpErrorResponse) => this.fail(error)
@@ -470,6 +525,8 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
     this.selectedSaved = name; this.selectStrategy(item.strategyId); this.timeframe = ['ghost_rider','rsi_divergence','golden_death_cross'].includes(item.strategyId) && !['1d','1h','15m','5m'].includes(item.timeframe) ? '1d' : item.timeframe;
     if(item.strategyId==='suryavanshi'&&!['1d','1h','15m','5m'].includes(this.timeframe))this.timeframe='15m';
     if(item.strategyId==='sutradhar'&&!['1h','15m','5m'].includes(this.timeframe))this.timeframe='15m';
+    if(item.strategyId==='opening_range_breakout')this.timeframe='5m';
+    if(item.strategyId==='opening_range_breakout')this.timeframe='5m';
     this.strategyParams = Object.fromEntries((this.activeStrategy?.parameters ?? []).filter(p=>['number','boolean','string'].includes(typeof p.default)).map(p=>{
       const saved=item.strategyParams?.[p.name];
       if(p.type==='str')return [p.name,typeof saved==='string'&&p.options?.includes(saved)?saved:p.default as string];

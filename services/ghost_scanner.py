@@ -64,6 +64,10 @@ def scan_row(rows, five, metadata, timeframe, multiplier):
     for target in setup['targets']:
         result[f"tp{target['number']}"] = target['price']
         result[f"tp{target['number']}Hit"] = target['hit']
+    from services.ghost_assessment import assess
+    assessment = assess(rows, five, overlay, TIMEFRAMES[timeframe])
+    result.update(assessment or {})
+    result['assessment'] = assessment
     return result
 
 
@@ -77,6 +81,8 @@ async def stock_chart(key, timeframe='1d', multiplier=1.5):
     rows = completed_rows(frame.sort('timestamp').to_dicts(),timeframe) if not frame.is_empty() else []
     five = completed_rows(five_frame.sort('timestamp').to_dicts(),'5m') if not five_frame.is_empty() else []
     overlay = await asyncio.to_thread(calculate,rows,five,TIMEFRAMES[timeframe],multiplier)
+    from services.ghost_assessment import assess
+    overlay['assessment'] = assess(rows, five, overlay, TIMEFRAMES[timeframe])
     stock = next(s for s in get_fno_stocks() if s['key']==key)
     strategy = strategy_card(overlay,len(rows))
     if not rows:

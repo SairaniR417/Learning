@@ -5,6 +5,26 @@
   </header>
   <p *ngIf="loading" role="status">{{ data?.storedPreview ? 'Updating current-session data' : 'Loading ' + (underlyingWorkspace ? underlyingKind.toLowerCase() : stockMode ? 'stock' : 'option') + ' candles and evaluating strategies' }}…</p>
   <p *ngIf="error" class="error" role="alert">{{ error }} <a *ngIf="needsConnection" [href]="loginUrl">Connect Upstox</a><button type="button" (click)="load()">Retry</button></p>
+  <ng-container *ngIf="stockMode && ghostSelected">
+    <section class="ghost-assessment" *ngIf="data?.ghostRider?.assessment as context" [attr.data-direction]="trendTone(context)" aria-label="Price movement and trade outlook">
+      <header><span class="summary-label">PRICE MOVEMENT</span><span>{{ context.sessionDate | date:'dd MMM yyyy' }} · {{ stockTimeframe === '1d' ? 'Daily candle' : (context.assessmentAsOf | date:'HH:mm':'+0530') + ' IST' }}{{ context.stale ? ' · Old data' : '' }}{{ context.developing ? ' · Still forming' : '' }}</span></header>
+      <div class="movement-overview">
+        <div class="movement-lead" [class.move-up]="context.fromOpenPct !== null && context.fromOpenPct > 0" [class.move-down]="context.fromOpenPct !== null && context.fromOpenPct < 0">
+          <h3>{{ moveHeadline(context.fromOpenPct) }}</h3>
+          <p>Opened at <strong>{{ context.dayOpen === null ? '—' : '₹' + (context.dayOpen | number:'1.2-2') }}</strong><span aria-hidden="true"> → </span>Candle price <strong>₹{{ context.assessmentPrice | number:'1.2-2' }}</strong></p>
+          <small>Highest move {{ signedMove(context.dayHighPct) }} · Lowest move {{ signedMove(context.dayLowPct) }} <span *ngIf="context.dayRangePosition !== null && context.dayRangePosition >= 99.99">· At the session high</span><span *ngIf="context.dayRangePosition !== null && context.dayRangePosition <= 0.01">· At the session low</span></small>
+        </div>
+        <div class="entry-outlook" [class.sell-outlook]="context.decision === 'SELL CANDIDATE'" [class.buy-outlook]="context.decision === 'BUY CANDIDATE'"><strong>{{ entryLabel(context) }}</strong><p>{{ entryExplanation(context) }}</p></div>
+      </div>
+      <div class="assessment-cards">
+        <div class="trend-card"><small>Market direction</small><b>{{ simpleTrend(context) }}</b><small>{{ trendTone(context) === 'bearish' ? 'Price signals lean downward' : trendTone(context) === 'bullish' ? 'Price signals lean upward' : 'Price signals are mixed' }}</small></div>
+        <div [class.risk-alert]="context.stopTouched"><small>Stop-loss</small><b>{{ context.stopTouched ? 'Already touched' : context.stopDistancePct === null ? 'Not available' : context.stopDistancePct <= 0 ? 'Price is beyond the stop' : (context.stopDistancePct | number:'1.2-2') + '% away' }}</b><small *ngIf="data?.ghostRider?.setup?.stopLoss as stop">Stop price ₹{{ stop | number:'1.2-2' }}</small></div>
+        <div><small>Next target</small><b>{{ targetName(context.nextTarget) }}</b><small *ngIf="context.nextTargetPct !== null">{{ context.nextTargetPct | number:'1.2-2' }}% {{ data?.ghostRider?.setup?.signal === 'SELL' ? 'below' : 'above' }} the candle price</small></div>
+        <div [class.bearish-breakout]="context.orbState === 'BEARISH'" [class.bullish-breakout]="context.orbState === 'BULLISH'"><small>Early breakout</small><b>{{ openingRangeLabel(context.orbState) }}</b><small>Compared with the first 15 minutes of trading</small></div>
+      </div>
+      <details class="assessment-details"><summary>Why this assessment? <span>Technical details</span></summary><p>{{ context.decisionReason }}</p><p>Indicator agreement {{ context.strengthScore | number:'1.0-0' }}% · ADX {{ context.adx === null ? '—' : (context.adx | number:'1.1-1') }} · MACD histogram {{ context.macdHistogram | number:'1.2-2' }} · Relative volume {{ context.relativeVolume === null ? '—' : (context.relativeVolume | number:'1.2-2') + '×' }}</p><p>Closest level {{ targetName(context.nearestLevel) }} · Distance {{ context.nearestLevelPct === null ? '—' : (context.nearestLevelPct | number:'1.2-2') + '%' }} · Remaining reward/risk to {{ targetName(context.rrTarget) }}: {{ context.remainingRR === null ? '—' : (context.remainingRR | number:'1.2-2') }}</p><small>Indicator agreement is not a win rate. Prices come from candle snapshots; costs and execution are not included.</small></details>
+    </section>
+  </ng-container>
   <div class="analysis-workspace">
   <div class="chart-column">
   <div class="chart-panel" [class.expanded]="expanded" [class.rsi-stacked]="rsiSelected && (!stockMode || stockWorkspace)" [class.ghost-chart]="darkSelected" [class.ghost-dark-panel]="darkSelected" [style.background-color]="darkSelected ? '#000000' : null" [style.color]="darkSelected ? '#d1d4dc' : null">

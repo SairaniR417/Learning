@@ -23,6 +23,7 @@ from scanner.strategies.rsi_reversal import RsiStrategy
 from scanner.strategies.rsi_divergence import RsiDivergenceStrategy
 from scanner.strategies.ghost_rider import GhostRiderStrategy
 from scanner.strategies.sutradhar import SutradharStrategy
+from scanner.strategies.opening_range_breakout import OpeningRangeBreakoutStrategy
 
 
 class StrategyRegistry:
@@ -39,6 +40,7 @@ class StrategyRegistry:
         self.register(GhostRiderStrategy())
         self.register(SutradharStrategy())
         self.register(SuryavanshiStrategy())
+        self.register(OpeningRangeBreakoutStrategy())
 
     def register(self, strategy: BaseStrategy):
         """Register a new strategy instance."""
@@ -75,6 +77,8 @@ class StrategyRegistry:
         strategy = self.get(strategy_id)
         if not strategy:
             raise ValueError(f"Strategy '{strategy_id}' is not registered.")
+        if strategy_id == 'opening_range_breakout' and timeframe != '5m':
+            raise ValueError('Opening Range Breakout requires stored 5m candles.')
         if strategy_id == 'rsi_divergence' and timeframe not in {'1d','1h','15m','5m'}:
             raise ValueError('RSI Divergence supports stored daily, 1h, 15m and 5m candles.')
         if strategy_id == 'ghost_rider' and timeframe not in {'1d','1h','15m','5m'}:
@@ -120,6 +124,9 @@ class StrategyRegistry:
             cache_key += f":sutradhar-v1:daily-v{await get_candle_revision('1d')}"
         if strategy_id == 'ghost_rider':
             cache_key += f":pine-v2:5m-v{await get_candle_revision('5m')}"
+            cache_key += ':assessment-v1:' + datetime.now(timezone.utc).strftime('%Y-%m-%d-%H-%M')
+        if strategy_id == 'opening_range_breakout':
+            cache_key += ':orb-v1:' + datetime.now(timezone.utc).strftime('%Y-%m-%d-%H-%M')
 
 
         # 1. Check shared cache

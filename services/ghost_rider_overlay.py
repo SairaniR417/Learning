@@ -116,6 +116,7 @@ def calculate(rows, five_rows, interval=5, multiplier=1.5):
             bias = 'STRONG BULL' if bull-bear >= 40 else 'STRONG BEAR' if bear-bull >= 40 else 'MILD BULL' if bull > bear else 'MILD BEAR'
             latest = dict(bull=bull, bear=bear, bias=bias, rsi=rs, rsi5=rsi5, adx=power, atr=atr[i],
                           macd=macd[i], macdSignal=macd_signal[i], highVol=high_vol, above=above,
+                          relativeVolume=row['volume'] / average_vol if average_vol else None,
                           emaBull=fast[i] > slow[i], status='NEW' if signal else 'WAIT',
                           fiveAt=five_rows[index5]['timestamp'].isoformat() if index5 >= 0 else None)
     def display(value, digits=1):
@@ -149,7 +150,7 @@ def calculate(rows, five_rows, interval=5, multiplier=1.5):
                                    labelColor=GREEN if n <= 3 else '#006400' if n == 4 else '#004600', width=1 if n <= 3 else 2 if n == 4 else 3,
                                    dashed=n <= 3, hit=target['hit'], icon=icons[n-1] if target['hit'] else ''))
     return dict(points=points, signals=signals, levels=levels, dashboard=dashboard,
-                setup=setup, fiveMinuteAsOf=a['fiveAt'], multiplier=multiplier)
+                setup=setup, fiveMinuteAsOf=a['fiveAt'], multiplier=multiplier, dashboardMetrics=a)
 
 
 def strategy_card(overlay, count):

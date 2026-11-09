@@ -11,7 +11,7 @@ import { CandlestickSeries, LineSeries, LineType, LineWidth, ColorType, createCh
 import { MarketApiService, OptionAnalysis, OptionStrategyResult } from '../market-api.service';
 import { backendUrl } from '../backend-url';
 import { GhostRiderPrimitive } from './ghost-rider.primitive';
-import { GhostSettings, defaultGhostSettings, ghostFontSize } from './ghost-rider.types';
+import { GhostAssessment, GhostSettings, defaultGhostSettings, ghostFontSize } from './ghost-rider.types';
 import { GhostSettingsComponent } from './ghost-settings.component';
 import { RsiSettingsComponent } from './rsi-settings.component';
 import { RsiPaneComponent } from './rsi-pane.component';
@@ -144,6 +144,42 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   get lastCandle() { return this.activeCandles.find(c=>Date.parse(c.timestamp)===this.hoveredTimestamp) ?? this.activeCandles.at(-1); }
   get ghostPoint() { return this.data?.ghostRider?.points.find(p=>Date.parse(p.timestamp)===this.hoveredTimestamp) ?? this.data?.ghostRider?.points.at(-1); }
   ghostNumber(value: number | undefined): string { return value == null ? 'n/a' : value.toFixed(this.ghostSettings.precision < 0 ? 2 : this.ghostSettings.precision); }
+  moveHeadline(value: number | null): string {
+    if (value === null) return 'Day’s move unavailable';
+    if (value === 0) return 'Unchanged since open';
+    return `${value > 0 ? '↑ Up' : '↓ Down'} ${Math.abs(value).toFixed(2)}% since open`;
+  }
+  signedMove(value: number | null): string { return value === null ? 'Unavailable' : `${value > 0 ? '+' : ''}${value.toFixed(2)}%`; }
+  trendTone(context: GhostAssessment): string {
+    return context.strength.includes('BEARISH') ? 'bearish' : context.strength.includes('BULLISH') ? 'bullish' : 'neutral';
+  }
+  simpleTrend(context: GhostAssessment): string {
+    const direction = this.trendTone(context);
+    if (direction === 'neutral') return 'No clear direction';
+    return `${direction === 'bearish' ? 'Bearish' : 'Bullish'}${context.strength.startsWith('WEAK') ? ', but weak' : context.strength.startsWith('STRONG') ? ' · Strong trend' : ' · Still forming'}`;
+  }
+  entryLabel(context: GhostAssessment): string {
+    return context.decision === 'BUY CANDIDATE' ? 'Possible buy setup' : context.decision === 'SELL CANDIDATE' ? 'Possible sell setup' : 'Wait before entering';
+  }
+  entryExplanation(context: GhostAssessment): string {
+    if (context.stale) return 'These prices are old. Refresh before making a decision.';
+    if (context.developing) return 'The current candle is still forming. Wait for it to close.';
+    if (context.stopTouched) return 'The stop-loss has already been touched.';
+    if (context.decision !== 'WAIT') return 'The setup meets the entry checks. Review the stop-loss before entering.';
+    if (context.adx !== null && context.adx <= 25) return 'The trend is weak. Wait for a clearer move.';
+    if (context.remainingRR !== null && context.remainingRR < 1.5) return 'The remaining upside or downside is small compared with the risk.';
+    return 'The entry checks are not all met. Wait for a clearer setup.';
+  }
+  targetName(value: string | null): string {
+    if (!value) return 'No target ahead';
+    const level = value.replace(/^(Near |Closest )/, '');
+    return level === 'SL' ? 'Stop-loss' : level.replace(/^TP/, 'Target ');
+  }
+  openingRangeLabel(state: string): string {
+    return state === 'BULLISH' ? 'Holding above the early high' : state === 'BEARISH' ? 'Holding below the early low'
+      : state === 'INSIDE' ? 'Inside the early price range' : state === 'WATCH' ? 'Breakout not yet confirmed'
+      : state === 'BUILDING' ? 'First 15 minutes still forming' : 'Early-session data unavailable';
+  }
   applyGhostSettings(settings: GhostSettings): void {
     const riskChanged = settings.atrMultiplier !== this.ghostSettings.atrMultiplier;
     const offsetChanged = settings.labelOffset !== this.ghostSettings.labelOffset;

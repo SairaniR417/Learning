@@ -47,6 +47,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Market Desk API", lifespan=lifespan)
+from services.overview_signals import router as overview_signals_router
+app.include_router(overview_signals_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -670,6 +672,13 @@ async def sync_job_status(job_id: int):
     if job is None:
         raise HTTPException(status_code=404, detail="Sync job not found.")
     return job
+
+
+@app.post("/api/market/overview-signals/history")
+async def repair_overview_history(background_tasks: BackgroundTasks, timeframe: str = "1d"):
+    require_token()
+    from services.overview_signals import repair_history
+    return await repair_history(market_sync_service, timeframe, background_tasks)
 
 @app.get("/api/scanner/universe")
 async def scanner_universe():

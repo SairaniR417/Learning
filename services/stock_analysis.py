@@ -85,6 +85,9 @@ async def _analyze(key, timeframe='1d', atr_multiplier=1.5, rsi_settings=None, s
     ghost=await asyncio.to_thread(ghost_overlay,developing,five,interval,atr_multiplier)
     ghost['candles']=serial(developing)
     ghost['developingBar']=any(r['developing'] for r in all_rows[-1:])
+    if key.startswith('NSE_EQ|'):
+        from services.ghost_assessment import assess
+        ghost['assessment'] = assess(developing, five, ghost, interval, developing=ghost['developingBar'])
     rsi_frame=FRAMES[rsi_config.timeframe] if rsi_config.timeframe else timeframe
     rsi_rows=await rows_for(rsi_frame)
     rsi_rows=plain([r for r in rsi_rows if not r['developing'] or not rsi_config.wait_close][-1000:])

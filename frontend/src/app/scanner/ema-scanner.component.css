@@ -9,3 +9,5 @@
 .scanner-tabs .tab-strategy{margin-left:0;color:#73d5b2;font-weight:600}.scanner-tabs .universe-count{margin-left:auto}
 
 .scanner-options{padding:16px}.scanner-options>header{display:flex;gap:16px;align-items:center;margin-bottom:16px}.scanner-options h2{margin:0;font-size:18px}.scanner-options>header button{background:#172220;color:#d4e2dc;border:1px solid #35454c;border-radius:4px;padding:8px 12px;cursor:pointer}
+
+.assessment-note{margin:10px 0;padding:12px 14px;border:1px solid #3c4942;border-radius:6px;background:#16231c;color:#adbfaf;font-size:11px;line-height:1.7}

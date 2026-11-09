@@ -158,6 +158,14 @@ def evaluate(candles, contract, interval, *, stock=False, defer_overlays=False):
     meta = {key: {'symbol': contract.get('trading_symbol', key), 'name': contract.get('name', ''),
                   'exchange': contract.get('exchange', key.split('_')[0])}}
     for descriptor in strategy_registry.list_strategies():
+        if descriptor['id'] == 'opening_range_breakout' and not stock:
+            continue
+        if descriptor['id'] == 'opening_range_breakout' and interval != 5:
+            results.append(dict(id=descriptor['id'], name=descriptor['name'], minimumCandles=5,
+                                availableCandles=len(candles), status='NOT_APPLICABLE', bias='neutral',
+                                metrics=[], checks=[], markers=[], levels=[], signalAt=None,
+                                scenario='Opening ranges apply to NSE stock 5m candles. Use Opening Range Breakout in Stock Screener to choose 15, 30 or 60 minutes.'))
+            continue
         if defer_overlays and descriptor['id'] in {'ghost_rider','rsi_divergence','suryavanshi','golden_death_cross'}:
             results.append({'id':descriptor['id']})
             continue

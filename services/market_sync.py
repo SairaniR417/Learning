@@ -104,6 +104,7 @@ class MarketSyncService:
         concurrency: int = 15,
         target_instruments: Sequence[dict[str, Any]] | None = None,
         job_id: int | None = None,
+        backfill: bool = False,
     ) -> dict[str, Any]:
         """Delta-sync historical and recent candles for all active universe instruments."""
         if unit not in {"minutes", "hours", "days"} or not (1 <= interval <= {"minutes": 300, "hours": 5, "days": 1}[unit]):
@@ -126,7 +127,9 @@ class MarketSyncService:
 
             if any(i["key"] not in fno_keys() for i in instruments):
                 raise ValueError("Only saved F&O stocks can be synced.")
-            latest_map = await get_latest_candle_timestamps(timeframe)
+            # Overview repairs need the full warm-up window even when a few
+            # recent chart candles already exist. Normal scheduled sync is incremental.
+            latest_map = {} if backfill else await get_latest_candle_timestamps(timeframe)
             semaphore = asyncio.Semaphore(concurrency)
             stats = {"total": len(instruments), "synced": 0, "failed": 0, "candles_changed": 0}
             errors = []

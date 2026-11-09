@@ -118,6 +118,12 @@ Chain polling pauses during analysis. **Back to option chain** resumes it.
 
 ## Ghost rider v.2 chart
 
+Stock Screener's Ghost Rider results now show day-open movement, SL/target
+proximity, indicator strength and a separate BUY CANDIDATE / SELL CANDIDATE / WAIT
+assessment. The shared Scanner chart shows the same session summary. Select
+**Opening Range Breakout** in Stock Screener for held 15-, 30- or 60-minute NSE
+opening-range breaks using stored 5m candles. See [rules and limitations](docs/ghost-rider.md#scanner-session-and-entry-assessment).
+
 The supplied source is preserved verbatim in `docs/ghost-rider-v2.pine`. The option
 Ghost Rider view ports its EMA 9/21 crossover state, Wilder ATR 14 risk, entry/SL,
 all five R-multiple targets, same-candle target detection and latched hit flags.

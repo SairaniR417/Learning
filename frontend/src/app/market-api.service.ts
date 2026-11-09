@@ -2,6 +2,29 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
+export type IndicatorPosition = 'above' | 'below' | 'at' | null;
+export interface OverviewSignalStock extends Omit<SelectedStock, 'price'> {
+  price: number | null;
+  asOf: string | null;
+  bars: number;
+  vwap: number | null;
+  sma20: number | null;
+  sma50: number | null;
+  vwapPosition: IndicatorPosition;
+  sma20Position: IndicatorPosition;
+  sma50Position: IndicatorPosition;
+  maTrend: IndicatorPosition;
+  crossover: 'bullish' | 'bearish' | null;
+  historyNote?: string;
+}
+export interface OverviewSignals {
+  timeframe: string;
+  source: string;
+  fetchedAt: string;
+  vwapLabel: string;
+  stocks: OverviewSignalStock[];
+}
+
 export interface Instrument {
   key: string;
   symbol: string;
@@ -166,6 +189,15 @@ export class MarketApiService {
     return this.http.get<OptionAnalysis>('/api/stocks/rsi-divergence',{params:{instrument_key:key,timeframe,rsi_settings:JSON.stringify(settings)}});
   }
   private readonly http = inject(HttpClient);
+  overviewSignals(timeframe: string): Observable<OverviewSignals> {
+    return this.http.get<OverviewSignals>('/api/market/overview-signals', { params: { timeframe } });
+  }
+  loadOverviewHistory(timeframe: string): Observable<{ job_id: number | null; status: string }> {
+    return this.http.post<{ job_id: number | null; status: string }>('/api/market/overview-signals/history', {}, { params: { timeframe } });
+  }
+  overviewHistoryJob(id: number): Observable<{ status: string; last_error: string | null }> {
+    return this.http.get<{ status: string; last_error: string | null }>(`/api/sync/jobs/${id}`);
+  }
   analyzeStockGhost(key: string, timeframe: string, atrMultiplier = 1.5): Observable<OptionAnalysis> {
     return this.http.get<OptionAnalysis>('/api/stocks/ghost-rider', { params: { instrument_key:key, timeframe, atr_multiplier:atrMultiplier } });
   }

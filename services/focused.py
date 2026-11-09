@@ -172,7 +172,7 @@ def analyze_snapshot(df: pl.DataFrame, instruments: dict[str, dict[str, Any]], p
     df = df.filter(pl.col("timestamp").map_elements(lambda ts: nse_daily_closed(ts, now), return_dtype=pl.Boolean)).sort(["instrument_key", "timestamp"])
     outputs, names, coverage = {}, {}, []
     # Sutradhar supplies intraday reference levels, not a directional signal.
-    strategies = [s for s in strategy_registry.list_strategies() if s['id'] not in {'sutradhar','suryavanshi'}]
+    strategies = [s for s in strategy_registry.list_strategies() if s['id'] not in {'sutradhar','suryavanshi','opening_range_breakout'}]
     for index, metadata in enumerate(strategies):
         if progress:
             progress(f"Checking {metadata['name']} ({index + 1}/{len(strategies)})")

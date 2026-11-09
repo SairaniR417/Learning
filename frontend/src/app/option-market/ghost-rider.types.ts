@@ -6,6 +6,7 @@ export interface GhostLevel {
   label: string; price: number; color: string; labelColor?: string; width: number; dashed: boolean; hit?: boolean; icon: string;
 }
 export interface GhostRiderOverlay {
+  assessment?: GhostAssessment | null;
   candles?: import('../market-api.service').HistoricalCandle[];
   developingBar?: boolean;
   points: GhostPoint[];
@@ -24,6 +25,20 @@ export interface GhostSettings {
   ema9Width: number; ema21Width: number; vwapWidth: number;
   minutes: boolean; minuteMin: number; minuteMax: number;
   timeframes: Record<string, { enabled: boolean; min: number; max: number }>;
+}
+export interface GhostAssessment {
+  sessionDate: string | null; dayOpen: number | null; fromOpenPct: number | null;
+  dayHighPct: number | null; dayLowPct: number | null; dayRangePosition: number | null;
+  assessmentAsOf: string; assessmentPrice: number; strength: string; strengthScore: number;
+  pullersPct: number; draggersPct: number; rsi14: number | null; adx: number | null;
+  macdMain: number | null; macdSignal: number | null; macdHistogram: number | null;
+  relativeVolume: number | null; volumeStatus: string; vwap: number | null;
+  ema9: number | null; ema21: number | null; rsi5m: number | null; atr: number | null;
+  decision: string; decisionReason: string; nearestLevel: string | null; nearestLevelPct: number | null;
+  stopDistancePct: number | null; nextTarget: string | null; nextTargetPct: number | null;
+  remainingRR: number | null; rrTarget: string | null; progressR: number | null; stopTouched: boolean;
+  stale: boolean; developing: boolean; orbState: string; orbReason: string;
+  orbHigh: number | null; orbLow: number | null;
 }
 export const defaultGhostSettings = (): GhostSettings => ({
   dashboardSize: 'small', tradeSize: 'small', ribbonOpacity: 75, labelOffset: 12, atrMultiplier: 1.5,

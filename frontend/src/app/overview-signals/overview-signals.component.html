@@ -1,0 +1,38 @@
+<article class="signals-panel">
+  <div class="signals-heading"><div><h2>VWAP &amp; moving averages</h2><p>Price position and SMA 20 / SMA 50 crossovers across saved F&amp;O stocks.</p></div><div class="actions"><label>Timeframe <select [value]="timeframe" (change)="selectFrame($any($event.target).value)"><option *ngFor="let frame of frames" [value]="frame">{{ frame }}</option></select></label><button type="button" (click)="refresh()" [disabled]="loading">Refresh</button></div></div>
+  <div class="filters">
+    <label class="search">Stock <input type="search" placeholder="Symbol or company" [value]="search" (input)="search = $any($event.target).value"></label>
+    <label>Price vs VWAP <select [value]="vwapFilter" (change)="vwapFilter = $any($event.target).value"><option value="">All</option><option value="above">Above</option><option value="below">Below</option><option value="at">At</option></select></label>
+    <label>Price vs SMA 20 <select [value]="sma20Filter" (change)="sma20Filter = $any($event.target).value"><option value="">All</option><option value="above">Above</option><option value="below">Below</option><option value="at">At</option></select></label>
+    <label>Price vs SMA 50 <select [value]="sma50Filter" (change)="sma50Filter = $any($event.target).value"><option value="">All</option><option value="above">Above</option><option value="below">Below</option><option value="at">At</option></select></label>
+    <label>SMA 20 / 50 <select [value]="crossFilter" (change)="crossFilter = $any($event.target).value"><option value="">All</option><option value="bullish">Bullish crossover</option><option value="bearish">Bearish crossover</option><option value="above">20 above 50</option><option value="below">20 below 50</option></select></label>
+    <button type="button" (click)="reset()">Clear filters</button>
+  </div>
+  <p class="note">Completed stored candles · Prices are candle closes · Filters combine · Crossovers occurred on the latest completed bar. Intraday VWAP uses available session bars (HLC3 × volume); daily/weekly VWAP uses 20 bars. Missing or insufficient history is unavailable.</p>
+  <div class="history-notice" *ngIf="needsHistory || syncing">
+    <div><strong>{{ needsHistory }} stocks need more {{ timeframe }} history</strong><p>This timeframe needs up to 51 completed candles per stock. The daily updater does not populate intraday history. Connect Upstox to load the missing bars.</p></div>
+    <button type="button" (click)="loadHistory()" [disabled]="syncing || loading">{{ syncing ? 'Loading history…' : 'Load missing history' }}</button>
+  </div>
+  <p *ngIf="syncMessage" role="status">{{ syncMessage }}</p>
+  <p *ngIf="syncError" class="error" role="alert">{{ syncError }}</p>
+  <p *ngIf="loading" class="empty" role="status">Loading {{ timeframe }} stock signals…</p>
+  <p *ngIf="error" class="error" role="alert">{{ error }} <button type="button" (click)="refresh()">Retry</button></p>
+  <ng-container *ngIf="data as result">
+    <div class="results-meta" aria-live="polite"><span>{{ stocks.length }} of {{ result.stocks.length }} stocks · {{ available }} with stored {{ timeframe }} candles</span><span>Retrieved {{ result.fetchedAt | date:'dd MMM, HH:mm':'Asia/Kolkata' }} IST</span></div>
+    <div class="table-scroll" *ngIf="stocks.length; else noMatches">
+      <table><thead><tr><th>Stock</th><th>Close</th><th>{{ result.vwapLabel }}</th><th>SMA 20</th><th>SMA 50</th><th>20 / 50 trend</th><th>Latest crossover</th><th>Candle time (IST)</th></tr></thead>
+        <tbody><tr *ngFor="let stock of stocks">
+          <td><button type="button" class="stock-link" (click)="open(stock)" [title]="stock.name">{{ stock.symbol }}</button><small>{{ stock.name }}</small><small class="history-reason" *ngIf="stock.historyNote" [title]="stock.historyNote">{{ stock.bars }} completed bars · {{ stock.historyNote }}</small></td>
+          <td>{{ stock.price === null ? '—' : (stock.price | number:'1.2-2') }}</td>
+          <td><span [class.up]="stock.vwapPosition === 'above'" [class.down]="stock.vwapPosition === 'below'">{{ label(stock.vwapPosition) }}</span><small>{{ stock.vwap === null ? '—' : (stock.vwap | number:'1.2-2') }}</small></td>
+          <td><span [class.up]="stock.sma20Position === 'above'" [class.down]="stock.sma20Position === 'below'">{{ label(stock.sma20Position) }}</span><small>{{ stock.sma20 === null ? '—' : (stock.sma20 | number:'1.2-2') }}</small></td>
+          <td><span [class.up]="stock.sma50Position === 'above'" [class.down]="stock.sma50Position === 'below'">{{ label(stock.sma50Position) }}</span><small>{{ stock.sma50 === null ? '—' : (stock.sma50 | number:'1.2-2') }}</small></td>
+          <td [class.up]="stock.maTrend === 'above'" [class.down]="stock.maTrend === 'below'">{{ stock.maTrend ? '20 ' + label(stock.maTrend).toLowerCase() + ' 50' : 'Unavailable' }}</td>
+          <td [class.up]="stock.crossover === 'bullish'" [class.down]="stock.crossover === 'bearish'">{{ stock.crossover === 'bullish' ? 'Bullish ↑' : stock.crossover === 'bearish' ? 'Bearish ↓' : stock.bars >= 51 ? 'None' : 'Unavailable' }}</td>
+          <td>{{ stock.asOf ? (stock.asOf | date:'dd MMM yyyy, HH:mm':'Asia/Kolkata') : 'No stored candles' }}</td>
+        </tr></tbody>
+      </table>
+    </div>
+    <ng-template #noMatches><p class="empty">No stocks match these filters. Try another timeframe or clear the filters.</p></ng-template>
+  </ng-container>
+</article>
