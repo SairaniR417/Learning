@@ -1,5 +1,5 @@
 <article class="signals-panel">
-  <div class="signals-heading"><div><h2>VWAP &amp; moving averages</h2><p>Price position and SMA 20 / SMA 50 crossovers across saved F&amp;O stocks.</p></div><div class="actions"><label>Timeframe <select [value]="timeframe" (change)="selectFrame($any($event.target).value)"><option *ngFor="let frame of frames" [value]="frame">{{ frame }}</option></select></label><button type="button" (click)="refresh()" [disabled]="loading">Refresh</button></div></div>
+  <div class="signals-heading"><div><h2>VWAP &amp; moving averages</h2><p>Price position and SMA 20 / SMA 50 crossovers across saved F&amp;O stocks.</p></div><div class="actions"><label>Timeframe <select aria-label="Signal timeframe" [value]="timeframe" (change)="selectFrame($any($event.target).value)"><option *ngFor="let frame of frames" [value]="frame" [selected]="frame === timeframe">{{ frame }}</option></select></label><button type="button" (click)="refresh()" [disabled]="loading">Refresh</button></div></div>
   <div class="filters">
     <label class="search">Stock <input type="search" placeholder="Symbol or company" [value]="search" (input)="search = $any($event.target).value"></label>
     <label>Price vs VWAP <select [value]="vwapFilter" (change)="vwapFilter = $any($event.target).value"><option value="">All</option><option value="above">Above</option><option value="below">Below</option><option value="at">At</option></select></label>
@@ -24,11 +24,11 @@
         <tbody><tr *ngFor="let stock of stocks">
           <td><button type="button" class="stock-link" (click)="open(stock)" [title]="stock.name">{{ stock.symbol }}</button><small>{{ stock.name }}</small><small class="history-reason" *ngIf="stock.historyNote" [title]="stock.historyNote">{{ stock.bars }} completed bars · {{ stock.historyNote }}</small></td>
           <td>{{ stock.price === null ? '—' : (stock.price | number:'1.2-2') }}</td>
-          <td><span [class.up]="stock.vwapPosition === 'above'" [class.down]="stock.vwapPosition === 'below'">{{ label(stock.vwapPosition) }}</span><small>{{ stock.vwap === null ? '—' : (stock.vwap | number:'1.2-2') }}</small></td>
-          <td><span [class.up]="stock.sma20Position === 'above'" [class.down]="stock.sma20Position === 'below'">{{ label(stock.sma20Position) }}</span><small>{{ stock.sma20 === null ? '—' : (stock.sma20 | number:'1.2-2') }}</small></td>
-          <td><span [class.up]="stock.sma50Position === 'above'" [class.down]="stock.sma50Position === 'below'">{{ label(stock.sma50Position) }}</span><small>{{ stock.sma50 === null ? '—' : (stock.sma50 | number:'1.2-2') }}</small></td>
-          <td [class.up]="stock.maTrend === 'above'" [class.down]="stock.maTrend === 'below'">{{ stock.maTrend ? '20 ' + label(stock.maTrend).toLowerCase() + ' 50' : 'Unavailable' }}</td>
-          <td [class.up]="stock.crossover === 'bullish'" [class.down]="stock.crossover === 'bearish'">{{ stock.crossover === 'bullish' ? 'Bullish ↑' : stock.crossover === 'bearish' ? 'Bearish ↓' : stock.bars >= 51 ? 'None' : 'Unavailable' }}</td>
+          <td [title]="signalHint(stock, 'vwap')" ><span [class.up]="stock.vwapPosition === 'above'" [class.down]="stock.vwapPosition === 'below'">{{ label(stock.vwapPosition) }}</span><small>{{ stock.vwap === null ? '—' : (stock.vwap | number:'1.2-2') }}</small></td>
+          <td [title]="signalHint(stock, 'sma20')" ><span [class.up]="stock.sma20Position === 'above'" [class.down]="stock.sma20Position === 'below'">{{ label(stock.sma20Position) }}</span><small>{{ stock.sma20 === null ? '—' : (stock.sma20 | number:'1.2-2') }}</small></td>
+          <td [title]="signalHint(stock, 'sma50')" ><span [class.up]="stock.sma50Position === 'above'" [class.down]="stock.sma50Position === 'below'">{{ label(stock.sma50Position) }}</span><small>{{ stock.sma50 === null ? '—' : (stock.sma50 | number:'1.2-2') }}</small></td>
+          <td [title]="signalHint(stock, 'trend')"  [class.up]="stock.maTrend === 'above'" [class.down]="stock.maTrend === 'below'">{{ stock.maTrend ? '20 ' + label(stock.maTrend).toLowerCase() + ' 50' : 'Unavailable' }}</td>
+          <td [title]="signalHint(stock, 'cross')"  [class.up]="stock.crossover === 'bullish'" [class.down]="stock.crossover === 'bearish'">{{ stock.crossover === 'bullish' ? 'Bullish ↑' : stock.crossover === 'bearish' ? 'Bearish ↓' : stock.bars >= 51 ? 'None' : 'Unavailable' }}</td>
           <td>{{ stock.asOf ? (stock.asOf | date:'dd MMM yyyy, HH:mm':'Asia/Kolkata') : 'No stored candles' }}</td>
         </tr></tbody>
       </table>

@@ -141,6 +141,8 @@ def require_token() -> str:
 from services import stock_chart
 stock_chart.get_token = require_token
 app.include_router(stock_chart.router)
+from services.price_structure import router as price_structure_router
+app.include_router(price_structure_router)
 
 
 async def api_json_request(url: str, *, method: str = "GET", headers: dict | None = None, data=None, params=None):

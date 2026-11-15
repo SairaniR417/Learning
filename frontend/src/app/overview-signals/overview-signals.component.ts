@@ -14,7 +14,7 @@ export class OverviewSignalsComponent implements OnInit, OnDestroy {
   private historyRequest?: Subscription;
   private historyPoll?: Subscription;
   readonly frames = ['1m', '5m', '15m', '30m', '1h', '1d', '1w'];
-  timeframe = '1d';
+  timeframe = '1h';
   data: OverviewSignals | null = null;
   loading = false;
   error = '';
@@ -85,6 +85,16 @@ export class OverviewSignalsComponent implements OnInit, OnDestroy {
   }
   get available(): number { return this.data?.stocks.filter(s => s.price !== null).length ?? 0; }
   label(value: IndicatorPosition): string { return value === 'above' ? 'Above' : value === 'below' ? 'Below' : value === 'at' ? 'At' : 'Unavailable'; }
+  signalHint(stock: OverviewSignalStock, kind: 'vwap' | 'sma20' | 'sma50' | 'trend' | 'cross'): string {
+    const number = (value: number | null) => value == null ? 'unavailable' : value.toFixed(2);
+    const values = `Close ${number(stock.price)}; SMA 20 ${number(stock.sma20)}; SMA 50 ${number(stock.sma50)}. ${this.timeframe} timeframe; periods count candles.`;
+    const context = `${values}${stock.asOf ? ` Data as of ${new Date(stock.asOf).toLocaleString('en-IN', {timeZone:'Asia/Kolkata'})} IST.` : ''}${stock.historyNote ? '\n' + stock.historyNote : ''}`;
+    if (kind === 'cross') return `${stock.crossover === 'bullish' ? 'SMA 20 crossed above SMA 50 on the latest completed candle.' : stock.crossover === 'bearish' ? 'SMA 20 crossed below SMA 50 on the latest completed candle.' : stock.bars >= 51 ? 'No SMA 20 / 50 cross on the latest completed candle.' : 'Insufficient history to compare the latest and previous SMA values.'}\n${context}`;
+    if (kind === 'trend') return `SMA 20 is ${stock.maTrend ? this.label(stock.maTrend).toLowerCase() : 'unavailable relative to'} SMA 50. This is their current position; it does not establish a fresh crossover.\n${context}`;
+    const label = kind === 'vwap' ? this.data?.vwapLabel ?? 'VWAP' : kind === 'sma20' ? 'SMA 20' : 'SMA 50';
+    const value = stock[kind], position = kind === 'vwap' ? stock.vwapPosition : kind === 'sma20' ? stock.sma20Position : stock.sma50Position;
+    return `Close ${number(stock.price)}; ${label} ${number(value)}. Price position: ${this.label(position).toLowerCase()}. A price position alone does not establish a new cross.\n${context}`;
+  }
   open(stock: OverviewSignalStock): void {
     this.stockSelected.emit({ key: stock.key, symbol: stock.symbol, name: stock.name, exchange: stock.exchange, timeframe: this.timeframe });
   }

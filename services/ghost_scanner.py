@@ -68,6 +68,12 @@ def scan_row(rows, five, metadata, timeframe, multiplier):
     assessment = assess(rows, five, overlay, TIMEFRAMES[timeframe])
     result.update(assessment or {})
     result['assessment'] = assessment
+    # Additional screener comparisons; the Pine signal still uses EMA 9/21.
+    from scanner.strategies.ghost_rider import ema
+    closes = [float(row['close']) for row in rows]
+    result.update(ema20=ema(closes,20)[-1] if len(closes)>=20 else None,
+                  ema50=ema(closes,50)[-1] if len(closes)>=50 else None,
+                  sma200=sum(closes[-200:])/200 if len(closes)>=200 else None)
     return result
 
 

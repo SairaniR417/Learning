@@ -1,9 +1,10 @@
-export const DEFAULT_PAGES = ['Overview', 'Market Scanner', 'Focused', 'F&O Stocks', 'Stock Details', 'Option Chains', 'Watchlist', 'Trade Journal', 'Learning'];
+export const DEFAULT_PAGES = ['Market Scanner', 'Focused', 'Stock Details', 'Option Chains', 'Watchlist', 'Trade Journal', 'Learning'];
 export const NAVIGATION_ORDER_KEY = 'traders-gita-navigation-order';
 
 /** Keep saved tabs once, ignore removed tabs and append newly introduced tabs. */
 export function normalizePageOrder(saved: unknown): string[] {
-  const valid = Array.isArray(saved) ? saved.filter((item): item is string => typeof item === 'string' && DEFAULT_PAGES.includes(item)) : [];
+  const migrated = Array.isArray(saved) ? saved.map(item => item === 'Overview' ? 'Market Scanner' : item === 'F&O Stocks' ? 'Stock Details' : item) : [];
+  const valid = migrated.filter((item): item is string => typeof item === 'string' && DEFAULT_PAGES.includes(item));
   return [...new Set([...valid, ...DEFAULT_PAGES])];
 }
 

@@ -24,6 +24,7 @@ from scanner.strategies.rsi_divergence import RsiDivergenceStrategy
 from scanner.strategies.ghost_rider import GhostRiderStrategy
 from scanner.strategies.sutradhar import SutradharStrategy
 from scanner.strategies.opening_range_breakout import OpeningRangeBreakoutStrategy
+from scanner.strategies.institution_transaction import InstitutionTransactionStrategy
 
 
 class StrategyRegistry:
@@ -41,6 +42,7 @@ class StrategyRegistry:
         self.register(SutradharStrategy())
         self.register(SuryavanshiStrategy())
         self.register(OpeningRangeBreakoutStrategy())
+        self.register(InstitutionTransactionStrategy())
 
     def register(self, strategy: BaseStrategy):
         """Register a new strategy instance."""
@@ -79,6 +81,8 @@ class StrategyRegistry:
             raise ValueError(f"Strategy '{strategy_id}' is not registered.")
         if strategy_id == 'opening_range_breakout' and timeframe != '5m':
             raise ValueError('Opening Range Breakout requires stored 5m candles.')
+        if strategy_id == 'institution_transaction' and timeframe not in {'1d','1h'}:
+            raise ValueError('Institution Transaction supports Daily and 1-hour candles.')
         if strategy_id == 'rsi_divergence' and timeframe not in {'1d','1h','15m','5m'}:
             raise ValueError('RSI Divergence supports stored daily, 1h, 15m and 5m candles.')
         if strategy_id == 'ghost_rider' and timeframe not in {'1d','1h','15m','5m'}:
@@ -118,13 +122,16 @@ class StrategyRegistry:
             resolve(resolved_params)
         revision = await get_candle_revision(timeframe)
         cache_key = self._generate_cache_key(strategy_id, timeframe, resolved_params) + f":v{revision}"
+        if strategy_id == 'institution_transaction':
+            other = '1h' if timeframe == '1d' else '1d'
+            cache_key += f':pressure-v1:{other}-v{await get_candle_revision(other)}:' + datetime.now(timezone.utc).strftime('%Y-%m-%d-%H-%M')
         if strategy_id == 'golden_death_cross': cache_key += ':shared-golden-v2'
         if strategy_id == 'rsi_divergence': cache_key += ':pine-rsi-v1'
         if strategy_id == 'sutradhar':
             cache_key += f":sutradhar-v1:daily-v{await get_candle_revision('1d')}"
         if strategy_id == 'ghost_rider':
             cache_key += f":pine-v2:5m-v{await get_candle_revision('5m')}"
-            cache_key += ':assessment-v1:' + datetime.now(timezone.utc).strftime('%Y-%m-%d-%H-%M')
+            cache_key += ':assessment-v2-ma:' + datetime.now(timezone.utc).strftime('%Y-%m-%d-%H-%M')
         if strategy_id == 'opening_range_breakout':
             cache_key += ':orb-v1:' + datetime.now(timezone.utc).strftime('%Y-%m-%d-%H-%M')
 
@@ -150,6 +157,10 @@ class StrategyRegistry:
         # 4. Run strategy calculation in memory
         run_params = dict(resolved_params)
         run_params['_timeframe'] = timeframe
+        if strategy_id == 'institution_transaction':
+            other = '1h' if timeframe == '1d' else '1d'
+            other_df = await load_recent_candles_polars(other, per_instrument=1000)
+            run_params['_hourly_rows' if other == '1h' else '_daily_rows'] = ({str(g['instrument_key'][0]): g.sort('timestamp').to_dicts() for g in other_df.partition_by('instrument_key')} if not other_df.is_empty() else {})
         if strategy_id=='sutradhar':
             daily=await load_recent_candles_polars('1d',per_instrument=1000)
             run_params['_daily_rows']=({str(group['instrument_key'][0]):group.sort('timestamp').to_dicts()
@@ -163,6 +174,7 @@ class StrategyRegistry:
 
         # 5. Compute distinct symbols analyzed
         total_scanned = df["instrument_key"].n_unique() if not df.is_empty() else 0
+        if strategy_id == 'institution_transaction': total_scanned = len(instruments_map)
 
         # 6. Save to cache
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=cache_ttl_minutes)

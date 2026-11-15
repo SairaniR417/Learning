@@ -13,7 +13,6 @@ import { TradeJournalComponent } from './trade-journal/trade-journal.component';
 import { StockDetailsComponent } from './stock-details/stock-details.component';
 import { EmaScannerComponent } from './scanner/ema-scanner.component';
 import { FocusedComponent } from './focused/focused.component';
-import { FnoStocksComponent } from './fno-stocks/fno-stocks.component';
 import { MarketApiService, MarketAssetQuote, SelectedStock } from './market-api.service';
 
 interface DashboardAsset extends MarketAssetQuote {
@@ -32,7 +31,7 @@ interface Opportunity {
   tag: string;
 }
 
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, LearningComponent, OverviewSignalsComponent, OptionMarketComponent, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent, FnoStocksComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, LearningComponent, OverviewSignalsComponent, OptionMarketComponent, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
 export class AppComponent implements OnInit, OnDestroy {
   readonly loginUrl = backendUrl('/auth/upstox');
   private readonly api = inject(MarketApiService);
@@ -46,8 +45,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   connected = false;
   clock = '';
-  page = 'Overview';
-  overviewTab: 'heatmap' | 'signals' = 'heatmap';
+  page = 'Market Scanner';
+  overviewTab: 'screener' | 'heatmap' | 'signals' = 'screener';
   selectedStock: SelectedStock | null = null;
   openStock(stock: SelectedStock): void { this.selectedStock = stock; this.page = 'Stock Details'; }
   readonly market = 'equities' as const;
@@ -102,11 +101,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.statusSubscription = timer(0, 15000).subscribe(() => {
-      if (this.page === 'Overview') this.api.status().subscribe({ next: (status) => this.connected = status.connected });
+      if (!document.hidden) this.api.status().subscribe({ next: (status) => this.connected = status.connected });
     });
     this.clockSubscription = timer(0, 1000).subscribe(() => this.clock = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date()) + ' IST');
     this.marketSubscription = timer(0, 300000).subscribe(() => {
-      if (this.page === 'Overview') this.refreshMarket();
+      if (this.page === 'Market Scanner' && this.overviewTab === 'heatmap' && !document.hidden) this.refreshMarket();
     });
   }
 
@@ -118,11 +117,16 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   selectPage(page: string): void {
-    this.page = page;
-    if (page === 'Overview') {
+    this.page = page === 'Overview' ? 'Market Scanner' : page === 'F&O Stocks' ? 'Stock Details' : page;
+    if (page === 'Overview') this.overviewTab = 'heatmap';
+    if (this.page === 'Market Scanner') {
       this.api.status().subscribe({ next: (status) => this.connected = status.connected });
-      if (!this.receivedAt || Date.now() - this.receivedAt >= 300000) this.refreshMarket();
+      if (this.overviewTab === 'heatmap' && (!this.receivedAt || Date.now() - this.receivedAt >= 300000)) this.refreshMarket();
     }
+  }
+  selectMarketView(view: 'screener' | 'heatmap' | 'signals'): void {
+    this.overviewTab = view;
+    if (view === 'heatmap' && (!this.receivedAt || Date.now() - this.receivedAt >= 300000)) this.refreshMarket();
   }
 
   refreshMarket(): void { // Poll live quotes for the selected Indian market.

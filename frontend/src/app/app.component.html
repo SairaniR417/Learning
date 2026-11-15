@@ -6,9 +6,8 @@
   <div class="navigation-bar">
     <nav class="primary-nav" aria-label="Main navigation"><button *ngFor="let item of pages; trackBy: trackPage" type="button" draggable="true" [class.active]="page === item" [class.dragging]="draggedTab === item" [class.drop-target]="tabDropTarget === item && draggedTab !== item" [attr.aria-current]="page === item ? 'page' : null" [attr.title]="'Drag to reorder. Alt + Left/Right to move ' + pageLabel(item)" (dragstart)="startTabDrag($event,item)" (dragover)="overTab($event,item)" (drop)="dropTab($event,item)" (dragend)="endTabDrag()" (keydown)="tabKeydown($event,item)" (click)="selectPage(item)">{{ pageLabel(item) }}</button></nav>
   </div>
-  <section class="overview page-shell" *ngIf="page === 'Overview'">
-    <div class="overview-title"><div><span class="eyebrow">INDIAN MARKETS</span><h1>Market overview</h1><p>Saved NSE F&amp;O stocks · Live Upstox quotes</p></div><span class="live-pill"><i></i>{{ receivedAt ? ('Updated ' + (receivedAt | date:'shortTime')) : 'Connecting' }}</span></div>
-    <nav class="overview-tabs" aria-label="Overview views"><button type="button" [class.active]="overviewTab === 'heatmap'" [attr.aria-pressed]="overviewTab === 'heatmap'" (click)="overviewTab = 'heatmap'">Heat map</button><button type="button" [class.active]="overviewTab === 'signals'" [attr.aria-pressed]="overviewTab === 'signals'" (click)="overviewTab = 'signals'">VWAP &amp; MA signals</button></nav>
+  <nav *ngIf="page === 'Market Scanner'" class="market-workspace-tabs" aria-label="Stock Screener views"><button type="button" [class.active]="overviewTab==='screener'" [attr.aria-pressed]="overviewTab==='screener'" (click)="selectMarketView('screener')">Screener</button><button type="button" [class.active]="overviewTab==='heatmap'" [attr.aria-pressed]="overviewTab==='heatmap'" (click)="selectMarketView('heatmap')">Heat map</button><button type="button" [class.active]="overviewTab==='signals'" [attr.aria-pressed]="overviewTab==='signals'" (click)="selectMarketView('signals')">VWAP &amp; MA signals</button></nav>
+  <section class="overview page-shell" *ngIf="page === 'Market Scanner' && overviewTab !== 'screener'">
     <app-overview-signals *ngIf="overviewTab === 'signals'" (stockSelected)="openStock($event)" />
     <ng-container *ngIf="overviewTab === 'heatmap'">
     <div class="market-grid">
@@ -20,20 +19,19 @@
           </section>
         </div><ng-template #heatmapEmpty><div class="heatmap-empty" role="status">{{ indexError || marketError || (indexLoading ? 'Loading index constituents...' : loadingMarket ? 'Loading live quotes...' : (heatSearch.trim() || selectedIndex !== 'all' || selectedSector !== 'All sectors') ? 'No quoted stocks match these filters.' : 'No quotes are available for this market.') }}<button type="button" *ngIf="indexError" (click)="selectIndex(selectedIndex)">Retry index</button></div></ng-template><div class="heatmap-footer"><span>{{ heatTiles.length }} of {{ filteredHeatAssets.length | number }} stocks &middot; Sorted by daily % change <span *ngIf="hasMultipleHeatPages">&middot; Page {{ heatPage + 1 }} / {{ heatPageCount }}</span></span><div *ngIf="hasMultipleHeatPages"><button type="button" (click)="prevHeatPage()" [disabled]="heatPage === 0">Previous</button><button type="button" (click)="nextHeatPage()" [disabled]="heatPage + 1 >= heatPageCount">Next</button></div></div><div class="heat-legend" aria-label="Darker shades indicate larger moves, scaled independently to the largest gain and loss in the filtered results"><span>{{ heatLossMax ? "-" + (heatLossMax | number:"1.2-2") + "%" : "No losses" }}</span><i class="loss-gradient"></i><span>0%</span><i class="gain-gradient"></i><span>{{ heatGainMax ? "+" + (heatGainMax | number:"1.2-2") + "%" : "No gains" }}</span></div><p class="heat-index-note" *ngIf="selectedIndex === 'sensex'">Sensex constituents &middot; NSE-listed stock quotes</p><p class="heat-scale-note">Darker colour = larger move &middot; Each colour scales to its largest filtered move &middot; Up to 24 per group per page</p></article>
     </div>
-    <h2 class="section-title">Today’s F&amp;O stock movers</h2><div class="opportunities panel"><div *ngFor="let opp of opportunities"><span><strong>{{ opp.title }}</strong><small>{{ opp.detail }}</small></span><b>{{ opp.tag }}</b></div><p *ngIf="!opportunities.length" class="empty-opportunities">{{ marketError || 'Waiting for live market quotes.' }}</p></div><button type="button" class="scanner-cta" (click)="selectPage('Market Scanner')">Open Stock Screener <span>→</span></button>
+    <h2 class="section-title">Today’s F&amp;O stock movers</h2><div class="opportunities panel"><div *ngFor="let opp of opportunities"><span><strong>{{ opp.title }}</strong><small>{{ opp.detail }}</small></span><b>{{ opp.tag }}</b></div><p *ngIf="!opportunities.length" class="empty-opportunities">{{ marketError || 'Waiting for live market quotes.' }}</p></div>
     </ng-container>
   </section>
   @defer (when page === 'Market Scanner') {
-    <div [hidden]="page !== 'Market Scanner'"><app-ema-scanner [active]="page === 'Market Scanner'" (stockSelected)="openStock($event)" /></div>
+    <div [hidden]="page !== 'Market Scanner' || overviewTab !== 'screener'"><app-ema-scanner [active]="page === 'Market Scanner' && overviewTab === 'screener'" (stockSelected)="openStock($event)" /></div>
   } @placeholder {
-    <section class="terminal-placeholder page-shell" *ngIf="page === 'Market Scanner'"><span class="eyebrow">NSE EQUITY UNIVERSE</span><h1>Loading Stock Screener…</h1><p>Preparing the stock grid and filters.</p></section>
+    <section class="terminal-placeholder page-shell" *ngIf="page === 'Market Scanner' && overviewTab === 'screener'"><h1>Loading Stock Screener…</h1></section>
   }
   @defer (when page === 'Focused') {
     <div [hidden]="page !== 'Focused'"><app-focused [active]="page === 'Focused'" (stockSelected)="openStock($event)" /></div>
   }
   <app-stock-details *ngIf="page === 'Stock Details'" [stock]="selectedStock" (stockSelected)="openStock($event)" />
   <app-watchlist *ngIf="page === 'Watchlist'" (stockSelected)="openStock($event)" />
-  <app-fno-stocks *ngIf="page === 'F&O Stocks'" (stockSelected)="openStock($event)" />
   <app-trade-journal *ngIf="page === 'Trade Journal'" />
   @defer (when page === 'Learning') {
     <app-learning *ngIf="page === 'Learning'" />

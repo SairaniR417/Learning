@@ -33,6 +33,21 @@ and `node --test tests/learning.test.cjs tests/navigation-order.test.cjs` from `
 
 ## F&O stock scope
 
+The **Stock Screener** navigation item now combines the screener, Heat map and
+VWAP & MA signals in one workspace. Overview is no longer a separate main tab.
+The screener opens with the stored daily table; strategy, timeframe and sector
+dropdowns sit above its full-width results. Strategy settings, factor filters and
+saved-screen configuration expand on demand. The generic Market Screener uses
+daily candles only; strategy scans retain their supported timeframes. On mobile,
+stock names and prices appear first, with the remaining columns accessible by
+scrolling within the table.
+
+The separate **F&O Stocks** tab is replaced by the full saved-stock dropdown in
+**Stock Details**. Filter it by symbol or company without a broker login, select a
+stock, or use it to switch the current stock. Existing saved navigation orders
+migrate Overview to Stock Screener and F&O Stocks to Stock Details, without
+duplicate tabs. Heat map quotes still require the existing Upstox connection.
+
 Stock views use `data/fno/current_fno_stocks.csv` as the shared stock list (currently
 213 NSE F&O underlying stocks). Searches work without broker login. Overview
 quotes, Market Scanner, Focused, Stock Details, Watchlist, alerts, and journal
@@ -149,9 +164,21 @@ Chain polling pauses during analysis. **Back to option chain** resumes it.
 
 ## Ghost rider v.2 chart
 
-Stock Screener's Ghost Rider results now show day-open movement, SL/target
-proximity, indicator strength and a separate BUY CANDIDATE / SELL CANDIDATE / WAIT
-assessment. The shared Scanner chart shows the same session summary. Select
+Stock Screener's Ghost Rider default view shows stock, signal and latest candle price, then day open,
+change %, opening range, ADX 14, RSI 14, MACD line, VWAP and volume.
+Price-vs-VWAP, EMA 20, EMA 50 and SMA 200 comparisons show Above in green, Below
+in red and equality in neutral. MA comparisons use the selected timeframe's
+latest completed candle; hover for the actual price and average. EMA 20/50 and
+SMA 200 require at least 20/50/200 candles respectively. These comparisons do not
+change Ghost Rider's EMA 9/21 signals. Additional columns can be reached by scrolling
+the table horizontally while stock and signal remain pinned on desktop. Change % still
+compares consecutive candle closes on the selected timeframe.
+Entry checks, stops, targets, session dates and day extremes are hidden by default
+and remain available through Columns. Header/value hovers explain the fields.
+Strategy, timeframe and saved-screener dropdown changes load results automatically;
+sector changes filter the current rows immediately. Refresh is available for manual updates.
+The entry check separates BUY CANDIDATE / SELL CANDIDATE / WAIT from the original
+signal direction. The shared Scanner chart shows the same session summary. Select
 **Opening Range Breakout** in Stock Screener for held 15-, 30- or 60-minute NSE
 opening-range breaks using stored 5m candles. See [rules and limitations](docs/ghost-rider.md#scanner-session-and-entry-assessment).
 
@@ -189,39 +216,67 @@ calendar session. Our 28-day/1,000-bar window, Upstox candles and minute samplin
 can differ from TradingView's warm-up, feed and tick-by-tick execution. Numerical
 parity is not asserted without matching exported input candles from TradingView.
 
-## Focused strategy signals
+## Focused price analysis
 
-Focused opens with one row per stock, combining recent usable Ghost Rider,
-Suryavanshi, RSI Divergence and Golden / Death Cross signals. BUY/SELL setup counts
-and entry-check counts lead the view. Stocks passing entry checks rank first,
-then agreement count and signal recency. Ghost Rider keeps the latest crossover direction until an opposite crossover,
-as in Scanner; freshness, stop touches and target touches affect entry eligibility
-separately. Active Suryavanshi trades also retain their direction beyond the
-fresh-entry window. Closed structure trades and invalidated divergences are
-excluded; conflicting strategy directions have no trade levels. Each strategy
-shows its own BUY/SELL, and unconfirmed crosses do not invent a direction. This ranking is not a forecast.
+Select one F&O stock to load an analysis-only report, with no candle charts.
+The six views are 12 Months, 3 Months, 1 Month, 1 Week, 1 Day and 1 Hour.
+They share a compact tabbed workspace: one timeframe is visible at a time, with
+the price story, watch conditions and key levels in the main view. Full narrative,
+trendline explanations, individual pattern details and longer-term methodology
+expand on demand. All six views still load together; changing tabs makes no new
+broker request. Arrow keys, Home and End navigate the timeframe tabs.
+The first three are trailing calendar windows of daily history; the last three
+analyze weekly, daily and hourly bars. Longer-term context uses all loaded daily
+history and does not claim to cover the full listing history.
 
-Choose 1 minute, 5 minutes, 15 minutes, 1 hour or 1 day. The timeframe applies to
-signals, charts and option checks independently of Intraday/Swing holding style.
-READY uses the validated stock plan; WATCH shows source reference levels where
-defined and needs a new entry check. Before the next session, this is a watchlist.
-Stored scans do not sync fresh broker candles. Candle dates and coverage identify
-missing/stale history; daily signals use completed candles and retain the existing
-current-session and intraday daily-open entry gates.
+Each view explains the observed high/low, fall or recovery, confirmed higher
+highs/higher lows or lower highs/lower lows, nearby support/resistance zones,
+candidate trendlines, recent closing breaks/retests, volume and conditional
+levels to watch. These are descriptive observations, not entry approvals.
+Overlapping review windows do not supply independent strategy confirmations.
 
-Options remain unverified candidates until an explicit check resolves an actual
-contract, premium setup and live liquidity. Stock SELL does not mean selling an
-option; a bearish stock can be evaluated for a separately purchased PUT.
-Strategy evidence, history coverage and methodology are under Details.
-Validation: `python -m unittest tests.test_focused_plans tests.test_focused` and,
+`GET /api/focused/structure?instrument_key=...` reads only the selected stock's
+daily and hourly history through the shared DB/live chart loader. No market-wide
+scan runs. The loader can fetch the current session and hydrate missing selected
+history when connected to Upstox. Stored history works offline. Refresh is manual;
+switching stocks or leaving Focused cancels the browser request. An already-started
+backend fetch may finish and populate the shared history store.
+
+Developing bars are excluded. Weekly bars aggregate available daily sessions and
+are confirmed after Friday 16:00 IST. Swings require two bars on each side;
+trendlines are two-swing candidates, not guaranteed support/resistance. Volume
+compares a completed bar with the previous 20 bars; hourly comparisons are not
+adjusted for time of day. Source dates, missing/old history and partial windows
+are shown. Corrupt source bars disable that history's analysis rather than bridge
+across them. The screen contains no strategy shortlist or option-entry workflow.
+
+The **1 Day** and **1 Hour** views also report recent candlestick patterns as text:
+bullish/bearish engulfing, hammer, inverted hammer, hanging man, shooting star,
+morning/evening star, doji and inside bar. The latest three completed bars and
+any available developing bar are checked. An open-candle shape is labelled
+**Forming**, with partial volume and changeable boundaries. Closed directional
+patterns remain **Awaiting confirmation** until a later completed close crosses
+the entire pattern range. A later close past the opposite boundary invalidates
+the interpretation. Neutral ranges resolve on a close outside either boundary.
+Old source dates remain explicitly visible.
+
+Names follow the [StockCharts pattern dictionary](https://chartschool.stockcharts.com/table-of-contents/chart-analysis/candlestick-charts/candlestick-pattern-dictionary),
+with explicit app heuristics: reversal context is the preceding five closes moving
+more than half their average candle range; doji body <=10% of range; wick patterns
+have a body >10% and <=35%, a long shadow >=2 bodies and opposite shadow <=0.5 body.
+Engulfing bodies cover the preceding opposite body, exceed its size and occupy
+>=50% of the current range; the prior body must exceed 10% of its range. Star
+patterns require a first body >=50% of range, a middle body <=30% of that body
+with a body gap, and a third body >=50% of range closing beyond the first midpoint.
+Inside bars require strictly lower highs and higher lows. Prior-range context and
+ending-bar volume are shown separately; forming volume is not compared with full
+bars. These thresholds are descriptive rules, not calibrated probabilities.
+Invalid source data disables the affected pattern review as well as structure.
+
+Validation: `.venv/Scripts/python.exe -m unittest tests.test_price_structure tests.test_candlestick_patterns` and,
 from `frontend`, `node --test tests/focused-signals.test.cjs` and `npm run build`.
-
-To audit every saved stock against the shared engines on identical stored completed
-candles, run `.\.venv\Scripts\python.exe scripts\audit_focused_signals.py`, then
-from `frontend` run `node scripts/audit-focused-signals.cjs`. Reports are saved to
-`data/focused-signal-audit.json` and `data/focused-shortlist-audit.json`.
-The first report lists insufficient history separately; the second verifies actual
-frontend directions, conflict rows, entry gates and source-level ordering.
+The earlier focused strategy APIs remain available for compatibility; their audit
+scripts and fixtures describe the retired strategy-grid workflow.
 These are stored-data checks with default inputs; live/developing candles and
 custom chart settings can still produce different results.
 
@@ -458,9 +513,9 @@ Trades can be edited/deleted with confirmation for deletion and exported as filt
 Validation: `.venv/Scripts/python.exe -m unittest tests.test_trade_journal -v`. Manual browser test `tests/journal_browser_smoke.py` intercepts all API calls so it cannot modify real trades. Requires frontend on 4200 and a temporary headless Chrome instance on debugging port 9333.
 
 
-## Focused shortlist
+## Legacy Focused shortlist API
 
-The Focused tab combines all six registered strategies against one shared NSE daily database snapshot. It returns all qualified stocks and shows five per page by default, with reasons and links to stock analysis. Pagination gives access to every match without expanding the page. The database scan requires no broker token. Results are cached for 15 minutes and invalidated by the daily candle revision.
+The legacy `/api/focused` API combines all six registered strategies against one shared NSE daily database snapshot. The current Focused screen uses the selected-stock price analysis described above instead. The legacy database scan requires no broker token. Results are cached for 15 minutes and invalidated by the daily candle revision.
 
 Qualification requires at least two confirmed directional strategies from at least two signal families. Trend, crossover and momentum each contribute at most three points, so overlapping MA checks do not inflate the score. SUPER requires three confirmed strategies, at least six points and no opposing evidence. Scores are deterministic confluence points, not calibrated probabilities or a backtested combined trading system. Absence of a bullish match never creates a bearish vote. Conflicting confirmed signals, weakened cross setups, unconfirmed divergence, old/stopped Ghost Rider setups and stale stock data are excluded.
 
@@ -551,3 +606,29 @@ The evening schedule remains daily-only. Latest traded prices use an independent
 validated quote request every 15 seconds while visible; candle/strategy refreshes
 remain once per minute. Quote retrieval times are labelled separately from candle
 timestamps, and failed refreshes retain the Old data warning.
+
+## Institution Transaction screener
+
+Select **Institution Transaction** in Stock Screener and scan on Daily or 1 Hour.
+Both completed daily and hourly history are evaluated. This is a price/volume
+pressure proxy: institutional identities, bulk/block trades and shareholding
+disclosures are not connected or checked. No institutional transaction is claimed.
+
+Default lookback is 20 candles and minimum relative volume is 1.5x. Daily volume
+uses the prior 20 candles; hourly volume uses matching hourly start times from up
+to 20 prior sessions, requiring at least five. Buying pressure requires positive
+close-location volume pressure (CMF >= 0.10), an up candle closing in the upper
+third of its range, close above the lookback SMA and elevated relative volume.
+Selling pressure uses the opposite conditions. Hourly pressure also requires
+complete session bars and the corresponding side of session VWAP.
+
+Matching Daily/Hourly observations within one day yield BUYING/SELLING PRESSURE;
+one-sided evidence yields a WATCH, and opposing evidence yields MIXED PRESSURE.
+These are observations, not entry orders. Neutral and missing-history stocks are
+included by default and can be hidden in strategy settings. Hover badges for each
+timeframe's volume basis, confirmed swing structure, prior-range support/resistance,
+VWAP, and observation time in IST. A retest is a watch condition, not an assumed event.
+History older than four calendar days is flagged; hourly data over two hours old
+within the same daytime session is also flagged. This age check is conservative
+and does not use an exchange holiday calendar. Stored observations are not live
+verification. The strategy reads existing candles without downloading new history.

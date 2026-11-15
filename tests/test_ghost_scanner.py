@@ -40,6 +40,19 @@ class SharedScannerTests(unittest.IsolatedAsyncioTestCase):
         rows=fixture(30)+[dict(fixture(1)[0],timestamp=now-timedelta(minutes=1),close=500,high=501)]
         self.assertEqual(len(ghost_scanner.completed_rows(rows,'5m',now)),30)
 
+    def test_extra_moving_averages_are_exact_and_short_history_is_unavailable(self):
+        rows=fixture(300)
+        result=ghost_scanner.scan_row(rows,[],dict(symbol='TEST'),'5m',1.5)
+        closes=[r['close'] for r in rows]
+        for period in (20,50):
+            alpha=2/(period+1)
+            expected=closes[0]*(1-alpha)**(len(closes)-1)+sum(alpha*c*(1-alpha)**(len(closes)-1-i) for i,c in enumerate(closes[1:],1))
+            self.assertAlmostEqual(result[f'ema{period}'],expected)
+        self.assertAlmostEqual(result['sma200'],sum(closes[-200:])/200)
+        self.assertNotAlmostEqual(result['ema50'],sum(closes[-50:])/50,places=3)
+        short=ghost_scanner.scan_row(fixture(35),[],dict(symbol='TEST'),'5m',1.5)
+        self.assertIsNotNone(short['ema20']);self.assertIsNone(short['ema50']);self.assertIsNone(short['sma200'])
+
     async def test_registry_accepts_intraday_and_tracks_five_minute_revision(self):
         frame=pl.DataFrame(fixture())
         async def revision(timeframe): return 7 if timeframe=='5m' else 3

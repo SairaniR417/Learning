@@ -1,55 +1,53 @@
 <section class="focused-page" aria-labelledby="focused-title">
-<header class="page-heading">
-  <div><h1 id="focused-title">Focused</h1><p class="subtitle">Your stock shortlist · entries, exits and the strategies behind them</p></div>
-  <div class="horizon-tabs" role="tablist" aria-label="Holding style"><button role="tab" [attr.aria-selected]="mode==='intraday'" (click)="selectMode('intraday')">Intraday</button><button role="tab" [attr.aria-selected]="mode==='swing'" (click)="selectMode('swing')">Swing</button></div>
-  <label class="timeframe-picker">Timeframe
-    <select aria-label="Signal timeframe" [value]="timeframe" (change)="selectTimeframe($any($event.target).value)">
-      <option value="1d" [selected]="timeframe==='1d'">1 day</option>
-      <option value="1m" [selected]="timeframe==='1m'">1 minute</option>
-      <option value="5m" [selected]="timeframe==='5m'">5 minutes</option>
-      <option value="15m" [selected]="timeframe==='15m'">15 minutes</option>
-      <option value="1h" [selected]="timeframe==='1h'">1 hour</option>
-    </select>
-  </label>
-  <button type="button" class="refresh" (click)="refresh()" [disabled]="loading">{{loading?'Scanning...':'Refresh'}}</button>
-</header>
-<p class="loading" *ngIf="loading" role="status">{{stage}}</p><p class="error" *ngIf="error" role="alert">{{error}}</p>
-<ng-container *ngIf="data as result">
-<div class="shortlist-summary" aria-label="Stock shortlist summary">
-  <button [attr.aria-pressed]="directionFilter==='all'" (click)="directionFilter='all';updateSignals()"><b>{{shortlist.length}}</b> Stocks to focus on</button>
-  <button class="buy-summary" [attr.aria-pressed]="directionFilter==='BUY'" (click)="directionFilter='BUY';updateSignals()"><b>{{count('BUY')}}</b> BUY setups</button>
-  <button class="sell-summary" [attr.aria-pressed]="directionFilter==='SELL'" (click)="directionFilter='SELL';updateSignals()"><b>{{count('SELL')}}</b> SELL setups</button>
-  <button [attr.aria-pressed]="filter==='ready'" (click)="changeFilter(filter==='ready'?'all':'ready')"><b>{{readyCount}}</b> Entry checks passed</button>
-</div>
-<div class="decision-summary"><strong>{{headline}}</strong><small>{{timeframeLabel}} candles · Scanned {{result.scannedAt | date:'dd MMM, HH:mm':'+0530'}} IST</small></div>
-<div class="signal-filters">
-  <label>Search <input aria-label="Search stocks" placeholder="Stock or strategy" [value]="search" (input)="search=$any($event.target).value" /></label>
-  <label>Strategy <select [value]="strategyFilter" (change)="strategyFilter=$any($event.target).value;updateSignals()"><option value="all">All strategies</option><option value="ghost_rider">Ghost Rider</option><option value="suryavanshi">Suryavanshi</option><option value="rsi_divergence">RSI Divergence</option><option value="golden_death_cross">Golden / Death Cross</option></select></label>
-  <label>Show <select [value]="filter" (change)="changeFilter($any($event.target).value)"><option value="all">Full shortlist</option><option value="ready">Entry checks passed</option><option value="watch">Watch / confirm first</option></select></label>
-  <button *ngIf="directionFilter!=='all'" (click)="directionFilter='all';updateSignals()">Clear {{directionFilter}} filter</button>
-</div>
-<p class="signal-help">One row per stock. CONFLICT means strategies disagree; see the BUY/SELL beside each strategy. READY means entry checks passed; WATCH needs confirmation. Reference levels are from the displayed setup. Options require a separate contract and premium check.</p>
-<ag-grid-angular class="signal-grid" aria-label="Focused stock shortlist" [theme]="gridTheme" [rowData]="signalRows" [getRowStyle]="signalRowStyle" [columnDefs]="columnDefs" [defaultColDef]="defaultColDef" [quickFilterText]="search" [pagination]="true" [paginationPageSize]="20" [paginationPageSizeSelector]="[20,50,100]" [enableCellTextSelection]="true" (gridReady)="gridReady($event)" />
-<p class="empty" *ngIf="!signalRows.length">No stocks match this view on {{timeframeLabel}} candles. Check history coverage below or clear the filters.</p>
-<app-option-analysis id="focused-chart" *ngIf="chartStock as stock" [stockMode]="true" [stockWorkspace]="true" [underlyingKey]="stock.instrumentKey" [stockTimeframe]="stock.timeframe" [stockStrategy]="chartStrategy" /><button *ngIf="chartStock" class="close-chart" (click)="chartStock=null">Close chart</button>
-<ng-container *ngIf="selected as selection"><article id="focused-details" class="trade-card selected-plan" *ngIf="selection.stock as stock" [attr.data-action]="action(stock)" [attr.data-signal]="selection.signal">
-  <header><strong>{{stock.symbol}} · {{selection.signal}} · {{selection.state}}</strong><button class="refresh" (click)="selected=null">Close details</button></header>
-  <p>{{selection.reason}}</p><p class="what-happening">{{selection.strategy}}</p>
-  <div class="levels"><div><small>Reference entry</small><b>{{selection.entry==null?'—':(selection.entry | number:'1.2-2')}}</b></div><div><small>Stop loss</small><b class="stop">{{selection.stopLoss==null?'—':(selection.stopLoss | number:'1.2-2')}}</b></div><div><small>Target</small><b>{{selection.target==null?'—':(selection.target | number:'1.2-2')}}</b></div><div><small>Reference basis</small><b>{{selection.state==='READY'?'Validated stock plan':selection.signal==='CONFLICT'?'No entry':selection.evidence.name}}</b></div></div>
-  <p class="hold">{{stock.holding}}</p>
-  <details><summary>Strategy evidence and entry conditions</summary>
-    <div class="evidence" *ngFor="let e of stock.evidence"><b>{{e.name}}</b><span [attr.data-direction]="e.signal || e.direction">{{e.signal || e.direction || 'No signal'}} · {{e.signalState || e.state}}</span><small>{{e.signalReason || e.reason}}</small><small *ngIf="e.signalAt">Signal {{e.signalAt | date:'dd MMM, HH:mm':'+0530'}} IST</small></div>
-    <p class="blocked" *ngFor="let reason of stock.waitReasons">{{reason}}</p><p>{{stock.exitRule}}</p><p *ngIf="stock.plan">{{stock.plan.basis}}</p>
-  </details>
-  <footer><small>Candle {{stock.asOf | date:'dd MMM, HH:mm':'+0530'}} IST · Reference expires {{stock.validUntil | date:'dd MMM, HH:mm':'+0530'}} IST</small><button (click)="chartStrategy=selection.evidence.id;chartStock=stock">Chart</button><button (click)="checkOptions(stock)" [disabled]="optionLoading">Verify option contract</button></footer>
-</article></ng-container>
-<aside id="focused-options" class="option-plan" *ngIf="optionFor as stock" aria-label="Option trade plan"><header><strong>{{stock.symbol}} · {{mode}} option check</strong><button (click)="closeOptions()">Close</button></header><p *ngIf="optionLoading" role="status">Checking actual expiry, strike, premium signals and live liquidity...</p><ng-container *ngIf="option as o"><h2 [attr.data-action]="optionAction">{{optionAction}} <small>{{o.contract?.symbol}}</small></h2><p>{{o.reason}}</p><p *ngIf="o.contract as c">Expiry {{c.expiry}} · Strike {{c.strike}} {{c.side}} · Lot {{c.lotSize}}</p><div class="levels" *ngIf="o.plan as p"><div><small>Buy premium</small><b>&#8377;{{p.entry | number:'1.2-2'}}</b></div><div><small>Premium stop</small><b class="stop">&#8377;{{p.stopLoss | number:'1.2-2'}}</b></div><div><small>Premium T1</small><b>&#8377;{{p.target1 | number:'1.2-2'}}</b></div><div><small>Premium T2</small><b>&#8377;{{p.target2 | number:'1.2-2'}}</b></div></div><p *ngIf="o.quote">Bid {{o.quote.bid}} / Ask {{o.quote.ask}} · Spread {{o.quote.spreadPct}}% · Quote {{o.quote.asOf | date:'HH:mm:ss':'+0530'}} IST</p><p *ngIf="o.holding"><b>Hold:</b> {{o.holding}}</p><p>{{o.exitRule}}</p><p *ngIf="o.estimatedPremiumPerLot!=null">Premium per lot &#8377;{{o.estimatedPremiumPerLot | number:'1.2-2'}} · Planned risk to stop &#8377;{{o.plannedRiskPerLot | number:'1.2-2'}} · Full premium at risk &#8377;{{o.maximumPremiumLossPerLot | number:'1.2-2'}}</p><div class="evidence" *ngFor="let e of o.evidence"><b>{{e.name}}</b><span [attr.data-direction]="e.direction">{{e.direction || e.state}}</span><small>{{e.reason}}</small></div><p>{{o.note}}</p><button (click)="checkOptions(stock)">Refresh option check</button></ng-container></aside>
-
-<details class="methodology"><summary>History coverage and how the shortlist works</summary>
-  <p>{{result.coverage['total']}} stocks checked · {{result.coverage['executionHistory']}} missing {{timeframeLabel}} history · {{result.coverage['dailyHistory']}} missing daily history · {{result.coverage['liquidity']}} fail liquidity rules.</p>
-  <p>One stock appears once. Ghost Rider keeps its latest crossover direction until an opposite crossover, as in Scanner; an old or stop-touched setup does not qualify as a fresh entry. Closed Suryavanshi trades and invalidated divergences are excluded. Opposing active signals are labelled CONFLICT and have no entry levels. Entry checks passed comes first, followed by stocks with more supporting strategies and newer signals. This order is not a profit forecast.</p>
-  <p>Before the next session, the shortlist is a watchlist based on the candle date shown. Stored scans do not fetch new broker candles. Refresh after syncing history; a new scan alone cannot make old prices current.</p>
-  <p>Daily signals use completed candles. Daily setups remain WATCH when the entry policy needs current-session candles or intraday daily-open levels.</p>
-  <p>{{result.methodology}}</p><p>{{result.policy}}</p><p>Stock SELL applies to owned shares or permitted intraday shorts. A PE candidate means a separately verified PUT purchase, not selling an option. No order is placed.</p>
-</details>
-</ng-container></section>
+  <header class="stock-picker">
+    <h1 id="focused-title">Focused</h1>
+    <label class="search-field"><span class="sr-only">Find a stock</span><input type="search" aria-label="Find a stock" placeholder="Search stocks…" [value]="query" (input)="query=$any($event.target).value" /></label>
+    <label class="select-field"><span class="sr-only">Select stock</span><select aria-label="Select stock" [value]="selectedKey" (change)="select($any($event.target).value)" [disabled]="universeLoading"><option value="">{{universeLoading?'Loading stocks…':'Choose an F&O stock'}}</option><option *ngFor="let stock of matches" [value]="stock.key">{{stock.symbol}} · {{stock.name}}</option></select></label>
+    <button class="refresh" (click)="refresh()" [disabled]="!selectedKey||loading">{{loading?'Analyzing…':'↻ Refresh'}}</button>
+  </header>
+  <p *ngIf="query&&!matches.length&&!universeLoading" class="notice">No matching stocks. Try another symbol or company.</p>
+  <p *ngIf="universeError" role="alert" class="notice">{{universeError}} <button (click)="loadStocks()">Retry stock list</button></p>
+  <div *ngIf="!selectedKey" class="empty-state"><h2>Select a stock to get started</h2><p>Read its structure, key levels and candlestick observations across six timeframes.</p><small>12 Months · 3 Months · 1 Month · 1 Week · 1 Day · 1 Hour</small></div>
+  <p *ngIf="loading" role="status" class="loading">Reading history and preparing all six views…</p>
+  <p *ngIf="error" role="alert" class="notice">{{error}} <button (click)="refresh()">Retry analysis</button></p>
+  <ng-container *ngIf="data as result">
+    <div class="stock-heading"><div><strong>{{result.stock.symbol}}</strong><span>{{result.stock.name}}</span></div><small>Retrieved {{result.receivedAt | date:'dd MMM, HH:mm':'+0530'}} IST</small></div>
+    <div *ngIf="result.warnings.length" class="source-alert"><strong>Data notice</strong><span>{{result.warnings[0]}}</span><details *ngIf="result.warnings.length>1"><summary>{{result.warnings.length-1}} more</summary><p *ngFor="let warning of result.warnings.slice(1)">{{warning}}</p></details></div>
+    <nav class="view-nav" role="tablist" aria-label="Analysis timeframes">
+      <button *ngFor="let view of result.views;let i=index" role="tab" [id]="'timeframe-tab-'+i" aria-controls="focused-panel" [attr.aria-selected]="activeViewIndex===i" [tabIndex]="activeViewIndex===i?0:-1" [class.selected]="activeViewIndex===i" (click)="selectView(i)" (keydown)="tabKey($event,i)"><span>{{view.label}}</span><small [attr.data-tone]="tone(view)">{{shortTrend(view)}}</small></button>
+    </nav>
+    @for (view of activeView ? [activeView] : []; track view.label) {
+    <article id="focused-panel" class="view-card" role="tabpanel" [attr.aria-labelledby]="'timeframe-tab-'+activeViewIndex" tabindex="0">
+      <header class="view-heading"><div><h2>{{view.label}}</h2><span class="trend" [attr.data-tone]="tone(view)">{{view.trend}}</span></div><small *ngIf="view.asOf">Candle {{view.asOf | date:(view.frame==='1h'?'dd MMM yyyy, HH:mm':'dd MMM yyyy'):'+0530'}} IST{{view.frame==='1h'?' · bar start':''}}</small></header>
+      <p *ngIf="view.oldHistory||view.staleData||view.limitedCoverage" class="data-note"><span *ngIf="view.oldHistory">Old or missing history. </span><span *ngIf="view.staleData">Current-session data unverified. </span><span *ngIf="view.limitedCoverage">Partial history window. </span>Check the candle date.</p>
+      <div class="analysis-body">
+        <div class="main-analysis">
+          <section class="story"><h3>What is happening</h3><p *ngFor="let line of summaryLines(view)">{{line}}</p>
+            <details class="more-detail"><summary>Full price story &amp; trendlines</summary><p *ngFor="let line of view.narrative">{{line}}</p><p *ngFor="let event of view.events">{{event}}</p><p *ngFor="let line of view.trendlines"><b>{{line.kind}}</b> · {{line.start.price | currency:'INR'}} ({{line.start.date | date:'dd MMM yy':'+0530'}}) → {{line.end.price | currency:'INR'}} ({{line.end.date | date:'dd MMM yy':'+0530'}}). Projected now {{line.current | currency:'INR'}}. {{line.state}}. {{line.note}}</p><p *ngIf="!view.trendlines.length">No rising support or falling resistance line established from the latest confirmed swing pair.</p></details>
+          </section>
+          <section class="watch"><h3>What to watch next</h3><p *ngFor="let item of view.watch">{{item}}</p></section>
+          <section *ngIf="view.candlesticks as candles" class="candle-patterns" aria-label="Candlestick pattern analysis">
+            <h3>Candlestick patterns <small>{{candles.patterns.length?candles.patterns.length+' recent observations':''}}</small></h3>
+            <p *ngIf="!candles.patterns.length" class="muted">{{candles.note}}</p>
+            <details *ngFor="let pattern of candles.patterns" class="pattern-observation">
+              <summary><span class="pattern-name" [attr.data-tone]="pattern.bias==='bullish'?'up':pattern.bias==='bearish'?'down':'neutral'">{{pattern.name}}<small>{{pattern.at | date:(view.frame==='1h'?'dd MMM, HH:mm':'dd MMM'):'+0530'}} IST</small></span><span class="pattern-state">{{pattern.state}}</span></summary>
+              <div class="pattern-detail"><p class="pattern-confirmation">{{pattern.confirmation}}</p><p>{{pattern.explanation}}</p><p>{{pattern.context}}</p><p>{{pattern.volume}}</p><small *ngIf="pattern.followUpAt">Follow-through {{pattern.followUpAt | date:'dd MMM yyyy, HH:mm':'+0530'}} IST</small></div>
+            </details>
+            <small *ngIf="candles.patterns.length">Open-candle shapes are provisional. Expand a pattern for confirmation levels and volume.</small>
+          </section>
+          <section *ngIf="view.volume" class="volume-line"><h3>Volume confirmation</h3><p>{{view.volume.description}}</p></section>
+        </div>
+        <aside class="levels" aria-label="Key price levels">
+          <div class="range-strip" *ngIf="view.count"><div><small>Completed close</small><strong>{{view.close | currency:'INR':'symbol':'1.2-2'}}</strong></div><div><small>Range high</small><b>{{view.high?.price | currency:'INR':'symbol':'1.2-2'}}</b><small>{{view.frame==='1w'?'Week of ':''}}{{view.high?.date | date:'dd MMM yy':'+0530'}}</small></div><div><small>Range low</small><b>{{view.low?.price | currency:'INR':'symbol':'1.2-2'}}</b><small>{{view.frame==='1w'?'Week of ':''}}{{view.low?.date | date:'dd MMM yy':'+0530'}}</small></div></div>
+          <h3>Key levels <small>Distance from close</small></h3>
+          <h4>Support</h4><div *ngFor="let zone of view.supports" class="zone support"><b>{{zone.price | currency:'INR'}}</b><span>{{zone.distancePct | number:'1.1-2'}}%</span><small>{{zone.origin}} · {{zone.touches}} ref.</small></div><p *ngIf="!view.supports.length" class="muted">No lower support identified.</p>
+          <h4>Resistance</h4><div *ngFor="let zone of view.resistances" class="zone resistance"><b>{{zone.price | currency:'INR'}}</b><span>+{{zone.distancePct | number:'1.1-2'}}%</span><small>{{zone.origin}} · {{zone.touches}} ref.</small></div><p *ngIf="!view.resistances.length" class="muted">No overhead resistance identified.</p>
+          <small class="level-note">Approximate zones; reference counts do not predict whether a level will hold.</small>
+        </aside>
+      </div>
+      <footer>{{view.count}} completed bars · {{view.scope}} · {{view.source}}<span *ngIf="view.developingExcluded"> · Developing bars excluded from structure</span></footer>
+    </article>
+    }
+    <details class="methodology"><summary>Longer-term context &amp; how to read this analysis</summary><p>{{overview}}</p><p *ngFor="let line of result.historyContext.narrative">{{line}}</p><p>{{result.methodology}}</p><small>Available daily history since {{result.historyContext.firstDate | date:'dd MMM yyyy':'+0530'}}; it may not cover the full listing history. Weekly bars use available daily records. No order is placed.</small></details>
+  </ng-container>
+</section>

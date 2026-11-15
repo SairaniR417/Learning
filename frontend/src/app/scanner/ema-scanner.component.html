@@ -2,54 +2,42 @@
 <app-option-analysis *ngIf="ghostStock as stock" [stockMode]="true" [stockWorkspace]="true" [showBack]="true" [underlyingKey]="stock.instrumentKey" [stockTimeframe]="timeframe" [stockStrategy]="selectedStrategy" [initialRsiPeriod]="numericParam('period',14)" [initialAtrMultiplier]="numericParam('atr_multiplier',1.5)" [initialSutradharInputs]="sutradharInputs" [initialSuryavanshiInputs]="suryavanshiInputs" [initialGoldenInputs]="goldenInputs" (back)="ghostStock = undefined" />
 <section class="scanner-page" [hidden]="!!ghostStock || !!optionStock" aria-labelledby="scanner-title">
   <header class="scanner-topbar">
-    <div class="scanner-brand"><span class="scanner-brand-mark">TG</span><span><strong>Stock Screener</strong><small>NSE · Saved F&O stocks</small></span></div>
+    <div class="scanner-brand"><span class="scanner-brand-mark">TG</span><span><strong id="scanner-title">Stock Screener</strong><small>NSE · Saved F&O stocks</small></span></div>
     <div class="saved-controls">
       <select aria-label="Saved screeners" [value]="selectedSaved" (change)="loadScreener($any($event.target).value)"><option value="">My Screeners</option><option *ngFor="let saved of savedScreeners" [value]="saved.name">{{ saved.name }}</option></select>
       <button type="button" class="quiet-button" (click)="deleteScreener()" [disabled]="!selectedSaved">Delete</button>
     </div>
   </header>
 
-  <div class="scanner-tabs"><span>F&amp;O Stocks</span><span class="tab-strategy">{{ isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Selected strategy' }}</span><span class="universe-count">{{ universeCount || "—" }} instruments · {{ isMarketScreener ? 'Stored daily data' : selectedTimeframe + ' strategy results' }}</span></div>
-
-  <div class="scanner-layout">
-    <aside class="factor-sidebar">
-      <header class="sidebar-heading"><div><h2>Scanner filters</h2><p>Build a screen from market factors</p></div><button class="icon-button" type="button" (click)="rules = []; selectedSector = 'All sectors'" title="Clear filters">↺</button></header>
-
-      <label class="control-label">STRATEGY</label>
-      <select class="wide-control strategy-select" [value]="selectedStrategy" (change)="selectStrategy($any($event.target).value)">
+  <div class="scan-controls">
+    <label><span>Strategy</span><select class="wide-control strategy-select" aria-label="Strategy" [value]="selectedStrategy" (change)="selectStrategy($any($event.target).value)">
         <option value="market_screener">Market Screener</option>
         <optgroup label="Available strategies">
-          <option *ngFor="let strategy of strategies" [value]="strategy.id">{{ strategy.name }}</option>
+          <option *ngFor="let strategy of strategies" [value]="strategy.id" [selected]="strategy.id === selectedStrategy">{{ strategy.name }}</option>
         </optgroup>
-        <optgroup label="Coming soon">
-          
-          <option disabled>MACD Crossover</option>
-          <option disabled>Supertrend Reversal</option>
-          <option disabled>VWAP Crossover / Rejection</option>
-          <option disabled>Narrow CPR Breakout</option>
-          <option disabled>Support / Resistance Breakout</option>
-          <option disabled>Trendline Breakout and Retest</option>
-          <option disabled>Candlestick Pattern Detection</option>
-          <option disabled>Volume Spike / Relative Volume</option>
-          <option disabled>Multi-timeframe Confirmation</option>
-        </optgroup>
-      </select>
+
+      </select></label>
+    <label class="frame-control"><span>Timeframe</span><select class="wide-control" [value]="timeframe" aria-label="Timeframe" [disabled]="isMarketScreener || selectedStrategy === 'opening_range_breakout'" (change)="selectTimeframe($any($event.target).value)">
+        <option *ngIf="!['sutradhar','opening_range_breakout'].includes(selectedStrategy)" value="1d">Daily</option><option *ngIf="!['institution_transaction','ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross','opening_range_breakout'].includes(selectedStrategy)" value="1w">Weekly</option><option *ngIf="!['institution_transaction','ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross','opening_range_breakout'].includes(selectedStrategy)" value="1M">Monthly</option><option *ngIf="selectedStrategy !== 'opening_range_breakout'" value="1h">1 hour</option><option *ngIf="!['opening_range_breakout','institution_transaction'].includes(selectedStrategy)" value="15m">15 minutes</option><option *ngIf="['ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross','opening_range_breakout'].includes(selectedStrategy)" value="5m">5 minutes</option>
+      </select></label>
+    <label class="sector-control"><span>Sector</span><select class="wide-control" aria-label="Sector" [value]="selectedSector" (change)="selectSector($any($event.target).value)"><option *ngFor="let sector of sectors" [value]="sector">{{ sector }}</option></select></label>
+    <button class="run-scan" type="button" [disabled]="loading || loadingStrategies" (click)="scan()">{{ loading ? 'Loading…' : 'Refresh' }}</button>
+  </div>
+  <details class="advanced-filters"><summary>Strategy settings &amp; factor filters</summary><div class="advanced-body"><section class="advanced-settings">
+
       <p class="strategy-description">{{ isMarketScreener ? 'Screen the saved F&O stocks using stored daily price, change and volume.' : activeStrategy?.description }}</p>
 
-      <p class="strategy-description" *ngIf="selectedStrategy === 'rsi_divergence'">Supplied Pine RSI · Regular Bull/Bear divergences. RSI pivots confirm five bars later. Click a result for the dark RSI chart and settings.</p>
+      <p class="strategy-description" *ngIf="selectedStrategy === 'rsi_divergence'">Supplied Pine RSI · Regular Bull/Bear divergences. RSI pivots confirm five bars later. Use Chart for the dark RSI chart and settings.</p>
       <div class="strategy-params" *ngIf="!isMarketScreener && activeStrategy">
         <ng-container *ngFor="let param of activeStrategy.parameters"><label *ngIf="selectedStrategy!=='golden_death_cross' || param.name==='require_confirmation' || ['sma_medium','sma_long','max_confirmation_bars'].includes(param.name) || strategyParams['require_confirmation']===true"><span>{{ param.display_name }}</span><input *ngIf="param.type !== 'bool' && param.type !== 'str'" type="number" [min]="param.min_value ?? null" [max]="param.max_value ?? null" [value]="strategyParams[param.name]" (input)="updateStrategyParam(param.name, $any($event.target).value)"><select *ngIf="param.type === 'str'" [value]="strategyParams[param.name]" (change)="updateStrategyParam(param.name,$any($event.target).value)"><option *ngFor="let opt of param.options" [value]="opt">{{opt}}</option></select><input *ngIf="param.type === 'bool'" type="checkbox" [checked]="strategyParams[param.name]" (change)="updateStrategyParam(param.name,$any($event.target).checked)"></label></ng-container>
       </div>
-      <label class="control-label timeframe-label">TIMEFRAME</label>
-      <select class="wide-control" [value]="timeframe" [disabled]="selectedStrategy === 'opening_range_breakout'" (change)="timeframe = $any($event.target).value">
-        <option *ngIf="!['sutradhar','opening_range_breakout'].includes(selectedStrategy)" value="1d">Daily</option><option *ngIf="!['ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross','opening_range_breakout'].includes(selectedStrategy)" value="1w">Weekly</option><option *ngIf="!['ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross','opening_range_breakout'].includes(selectedStrategy)" value="1M">Monthly</option><option *ngIf="selectedStrategy !== 'opening_range_breakout'" value="1h">1 hour</option><option *ngIf="selectedStrategy !== 'opening_range_breakout'" value="15m">15 minutes</option><option *ngIf="['ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross','opening_range_breakout'].includes(selectedStrategy)" value="5m">5 minutes</option>
-      </select>
+
       <p class="strategy-description" *ngIf="!isMarketScreener">{{ activeStrategy?.min_candles }} candles minimum. Results use locally stored history.</p>
-      <p class="strategy-description" *ngIf="selectedStrategy === 'ghost_rider'">Same Pine v2 engine as Option Analysis. Click a result for the dark chart, ribbon, dashboard and targets. Intraday scans require stored candles; 5m RSI stays unavailable if its history is missing.</p>
+      <p class="strategy-description" *ngIf="selectedStrategy === 'ghost_rider'">Same Pine v2 engine as Option Analysis. Use Chart for the dark chart, ribbon, dashboard and targets. Intraday scans require stored candles; 5m RSI stays unavailable if its history is missing.</p>
       <p class="strategy-description" *ngIf="selectedStrategy === 'opening_range_breakout'">Range starts at 09:15 IST. Default hold: two completed 5m closes above the range high or below its low. Choose 15, 30 or 60 minutes above. Historical holds show their session date; they are not current entries.</p>
       <p class="strategy-description" *ngIf="selectedStrategy === 'sutradhar'">Current daily open and previous daily ranges. Intraday only; a result shows reference levels, not a buy/sell signal. Missing daily opens or range history are not estimated.</p>
 
-      <div class="factor-title"><strong>Factors</strong><span>Higher values&nbsp; · &nbsp;Important</span></div>
+      </section><section class="advanced-factors"><div class="factor-title"><strong>Factors</strong><span>Higher values&nbsp; · &nbsp;Important</span></div>
       <div class="factor-row" *ngFor="let rule of rules; let i = index">
         <div class="factor-row-title"><select aria-label="Factor" [value]="rule.field" (change)="updateRule(i, 'field', $any($event.target).value)"><option *ngFor="let factor of factors" [value]="factor.id">{{ factor.label }}</option></select><button type="button" (click)="removeFactor(i)" aria-label="Remove factor">×</button></div>
         <div class="range-inputs"><label><small>Min</small><input type="number" [value]="rule.min" (input)="updateRule(i, 'min', $any($event.target).value)" placeholder="Any"></label><label><small>Max</small><input type="number" [value]="rule.max" (input)="updateRule(i, 'max', $any($event.target).value)" placeholder="Any"></label></div>
@@ -57,31 +45,27 @@
       </div>
       <button type="button" class="add-factor" (click)="addFactor()">＋ Add Factor</button>
 
-      <label class="control-label sector-label">SECTOR</label>
-      <select class="wide-control" [value]="selectedSector" (change)="selectSector($any($event.target).value)"><option *ngFor="let sector of sectors" [value]="sector">{{ sector }}</option></select>
-      <div class="save-row"><input type="text" [value]="saveName" (input)="saveName = $any($event.target).value" placeholder="Screener name"><button type="button" (click)="saveScreener()" [disabled]="!saveName.trim()">Save</button></div>
-    </aside>
+      <div class="save-row"><input type="text" [value]="saveName" (input)="saveName = $any($event.target).value" placeholder="Screener name"><button type="button" (click)="saveScreener()" [disabled]="!saveName.trim()">Save</button></div></section></div></details>
+
+  <div class="scanner-layout">
 
     <main class="results-main">
-      <header class="results-toolbar">
-        <div><div class="results-title-row"><h1>{{ selectedSector !== 'All sectors' ? selectedSector : (isMarketScreener ? 'Market Screener' : activeStrategy?.name || 'Stock Screener') }}</h1><span class="live-tag"><i></i>{{ isMarketScreener ? 'DAILY SCREENER' : 'STRATEGY SCAN' }}</span></div><p>{{ isMarketScreener ? 'Apply factors to the saved F&O stock universe.' : activeStrategy?.description }}</p></div>
-        <button class="run-scan" type="button" [disabled]="loading || loadingStrategies" (click)="scan()">{{ loading ? 'Scanning...' : 'Scan F&O Stocks' }}</button>
-      </header>
 
-      <div class="results-meta" *ngIf="hasScanned && !error"><span>Displaying <strong>{{ filteredResults.length | number }}</strong> matches of <strong>{{ totalScanned | number }}</strong> scanned</span><span>{{ isMarketScreener ? 'Generated from live Upstox quotes' : selectedTimeframe + ' · strategy results' }}</span></div>
-      <p class="assessment-note" *ngIf="selectedStrategy === 'ghost_rider'">From open % compares the latest candle close with that session's open. Day high/low % show the session extremes. Directional votes are indicator agreement, not a probability of profit. Entry candidates need ADX &gt; 25, at least 5/7 votes, a fresh setup, an untouched stop and remaining R/R ≥ 1.5. Hover a column for the assessment reason; open Chart for the full explanation. Stored or developing data stays WAIT.</p>
+      <div class="results-meta" *ngIf="hasScanned && !error"><span>Displaying <strong>{{ filteredResults.length | number }}</strong> matches of <strong>{{ totalScanned | number }}</strong> scanned</span><span>{{ isMarketScreener ? 'Stored daily candles' : selectedTimeframe + ' · strategy results' }}</span></div>
+      <p class="assessment-note" *ngIf="selectedStrategy === 'ghost_rider'">Day open and indicators use the stored candles for the selected timeframe. Change % compares consecutive candle closes. Hover for explanations and the entry assessment; use Columns for entry checks, stops, targets and session details.</p>
       <p class="assessment-note" *ngIf="selectedStrategy === 'opening_range_breakout'">Stored 5m candles only. Missing opening bars cannot confirm a breakout. Enable “Include waiting / incomplete stocks” to inspect coverage. Bullish/bearish holds describe price behaviour; they do not guarantee a profitable trade.</p>
       <p class="strategy-description" *ngIf="coverageNote">Insufficient or unavailable contract history: {{ coverageNote }}</p>
       <div class="progress-line" *ngIf="loading"><span></span></div>
+      <p class="assessment-note" *ngIf="selectedStrategy === 'institution_transaction'">Possible buying/selling pressure from completed Daily and 1-hour candles. Hourly volume is compared with the same start time in prior sessions. Hover results for volume, trend, levels and timestamps. Institutional disclosures are not connected or checked; these observations do not identify institutions or give an entry signal.</p>
       <div class="scanner-error" *ngIf="error" role="alert"><strong>Scan could not finish</strong><span>{{ error }}</span><a *ngIf="error.toLowerCase().includes('connect')" [href]="loginUrl">Connect Upstox</a></div>
 
       <div class="table-tools" *ngIf="results.length"><span>{{ selectedSector }}</span><span class="color-rank"><small>More Preferred</small><i></i><small>Less Preferred</small></span><span class="right-panel-hint">Use the right toolbar to choose columns or filter results.</span></div>
       <div class="grid-tools-wrap" *ngIf="results.length; else emptyResults">
-        <div class="grid-wrap" *ngIf="filteredResults.length; else noFilteredResults"><ag-grid-angular class="market-grid" [theme]="gridTheme" [rowData]="filteredResults" [columnDefs]="columnDefs" [defaultColDef]="defaultColDef" [pagination]="true" [paginationPageSize]="50" [paginationPageSizeSelector]="[25, 50, 100]" [rowHeight]="104" [suppressCellFocus]="true" (gridReady)="onGridReady($event)" (rowClicked)="openStock($event.data)"></ag-grid-angular></div>
+        <div class="grid-wrap" *ngIf="filteredResults.length; else noFilteredResults"><ag-grid-angular class="market-grid" [theme]="gridTheme" [rowData]="filteredResults" [columnDefs]="columnDefs" [defaultColDef]="defaultColDef" [pagination]="true" [paginationPageSize]="50" [paginationPageSizeSelector]="[25, 50, 100]" [rowHeight]="40" [headerHeight]="34" [suppressCellFocus]="true" (gridReady)="onGridReady($event)" (gridSizeChanged)="gridResized($event)" [enableBrowserTooltips]="true"></ag-grid-angular></div>
         <ng-template #noFilteredResults><div class="empty-results"><strong>No instruments match these filters</strong><p>Change or clear a filter to see the scanned results again.</p></div></ng-template>
         <aside class="grid-tool-panel" *ngIf="gridPanel" [attr.aria-label]="gridPanel === 'columns' ? 'Choose visible columns' : 'Filter stock results'">
           <header><strong>{{ gridPanel === 'columns' ? 'Columns' : 'Filters' }}</strong><button type="button" (click)="gridPanel = ''" aria-label="Close panel">×</button></header>
-          <ng-container *ngIf="gridPanel === 'columns'; else filterPanel"><p class="panel-help">Choose which columns appear in the results grid.</p><label class="column-option" *ngFor="let column of gridColumns"><input type="checkbox" [checked]="column.visible" (change)="setGridColumnVisible(column, $any($event.target).checked)"><span>{{ column.label }}</span></label></ng-container>
+          <ng-container *ngIf="gridPanel === 'columns'; else filterPanel"><p class="panel-help">Choose which columns appear in the results grid.</p><label class="column-option" [title]="columnHelp[column.id] || column.label" *ngFor="let column of gridColumns"><input type="checkbox" [checked]="column.visible" (change)="setGridColumnVisible(column, $any($event.target).checked)"><span>{{ column.label }}</span></label></ng-container>
           <ng-template #filterPanel>
             <p class="panel-help">Filter the current scan results.</p>
             <label class="side-filter">Symbol or company<input type="search" [value]="rightFilters.symbol" (input)="setRightFilter('symbol', $any($event.target).value)" placeholder="Search stocks"></label>

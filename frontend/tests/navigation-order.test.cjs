@@ -27,17 +27,17 @@ test('saved tabs are deduplicated, obsolete values ignored and missing tabs appe
   const s=setup(JSON.stringify(['Option Chains','Option Chains','removed',12]));
   assert.equal(s.component.pages[0],'Option Chains');assert.equal(s.component.pages.length,s.order.DEFAULT_PAGES.length);
   assert.equal(new Set(s.component.pages).size,s.component.pages.length);
-  for(const value of ['invalid','{}','null'])assert.equal(setup(value).component.pages[0],'Overview');
+  for(const value of ['invalid','{}','null'])assert.equal(setup(value).component.pages[0],'Market Scanner');
 });
 
 test('keyboard and drop reorder tabs; external drops and invalid positions do nothing',()=>{
   const s=setup();let prevented=0;
-  s.component.tabKeydown({altKey:true,key:'ArrowLeft',preventDefault:()=>prevented++},'Market Scanner');
-  assert.equal(prevented,1);assert.equal(s.component.pages[0],'Market Scanner');
+  s.component.tabKeydown({altKey:true,key:'ArrowLeft',preventDefault:()=>prevented++},'Focused');
+  assert.equal(prevented,1);assert.equal(s.component.pages[0],'Focused');
   const before=JSON.stringify(s.component.pages);
   s.component.dropTab({preventDefault:()=>{}},'Overview');assert.equal(JSON.stringify(s.component.pages),before);
   s.component.startTabDrag({dataTransfer:{setData:()=>{}}},'Option Chains');
-  s.component.dropTab({preventDefault:()=>{}},'Market Scanner');assert.equal(s.component.pages[0],'Option Chains');
+  s.component.dropTab({preventDefault:()=>{}},'Focused');assert.equal(s.component.pages[0],'Option Chains');
   assert.equal(s.component.draggedTab,null);
   s.component.moveTab('Option Chains',-1);assert.equal(s.component.pages[0],'Option Chains');
 });
@@ -45,4 +45,11 @@ test('keyboard and drop reorder tabs; external drops and invalid positions do no
 test('blocked storage still permits arranging tabs',()=>{
   const s=setup(null,true);s.component.moveTab('Option Chains',0);
   assert.equal(s.component.pages[0],'Option Chains');
+});
+
+test('saved Overview and F&O tabs migrate into the merged destinations without duplicates',()=>{
+  const s=setup(JSON.stringify(['Overview','F&O Stocks','Market Scanner','Stock Details','Focused']));
+  assert.equal(s.component.pages[0],'Market Scanner');assert.equal(s.component.pages[1],'Stock Details');
+  assert.equal(s.component.pages.includes('Overview'),false);assert.equal(s.component.pages.includes('F&O Stocks'),false);
+  assert.equal(new Set(s.component.pages).size,s.component.pages.length);
 });

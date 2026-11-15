@@ -1,33 +1,29 @@
 import { LivePriceComponent } from '../live-price.component';
 import { OptionChainComponent } from './option-chain.component';
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnChanges, OnDestroy, Output, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnChanges, OnDestroy, OnInit, Output, ViewChild, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { CandlestickSeries, HistogramSeries, ColorType, CrosshairMode, createChart, IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { MarketApiService, SelectedStock, StockHistory, StockNews, CompanyProfile, CorporateAction, HistoricalCandle, Instrument } from '../market-api.service';
 
 @Component({ selector: 'app-stock-details', standalone: true, imports: [CommonModule, OptionChainComponent, LivePriceComponent], templateUrl: './stock-details.component.html', styleUrl: './stock-details.component.css' })
-export class StockDetailsComponent implements OnChanges, OnDestroy {
+export class StockDetailsComponent implements OnChanges, OnDestroy, OnInit {
   @Input() stock: SelectedStock | null = null;
   @Output() stockSelected = new EventEmitter<SelectedStock>();
   searchQuery = '';
-  searchResults: Instrument[] = [];
   searchLoading = false;
   searchError = '';
-  searchFinished = false;
-  private searchTimer?: ReturnType<typeof setTimeout>;
   private searchSubscription?: Subscription;
+  stocks: Instrument[] = [];
+  get stockChoices(): Instrument[] { const q=this.searchQuery.trim().toLowerCase();return this.stocks.filter(s=>!q||(s.symbol+' '+s.name).toLowerCase().includes(q)); }
+  ngOnInit(): void { this.loadStockList(); }
+  loadStockList(): void {
+    this.searchSubscription?.unsubscribe(); this.searchLoading=true; this.searchError='';
+    this.searchSubscription=this.api.fnoStocks().subscribe({next:data=>{this.stocks=[...data.stocks].sort((a,b)=>a.symbol.localeCompare(b.symbol));this.searchLoading=false;},error:()=>{this.searchLoading=false;this.searchError='Could not load the stock list. Please retry.';}});
+  }
+  selectStockKey(key:string): void { const stock=this.stocks.find(s=>s.key===key);if(stock)this.chooseStock(stock); }
   searchStock(query: string): void {
-    clearTimeout(this.searchTimer); this.searchSubscription?.unsubscribe();
-    this.searchQuery = query; this.searchResults = []; this.searchError = ''; this.searchFinished = false;
-    const term = query.trim(); this.searchLoading = term.length >= 2;
-    if (!this.searchLoading) return;
-    this.searchTimer = setTimeout(() => {
-      this.searchSubscription = this.api.search(term).subscribe({ next: data => {
-        this.searchResults = data.instruments;
-        this.searchLoading = false; this.searchFinished = true;
-      }, error: error => { this.searchError = error.error?.detail || 'Unable to search stocks. Please try again.'; this.searchLoading = false; this.searchFinished = true; } });
-    }, 300);
+    this.searchQuery = query;
   }
   chooseStock(instrument: Instrument): void {
     this.searchStock('');
@@ -114,7 +110,7 @@ export class StockDetailsComponent implements OnChanges, OnDestroy {
   get passedChecks(): number { return this.confirmationChecks.filter(check => check.passed).length; }
   get divergenceEvidence(): { label: string }[] { return this.stock?.strategy === 'RSI Divergence' ? (this.stock.checks ?? []).filter(check => check.passed === undefined && !check.label.startsWith('Current RSI')) : []; }
   ngOnChanges(): void { this.activeTab = 'overview'; this.load(); }
-  ngOnDestroy(): void { clearInterval(this.chartTimer); this.chartSubscription?.unsubscribe(); clearTimeout(this.searchTimer); this.searchSubscription?.unsubscribe(); this.subscriptions.unsubscribe(); this.chartApi?.remove(); if (this.expanded) document.body.style.overflow = this.previousOverflow; }
+  ngOnDestroy(): void { clearInterval(this.chartTimer); this.chartSubscription?.unsubscribe(); this.searchSubscription?.unsubscribe(); this.subscriptions.unsubscribe(); this.chartApi?.remove(); if (this.expanded) document.body.style.overflow = this.previousOverflow; }
   load(): void {
     clearInterval(this.chartTimer); this.chartSubscription?.unsubscribe();
     this.subscriptions.unsubscribe(); this.subscriptions = new Subscription();

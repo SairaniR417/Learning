@@ -11,3 +11,30 @@
 .scanner-options{padding:16px}.scanner-options>header{display:flex;gap:16px;align-items:center;margin-bottom:16px}.scanner-options h2{margin:0;font-size:18px}.scanner-options>header button{background:#172220;color:#d4e2dc;border:1px solid #35454c;border-radius:4px;padding:8px 12px;cursor:pointer}
 
 .assessment-note{margin:10px 0;padding:12px 14px;border:1px solid #3c4942;border-radius:6px;background:#16231c;color:#adbfaf;font-size:11px;line-height:1.7}
+:host .scanner-page{max-width:none;padding:8px 22px 18px}
+:host .scanner-layout{display:block}
+:host .scanner-topbar{margin-bottom:8px;padding:0 0 7px;min-height:36px}
+:host .scanner-brand-mark{display:none}
+:host .scanner-brand strong{font-size:17px}
+:host .scanner-brand small{font-size:9px}
+:host .scan-controls{display:flex;align-items:flex-end;gap:12px;padding:10px 12px;background:#101a14;border:1px solid #304438;border-radius:6px}
+:host .scan-controls>label{display:grid;gap:5px;flex:1;min-width:0}
+:host .scan-controls>label>span{font-size:10px;color:#abc1b3}
+:host .scan-controls .frame-control{flex:0 1 170px}
+:host .scan-controls .sector-control{flex:0 1 260px}
+:host .scan-controls .wide-control{height:34px}
+:host .scan-controls .run-scan{height:34px;margin-left:auto;min-width:115px;background:#b1dec8;border-color:#b1dec8;color:#14281d}
+:host .advanced-filters{margin:7px 0;border:1px solid #2d4034;border-radius:5px;font-size:11px;background:#0d1610}
+:host .advanced-filters>summary{padding:8px 11px;color:#aec8b7;cursor:pointer}
+:host .advanced-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:25px;padding:0 13px 14px}
+:host .advanced-settings .strategy-params{grid-template-columns:repeat(3,minmax(0,1fr))}
+:host .advanced-factors .factor-title{margin:0 0 8px;padding:6px 0}
+:host .advanced-factors .factor-row{display:inline-block;vertical-align:top;width:calc(50% - 7px);margin:0 7px 8px 0}
+:host .advanced-factors .save-row{margin-top:10px;max-width:420px}
+:host .results-main{width:100%;min-width:0}
+:host .results-meta{padding:8px 12px}
+:host .table-tools{min-height:30px;padding:6px 12px}
+:host .grid-wrap{height:calc(100dvh - 445px);min-height:300px}
+:host .assessment-note{margin:6px 0;padding:8px 12px}
+:host .welcome{min-height:250px}
+@media(max-width:760px){:host .scanner-page{padding:8px 12px 16px}:host .scan-controls{display:grid;grid-template-columns:1fr 1fr;gap:9px}:host .scan-controls .run-scan{width:100%;margin:0}:host .advanced-body{grid-template-columns:1fr;gap:10px}:host .advanced-settings .strategy-params{grid-template-columns:repeat(2,minmax(0,1fr))}:host .grid-wrap{height:65dvh;min-height:330px}:host .saved-controls{gap:4px}:host .saved-controls select{max-width:120px}}
