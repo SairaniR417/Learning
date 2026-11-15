@@ -1,0 +1,18 @@
+<div class="pickers">
+  <select class="market" [attr.aria-label]="'Market for ' + label" [value]="market" (change)="changeMarket($any($event.target).value)" [disabled]="disabled"><option>Stocks</option><option>Indices</option><option>Commodities</option></select>
+  <select #picker [attr.aria-label]="label" [value]="selection" (change)="choose($any($event.target).value)" [disabled]="loading || disabled">
+    <option value="__choose_stock__" disabled>{{ loading ? 'Loading…' : error ? 'Unavailable — retry below' : market === 'Stocks' ? 'Choose a stock' : market === 'Indices' ? 'Choose an index' : 'Choose a futures contract' }}</option>
+    <option *ngIf="market === 'Stocks' && query" value="">Clear stock search / show all</option>
+    <option *ngFor="let stock of choices" [value]="market === 'Stocks' ? stock.symbol : stock.key">{{ stock.symbol }}{{ stock.name ? ' · ' + stock.name : '' }}</option>
+    <option *ngIf="!loading && !error && !choices.length" disabled>No matching {{ market | lowercase }}</option>
+  </select>
+  <button class="options" type="button" (click)="openChain()" [disabled]="!selected || disabled || chainLoading" [attr.aria-label]="'Open option chain for ' + (selected?.symbol || 'selected instrument')">{{ chainLoading ? '…' : 'Options' }}</button>
+</div>
+<input *ngIf="market !== 'Stocks'" type="search" [value]="assetQuery" (input)="assetQuery=$any($event.target).value" [attr.aria-label]="'Search ' + market + ' for ' + label" [placeholder]="market === 'Indices' ? 'Find an index…' : 'Find commodity / contract expiry…'" />
+<small *ngIf="market === 'Commodities'">Choose the exact futures contract / expiry linked to the options.</small>
+<button *ngIf="error" class="retry" type="button" (click)="load()">Retry {{ market | lowercase }}</button>
+<small class="error" *ngIf="chainError" role="alert">{{ chainError }}</small>
+<dialog #chainDialog (cancel)="closeChain()" (close)="chainOpen=false" [attr.aria-label]="chainLabel + ' option chain'">
+  <header><div><strong>{{ chainLabel }}</strong><small>{{ market }} · Option chain</small></div><button type="button" (click)="closeChain()" aria-label="Close option chain">Close ×</button></header>
+  <app-option-chain *ngIf="chainOpen" [stockKey]="chainKey" />
+</dialog>

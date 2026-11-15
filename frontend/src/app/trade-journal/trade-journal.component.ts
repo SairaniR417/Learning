@@ -1,3 +1,4 @@
+import { StockChoicesComponent } from '../shared/stock-choices.component';
 import { MarketApiService } from '../market-api.service';
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
@@ -7,7 +8,7 @@ import { JournalApiService, JournalTrade, WorkbookReference } from './journal-ap
 interface Breakdown { label: string; count: number; net: number; wins: number; width: number; }
 interface Field { key: keyof JournalTrade; label: string; type: 'text' | 'number' | 'textarea' | 'select' | 'boolean'; options?: string[]; min?: number; max?: number; }
 
-@Component({ selector: 'app-trade-journal', standalone: true, imports: [CommonModule], templateUrl: './trade-journal.component.html', styleUrl: './trade-journal.component.css' })
+@Component({ selector: 'app-trade-journal', standalone: true, imports: [StockChoicesComponent, CommonModule], templateUrl: './trade-journal.component.html', styleUrl: './trade-journal.component.css' })
 export class TradeJournalComponent implements OnInit, OnDestroy {
   readonly Math = Math;
   private readonly marketApi = inject(MarketApiService);

@@ -1,3 +1,4 @@
+import { StockChoicesComponent } from '../shared/stock-choices.component';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, EventEmitter, Input, Output, OnChanges, OnInit, OnDestroy, inject } from '@angular/core';
@@ -8,7 +9,7 @@ import { StructureAnalysis, StructureView } from './structure.types';
 import { FocusPlan, PlanEvidence } from './focused-plans.types';
 export interface SignalRow { stock:FocusPlan; evidence:PlanEvidence; symbol:string; strategy:string; signal:string; state:string; timeframe:string; signalAt:string; entry?:number|null; stopLoss?:number|null; target?:number|null; reason:string; support:number; optionHint:string; }
 
-@Component({selector:'app-focused',standalone:true,imports:[CommonModule],templateUrl:'./focused.component.html',styleUrl:'./focused.component.css'})
+@Component({selector:'app-focused',standalone:true,imports:[CommonModule,StockChoicesComponent],templateUrl:'./focused.component.html',styleUrl:'./focused.component.css'})
 export class FocusedComponent implements OnInit, OnChanges, OnDestroy {
   private api=inject(MarketApiService);private http=inject(HttpClient);
   private request?:Subscription;private universeRequest?:Subscription;private initialized=false;
@@ -25,6 +26,8 @@ export class FocusedComponent implements OnInit, OnChanges, OnDestroy {
     this.universeLoading=true;this.universeError='';this.universeRequest?.unsubscribe();
     this.universeRequest=this.api.fnoStocks().pipe(timeout(15000)).subscribe({next:r=>{this.stocks=r.stocks.sort((a,b)=>a.symbol.localeCompare(b.symbol));this.universeLoading=false;},error:()=>{this.universeLoading=false;this.universeError='Could not load the stock list. Retry to select a stock.';}});
   }
+  get selectedSymbol():string{return this.stocks.find(s=>s.key===this.selectedKey)?.symbol??'';}
+  chooseSymbol(symbol:string):void{this.query='';this.select(this.stocks.find(s=>s.symbol===symbol)?.key??'');}
   select(key:string):void{this.request?.unsubscribe();this.selectedKey=key;this.data=null;this.error='';this.loading=false;if(key)this.refresh();}
   refresh():void{
     if(!this.selectedKey||!this.active)return;

@@ -2,7 +2,7 @@
   <header class="stock-picker">
     <h1 id="focused-title">Focused</h1>
     <label class="search-field"><span class="sr-only">Find a stock</span><input type="search" aria-label="Find a stock" placeholder="Search stocks…" [value]="query" (input)="query=$any($event.target).value" /></label>
-    <label class="select-field"><span class="sr-only">Select stock</span><select aria-label="Select stock" [value]="selectedKey" (change)="select($any($event.target).value)" [disabled]="universeLoading"><option value="">{{universeLoading?'Loading stocks…':'Choose an F&O stock'}}</option><option *ngFor="let stock of matches" [value]="stock.key">{{stock.symbol}} · {{stock.name}}</option></select></label>
+    <label class="select-field"><span class="sr-only">Select stock</span><app-stock-choices [stocks]="stocks" [query]="query" [selectedSymbol]="selectedSymbol" (chosen)="chooseSymbol($event)" [disabled]="universeLoading" label="Select stock" /></label>
     <button class="refresh" (click)="refresh()" [disabled]="!selectedKey||loading">{{loading?'Analyzing…':'↻ Refresh'}}</button>
   </header>
   <p *ngIf="query&&!matches.length&&!universeLoading" class="notice">No matching stocks. Try another symbol or company.</p>

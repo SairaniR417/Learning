@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 const rx = require('rxjs');
+const research = {exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(__dirname + '/../src/app/research/research.types.ts','utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText, {exports:research.exports});
 
 function component(api = {}) {
   const module = {exports:{}};
@@ -15,10 +17,21 @@ function component(api = {}) {
       : name === 'ag-grid-community' ? {ModuleRegistry:{registerModules(){}},themeQuartz:theme}
       : name === 'rxjs' ? rx : name.includes('golden-cross.types') ? {defaultGoldenSettings:()=>({inputs:{require_confirmation:false,sma_medium:50,sma_long:200}})}
       : name.includes('suryavanshi.types') ? {defaultSuryavanshiSettings:()=>({inputs:{}})}
+      : name.includes('research.types') ? research.exports
       : name.includes('backend-url') ? {backendUrl:x=>x} : {}
   });
   return new module.exports.EmaScannerComponent();
 }
+
+test('research views cancel a running scan and never submit client-only strategy IDs', () => {
+  const calls=[]; let cancelled=false;
+  const c=component({scanStrategy:(id)=>{calls.push(id);return new rx.Observable(()=>()=>cancelled=true);}});
+  c.loadingStrategies=false;c.selectStrategy('ghost_rider');assert.equal(c.loading,true);
+  for (const view of research.exports.RESEARCH_VIEWS) { c.selectStrategy(view.id);c.scan();assert.equal(c.isResearch,true);assert.equal(c.loading,false); }
+  assert.equal(cancelled,true);assert.deepEqual(calls,['ghost_rider']);
+  c.selectStrategy('ghost_rider');assert.equal(c.isResearch,false);assert.deepEqual(calls,['ghost_rider','ghost_rider']);
+  c.ngOnDestroy();
+});
 
 test('opening the screener automatically loads Ghost Rider with its defaults once', () => {
   const calls=[];

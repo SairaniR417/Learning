@@ -1,3 +1,4 @@
+import { StockChoicesComponent } from '../shared/stock-choices.component';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, OnInit, Output, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -6,7 +7,7 @@ import { MarketApiService, SelectedStock } from '../market-api.service';
 @Component({
   selector: 'app-fno-stocks',
   standalone: true,
-  imports: [CommonModule],
+  imports: [StockChoicesComponent, CommonModule],
   templateUrl: './fno-stocks.component.html',
   styleUrl: './fno-stocks.component.css',
 })

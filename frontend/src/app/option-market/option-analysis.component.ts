@@ -209,7 +209,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
     this.hasChosenStrategy = false;
     if(this.stockMode){this.strategyId=this.stockStrategy;this.hasChosenStrategy=true;}
     this.request?.unsubscribe(); this.polling?.unsubscribe(); this.loading=false;
-    this.data = undefined; this.interval = this.stockMode ? ({'1d':1440,'1h':60,'30m':30,'15m':15,'5m':5,'1m':1} as Record<string,number>)[this.stockTimeframe] ?? 1440 : 5; this.clearChart();
+    this.data = undefined; this.interval = this.stockMode ? ({'1d':1440,'1w':10080,'1h':60,'30m':30,'15m':15,'5m':5,'1m':1} as Record<string,number>)[this.stockTimeframe] ?? 1440 : 5; this.clearChart();
     if (!document.hidden) this.load();
     this.polling = interval(60000).subscribe(() => { if (!document.hidden && !this.loading) this.load(); });
   }
@@ -236,7 +236,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   }
   changeStockTimeframe(value: string): void {
     this.stockTimeframe=value;
-    this.changeInterval(String(({'1d':1440,'1h':60,'30m':30,'15m':15,'5m':5,'1m':1} as Record<string,number>)[value]));
+    this.changeInterval(String(({'1d':1440,'1w':10080,'1h':60,'30m':30,'15m':15,'5m':5,'1m':1} as Record<string,number>)[value]));
   }
   load(): void {
     if (this.loading) return;

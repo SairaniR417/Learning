@@ -1,3 +1,4 @@
+import { StockChoicesComponent } from '../shared/stock-choices.component';
 import { LivePriceComponent } from '../live-price.component';
 import { OptionChainComponent } from './option-chain.component';
 import { CommonModule } from '@angular/common';
@@ -6,7 +7,7 @@ import { Subscription } from 'rxjs';
 import { CandlestickSeries, HistogramSeries, ColorType, CrosshairMode, createChart, IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { MarketApiService, SelectedStock, StockHistory, StockNews, CompanyProfile, CorporateAction, HistoricalCandle, Instrument } from '../market-api.service';
 
-@Component({ selector: 'app-stock-details', standalone: true, imports: [CommonModule, OptionChainComponent, LivePriceComponent], templateUrl: './stock-details.component.html', styleUrl: './stock-details.component.css' })
+@Component({ selector: 'app-stock-details', standalone: true, imports: [StockChoicesComponent, CommonModule, OptionChainComponent, LivePriceComponent], templateUrl: './stock-details.component.html', styleUrl: './stock-details.component.css' })
 export class StockDetailsComponent implements OnChanges, OnDestroy, OnInit {
   @Input() stock: SelectedStock | null = null;
   @Output() stockSelected = new EventEmitter<SelectedStock>();
@@ -21,6 +22,7 @@ export class StockDetailsComponent implements OnChanges, OnDestroy, OnInit {
     this.searchSubscription?.unsubscribe(); this.searchLoading=true; this.searchError='';
     this.searchSubscription=this.api.fnoStocks().subscribe({next:data=>{this.stocks=[...data.stocks].sort((a,b)=>a.symbol.localeCompare(b.symbol));this.searchLoading=false;},error:()=>{this.searchLoading=false;this.searchError='Could not load the stock list. Please retry.';}});
   }
+  chooseSearchSymbol(symbol:string):void{if(!symbol){this.searchStock('');return;}const item=this.stocks.find(s=>s.symbol===symbol);if(item)this.chooseStock(item);}
   selectStockKey(key:string): void { const stock=this.stocks.find(s=>s.key===key);if(stock)this.chooseStock(stock); }
   searchStock(query: string): void {
     this.searchQuery = query;

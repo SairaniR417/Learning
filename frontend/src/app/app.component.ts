@@ -1,3 +1,4 @@
+import { StockChoicesComponent } from './shared/stock-choices.component';
 import { backendUrl } from './backend-url';
 import { OverviewSignalsComponent } from './overview-signals/overview-signals.component';
 import { LearningComponent } from './learning/learning.component';
@@ -31,7 +32,7 @@ interface Opportunity {
   tag: string;
 }
 
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, LearningComponent, OverviewSignalsComponent, OptionMarketComponent, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
+@Component({ selector: 'app-root', standalone: true, imports: [StockChoicesComponent, CommonModule, LearningComponent, OverviewSignalsComponent, OptionMarketComponent, EmaScannerComponent, FocusedComponent, StockDetailsComponent, WatchlistComponent, TradeJournalComponent], templateUrl: './app.component.html', styleUrl: './app.component.css' })
 export class AppComponent implements OnInit, OnDestroy {
   readonly loginUrl = backendUrl('/auth/upstox');
   private readonly api = inject(MarketApiService);

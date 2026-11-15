@@ -632,3 +632,51 @@ History older than four calendar days is flagged; hourly data over two hours old
 within the same daytime session is also flagged. This age check is conservative
 and does not use an exchange holiday calendar. Stored observations are not live
 verification. The strategy reads existing candles without downloading new history.
+
+## Research dashboards under Strategies
+
+Search dropdowns include a **Stocks / Indices / Commodities** market selector.
+Choose an index or a listed commodity futures contract to open its option-chain
+dialog; use **Options** for the selected stock. Expiries and quotes use the existing
+Upstox connection. Commodity contracts keep their distinct underlying keys.
+Stock-only tables and analysis continue to use the saved F&O equity universe.
+
+Open **Stock Screener → Strategy → Research dashboards**. This group contains
+Market radar, CPR & Sutradhar, Camarilla levels, Chart wall, Stock intelligence,
+Index intelligence, Trendline scanner and Trade scenarios. These are research
+workspaces, so changing between them does not submit a scanner strategy. Ghost
+Rider remains the default screener. Tables have bounded scrolling, chart walls
+are paged at 12 charts, and stock symbols open the research stock view explicitly.
+Charts can be downloaded as PNG; filtered stored observations can be exported as CSV.
+
+`GET /api/research/dashboard` reads the saved F&O universe and up to 800 daily /
+500 hourly candles per instrument, caches a snapshot for 30 seconds and returns
+up to 90 completed bars per chart. Refresh rereads stored data; it does not sync
+new broker candles. Index intelligence uses the existing provider-backed analysis
+and option chain. Each source/observation time is labelled separately.
+
+CPR and Camarilla use the strictly preceding daily, weekly or monthly period.
+CPR narrow means width <= 0.25% of pivot. See the
+[CPR formula](https://support.zerodha.com/category/trading-and-markets/charts-and-orders/charts/articles/how-are-pivot-points-derived-while-using-the-cpr)
+and [Camarilla reference](https://www.tradingview.com/support/solutions/43000521824-pivot-points-standard/).
+Sutradhar remains intraday-only and requires a known session open. Regimes compare
+close with EMA 20, requiring 20 completed bars of each timeframe; aligned trends
+require at least two agreeing Daily/Weekly/Monthly readings and no opposing
+available reading. Chart EMA lines start from displayed history; the regime value
+uses the longer loaded history. Aggregated periods exclude the first possibly
+partial period. Weekly/monthly completion uses calendar weekdays, without an
+exchange holiday calendar. Trendlines are candidates from confirmed two-sided
+pivots with a 0.35 × mean 14-bar range tolerance, not guaranteed support/resistance.
+
+The saved universe does not supply sector/industry metadata, so missing values
+remain Unclassified. Institutional identities, participant positioning, historical
+IV, cross-expiry futures OI and fundamentals are not connected. Cash OHLCV is not
+substituted for those feeds. Conditional scenarios use reference levels without
+arming orders or assigning win probabilities. The payoff sandbox uses user-entered
+strikes, premiums and unit quantities; it is not a live option recommendation.
+The optional CPR CSV importer accepts `symbol,price,cpr,sutradhar` observations
+separately from stored data; it does not parse arbitrary notebook prose.
+
+Validation: `python -m unittest tests.test_research_dashboard
+tests.test_institution_transaction`, frontend `node --test tests/scanner-context.test.cjs`,
+and `tests/price_structure_browser_smoke.py <built-browser-directory>`.

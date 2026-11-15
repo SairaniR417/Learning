@@ -1,10 +1,11 @@
+import { StockChoicesComponent } from '../shared/stock-choices.component';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, OnDestroy, OnInit, Output, inject } from '@angular/core';
 import { Subscription, timer, switchMap, takeWhile } from 'rxjs';
 import { IndicatorPosition, MarketApiService, OverviewSignals, OverviewSignalStock, SelectedStock } from '../market-api.service';
 
 @Component({
-  selector: 'app-overview-signals', standalone: true, imports: [CommonModule],
+  selector: 'app-overview-signals', standalone: true, imports: [StockChoicesComponent, CommonModule],
   templateUrl: './overview-signals.component.html', styleUrl: './overview-signals.component.css'
 })
 export class OverviewSignalsComponent implements OnInit, OnDestroy {

@@ -18,6 +18,7 @@ import websockets
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from services.price_structure import build
+from services.research_dashboard import build as build_research
 
 
 async def run(base, debug_port):
@@ -27,6 +28,8 @@ async def run(base, debug_port):
                   close=100+i*.2, volume=100000+i*20) for i in range(420)]
     hourly = [dict(daily[-50+i], timestamp=now.replace(hour=3, minute=45, second=0, microsecond=0)-timedelta(days=10-i//7)+timedelta(hours=i%7)) for i in range(50)]
     views = build(daily, hourly, now)
+    research = build_research([dict(key=f'research-{i}',symbol=f'RESEARCH{i}',name='Synthetic research company',exchange='NSE') for i in range(14)],
+                             {f'research-{i}':daily for i in range(14)}, {f'research-{i}':hourly for i in range(14)}, now)
     for view in views:
         view.update(source='Synthetic QA history', staleData=False, oldHistory=False, developingExcluded=0)
     fixture = dict(stock=dict(key='test-a', symbol='TEST A', name='Synthetic QA company'), views=views,
@@ -43,7 +46,7 @@ async def run(base, debug_port):
         else:
             raise AssertionError('Headless browser did not start')
     websocket = next(t['webSocketDebuggerUrl'] for t in targets if t['type'] == 'page')
-    pending = {}; sequence = 0; errors = []; requests = []; signal_frames = []
+    pending = {}; sequence = 0; errors = []; requests = []; signal_frames = []; index_frames = []; chain_keys = []
     async with websockets.connect(websocket, max_size=8_000_000) as ws:
         async def call(method, params=None):
             nonlocal sequence
@@ -64,6 +67,17 @@ async def run(base, debug_port):
             status = 200
             if path == '/api/market/fno-stocks':
                 payload = dict(stocks=[dict(key='test-a', symbol='TEST A', name='Synthetic QA company'), dict(key='test-b', symbol='TEST B', name='Missing history company')], total=2)
+            elif path == '/api/research/dashboard':
+                payload = research
+            elif path == '/api/options/underlyings':
+                commodities = parse_qs(urlparse(params['request']['url']).query).get('commodities',['false'])[0]=='true'
+                payload = dict(underlyings=[dict(key='MCX_FUT|GOLD-A',symbol='GOLD',name='Gold November futures',group='Commodities'),dict(key='MCX_FUT|GOLD-B',symbol='GOLD',name='Gold December futures',group='Commodities')] if commodities else [dict(key='NSE_INDEX|Nifty 50',symbol='NIFTY',name='Nifty 50',group='Indices')])
+            elif path == '/api/stocks/option-expiries':
+                payload = dict(expiries=['2026-12-31'])
+            elif path == '/api/stocks/option-chain':
+                chain_keys.append(parse_qs(urlparse(params['request']['url']).query).get('instrument_key',[''])[0])
+                leg=dict(oi=1000,volume=100,iv=15,bid_price=10,ask_price=11,ltp=10.5)
+                payload = dict(rows=[dict(strike=100,call=leg,put=leg)],spot=100,atmStrike=100,expiry='2026-12-31',receivedAt=now.isoformat())
             elif path == '/api/strategies':
                 payload = dict(strategies=[dict(id='ghost_rider', name='Ghost Rider', description='Synthetic strategy fixture', min_candles=20, parameters=[]),dict(id='ema_sma_alignment', name='EMA alignment', description='Synthetic MA fixture', min_candles=20, parameters=[])])
                 payload['strategies'].append(dict(id='golden_death_cross', name='Golden Cross', description='Synthetic cross fixture', min_candles=201, parameters=[]))
@@ -88,12 +102,16 @@ async def run(base, debug_port):
                 frame = parse_qs(urlparse(params['request']['url']).query)['timeframe'][0]
                 signal_frames.append(frame)
                 payload = dict(stocks=[dict(key='test-a',symbol='TEST A',name='Synthetic QA company',price=110,vwap=108,sma20=105,sma50=100,vwapPosition='above',sma20Position='above',sma50Position='above',maTrend='above',crossover='bullish',bars=60,asOf=now.isoformat())], timeframe=frame, source='Synthetic history', vwapLabel='Session VWAP', fetchedAt=now.isoformat())
-            elif path == '/api/stocks/analysis':
+            elif path in ('/api/stocks/analysis','/api/market/analysis'):
+                if path == '/api/market/analysis':
+                    index_frames.append(parse_qs(urlparse(params['request']['url']).query)['timeframe'][0])
                 payload = dict(contract=dict(key='test-a',name='TEST A · Synthetic QA company',underlyingKey='test-a',expiry='',strike=0,side='CE'),interval=1440,
                                candles=[dict(row,timestamp=row['timestamp'].isoformat()) for row in daily[-100:]],
                                strategies=[dict(id='golden_death_cross',name='Golden Cross / Death Cross',status='CROSS_ACTIVE',bias='bullish',minimumCandles=201,availableCandles=420,scenario='Synthetic QA crossover. The chart and this explanation use the selected timeframe and the stored history.',signalAt=now.isoformat(),metrics=[dict(label='SMA 50',value=180),dict(label='SMA 200',value=160)],checks=[],markers=[],levels=[])],
                                underlying=dict(trend='UP',supportsPremium=None,asOf=now.isoformat(),description='Synthetic stock close relative to EMA 20; strategy signals refer to the underlying price.'),
                                warnings=['Synthetic QA history.'],historyMessage='Stored history for layout verification.',asOf=now.isoformat(),receivedAt=now.isoformat())
+                if path == '/api/market/analysis':
+                    payload['strategies'][0].update(id='ghost_rider',name='Ghost Rider')
             elif path == '/api/market/chart-quote':
                 payload = dict(price=1903.3,receivedAt=now.isoformat())
             elif path in ('/api/stocks/chart', '/api/stocks/history', '/api/stocks/news'):
@@ -130,11 +148,12 @@ async def run(base, debug_port):
 
         async def until(expression):
             for _ in range(80):
+                assert not errors, errors
                 value = await js(expression)
                 if value:
                     return value
                 await asyncio.sleep(.1)
-            raise AssertionError('Timed out: ' + expression)
+            raise AssertionError('Timed out: ' + expression + '\n' + str(await js("document.querySelector('.research')?.innerText || document.body.innerText"))[:3000])
 
         await call('Runtime.enable')
         await call('Page.addScriptToEvaluateOnNewDocument', dict(source="localStorage.setItem('traders-gita-navigation-order', JSON.stringify(['Overview','F&O Stocks','Market Scanner','Focused','Stock Details','Option Chains','Watchlist','Trade Journal','Learning']));"))
@@ -219,6 +238,75 @@ async def run(base, debug_port):
         await js("(()=>{const s=document.querySelector('select[aria-label=Strategy]');s.value='market_screener';s.dispatchEvent(new Event('change'));})()")
         assert await js("document.querySelector('select[aria-label=Timeframe]').value==='1d' && document.querySelector('select[aria-label=Timeframe]').disabled"), 'Daily-only screener has an invalid timeframe'
         await until("document.querySelectorAll('.scanner-page .ag-row').length>0")
+        # Research dashboards live under Strategies and never call the scan API.
+        scan_count = requests.count('/api/strategies/scan')
+        await js("(()=>{const s=document.querySelector('select[aria-label=Strategy]');s.value='research_radar';s.dispatchEvent(new Event('change'));})()")
+        await until("document.querySelector('.research .stats')?.textContent.includes('ALIGNED BULLISH')")
+        assert await js("!document.querySelector('select[aria-label=Timeframe]')"), 'Research must use its own timeframe controls'
+        for view, label in [('research_cpr','CPR & Sutradhar'),('research_camarilla','Camarilla levels'),('research_wall','Chart wall'),('research_stock','Stock intelligence'),('research_trends','Trendline scanner'),('research_scenarios','Trade scenarios')]:
+            await js(f"Array.from(document.querySelectorAll('.research .view-nav button')).find(b=>b.textContent.trim()==={json.dumps(label)}).click()")
+            await until(f"document.querySelector('select[aria-label=Strategy]').value==={json.dumps(view)}")
+            assert await js("!document.querySelector('.research .error')"), f'Research view failed: {view}'
+            if view == 'research_wall':
+                assert await js("document.querySelectorAll('.research app-research-chart').length===12"), 'Chart wall needs bounded pagination'
+                await js("Array.from(document.querySelectorAll('.research .pagination button')).find(b=>b.textContent==='Next').click()")
+                await until("document.querySelectorAll('.research app-research-chart').length===2")
+            if view == 'research_cpr':
+                await until("document.querySelector('.research select[aria-label=\"Choose research stock\"]')?.options.length===15")
+                await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Choose research stock\"]');s.value='RESEARCH13';s.dispatchEvent(new Event('change'));})()")
+                await until("document.querySelectorAll('.research .wide-table tbody tr').length===1 && Array.from(document.querySelectorAll('.research .panel h3')).some(h=>h.textContent.includes('RESEARCH13'))")
+                await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Choose research stock\"]');s.value='';s.dispatchEvent(new Event('change'));})()")
+                await until("document.querySelectorAll('.research .wide-table tbody tr').length===14")
+                await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Choose research stock\"]');s.value='RESEARCH2';s.dispatchEvent(new Event('change'));})()")
+                await until("document.querySelectorAll('.research .wide-table tbody tr').length===1")
+                await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Choose research stock\"]');s.value='';s.dispatchEvent(new Event('change'));})()")
+            if view == 'research_scenarios':
+                await js("(()=>{const inputs=document.querySelectorAll('.research .leg input');[100,3,1,110,1,1].forEach((v,i)=>{inputs[i].value=v;inputs[i].dispatchEvent(new Event('input'));});})()")
+                await until("!!document.querySelector('.research .payoff polyline')")
+                for width in (1440,390):
+                    await call('Emulation.setDeviceMetricsOverride', dict(width=width,height=900,deviceScaleFactor=1,mobile=width<500))
+                    await asyncio.sleep(.3)
+                    assert await js("document.querySelector('.research').scrollWidth<=document.querySelector('.research').clientWidth"), f'Research overflow at {width}'
+                    screenshot=await call('Page.captureScreenshot',dict(format='png',captureBeyondViewport=False))
+                    (ROOT/'frontend/dist'/f'research-ui-{width}.png').write_bytes(base64.b64decode(screenshot['data']))
+                await call('Emulation.setDeviceMetricsOverride', dict(width=1440,height=900,deviceScaleFactor=1,mobile=False))
+        await js("Array.from(document.querySelectorAll('.research .view-nav button')).find(b=>b.textContent.trim()==='Index intelligence').click()")
+        await until("!!document.querySelector('.research app-option-analysis .strategies article')")
+        assert index_frames == ['1h'], index_frames
+        assert await js("document.querySelector('.research .analysis .controls select').value==='1h'"), 'Index timeframe label and API request must agree'
+        await js("(()=>{const s=document.querySelector('.research .analysis .controls select');s.value='1w';s.dispatchEvent(new Event('change'));})()")
+        await until("document.querySelector('.research .analysis .controls select').value==='1w' && !document.querySelector('.research .analysis .controls button').disabled")
+        assert index_frames[-1] == '1w', index_frames
+        await js("Array.from(document.querySelectorAll('.research .segmented button')).find(b=>b.textContent.trim()==='Live option chain').click()")
+        await until("!!document.querySelector('.research app-option-chain')")
+        assert requests.count('/api/strategies/scan') == scan_count, 'Research selection must not submit an unregistered strategy'
+        assert requests.count('/api/research/dashboard') == 1, 'Switching research views should reuse its snapshot'
+        await js("Array.from(document.querySelectorAll('.research .view-nav button')).find(b=>b.textContent.trim()==='CPR & Sutradhar').click()")
+        await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Market for Choose research stock\"]');s.value='Indices';s.dispatchEvent(new Event('change'));})()")
+        await until("document.querySelector('.research select[aria-label=\"Choose research stock\"]')?.options.length===2")
+        await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Choose research stock\"]');s.value='NSE_INDEX|Nifty 50';s.dispatchEvent(new Event('change'));})()")
+        await until("!!document.querySelector('.research dialog[open] .chain-scroll tbody tr')")
+        assert await js("document.querySelector('.research dialog[open]').textContent.includes('Nifty 50')"), 'Index chain must identify its underlying'
+        await js("document.querySelector('.research dialog[open] button[aria-label=\"Close option chain\"]').click()")
+        await until("!document.querySelector('.research dialog[open]')")
+        await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Market for Choose research stock\"]');s.value='Commodities';s.dispatchEvent(new Event('change'));})()")
+        await until("document.querySelector('.research select[aria-label=\"Choose research stock\"]')?.options.length===3")
+        await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Choose research stock\"]');s.value='MCX_FUT|GOLD-B';s.dispatchEvent(new Event('change'));})()")
+        await until("!!document.querySelector('.research dialog[open] .chain-scroll tbody tr')")
+        assert await js("document.querySelector('.research dialog[open]').textContent.includes('Gold December')"), 'Commodity chain must use the selected expiry contract'
+        for width in (1440,390):
+            await call('Emulation.setDeviceMetricsOverride',dict(width=width,height=900,deviceScaleFactor=1,mobile=width<500))
+            assert await js("document.querySelector('.research dialog[open]').getBoundingClientRect().width<=window.innerWidth"), 'Option dialog must fit viewport'
+        await js("document.querySelector('.research dialog[open] button[aria-label=\"Close option chain\"]').click()")
+        await call('Emulation.setDeviceMetricsOverride',dict(width=1440,height=900,deviceScaleFactor=1,mobile=False))
+        await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Market for Choose research stock\"]');s.value='Stocks';s.dispatchEvent(new Event('change'));})()")
+        await js("(()=>{const s=document.querySelector('.research select[aria-label=\"Choose research stock\"]');s.value='RESEARCH13';s.dispatchEvent(new Event('change'));})()")
+        await js("document.querySelector('.research app-stock-choices button.options').click()")
+        await until("!!document.querySelector('.research dialog[open] .chain-scroll tbody tr')")
+        await js("document.querySelector('.research dialog[open] button[aria-label=\"Close option chain\"]').click()")
+        assert 'NSE_INDEX|Nifty 50' in chain_keys and 'MCX_FUT|GOLD-B' in chain_keys and 'research-13' in chain_keys, chain_keys
+        await js("(()=>{const s=document.querySelector('select[aria-label=Strategy]');s.value='market_screener';s.dispatchEvent(new Event('change'));})()")
+        await until("document.querySelectorAll('.scanner-page .ag-row').length>0")
         await js("Array.from(document.querySelectorAll('.market-workspace-tabs button')).find(b=>b.textContent.includes('Heat map')).click()")
         await until("!!document.querySelector('.heat-panel')")
         await js("Array.from(document.querySelectorAll('.market-workspace-tabs button')).find(b=>b.textContent.includes('VWAP')).click()")
@@ -226,6 +314,10 @@ async def run(base, debug_port):
         await until("document.querySelector('.signals-heading select')?.value==='1h'")
         await until("document.querySelector('.signals-heading button')?.disabled===false")
         assert signal_frames == ['1h'], f'Initial signal request must use 1h: {signal_frames}'
+        await until("document.querySelector('select[aria-label=\"Choose VWAP and MA stock\"]')?.options.length===2")
+        await js("(()=>{const s=document.querySelector('select[aria-label=\"Choose VWAP and MA stock\"]');s.value='TEST A';s.dispatchEvent(new Event('change'));})()")
+        assert await js("document.querySelector('app-overview-signals input[type=search]').value==='TEST A'"), 'Choosing a stock must update its search'
+        await js("(()=>{const s=document.querySelector('select[aria-label=\"Choose VWAP and MA stock\"]');s.value='';s.dispatchEvent(new Event('change'));})()")
         assert await js("document.querySelector('app-overview-signals td:nth-child(7)').title.includes('SMA 20 crossed above SMA 50')"), 'VWAP/MA crossover explanation missing'
         assert await js("document.querySelector('app-overview-signals td:nth-child(3)').title.includes('Session VWAP 108')"), 'VWAP position explanation missing'
         await js("(()=>{const s=document.querySelector('.signals-heading select');s.value='15m';s.dispatchEvent(new Event('change'));})()")
@@ -249,18 +341,18 @@ async def run(base, debug_port):
                 assert await js("['symbolCompany','price'].every(id=>{const r=document.querySelector('.scanner-page .ag-cell[col-id='+id+']')?.getBoundingClientRect();return r&&r.width>0&&r.left>=0&&r.right<=window.innerWidth;})"), 'Mobile table must show both stock name and price without horizontal scrolling'
         await call('Emulation.setDeviceMetricsOverride', dict(width=1440, height=900, deviceScaleFactor=1, mobile=False))
         await js("Array.from(document.querySelectorAll('.primary-nav button')).find(b=>b.textContent.trim()==='Stock Details').click()")
-        await until("document.querySelector('.stock-dropdown select')?.options.length===3")
+        await until("document.querySelector('.stock-dropdown select[aria-label^=Select]')?.options.length===3")
         await js("(()=>{const s=document.querySelector('#stock-details-search');s.value='missing';s.dispatchEvent(new Event('input'));})()")
-        assert await js("document.querySelector('.stock-dropdown select').options.length===2"), 'Stock dropdown search did not filter locally'
-        await js("(()=>{const s=document.querySelector('.stock-dropdown select');s.value='test-b';s.dispatchEvent(new Event('change'));})()")
+        assert await js("document.querySelector('.stock-dropdown select[aria-label^=Select]').options.length===3"), 'Stock dropdown search did not filter locally'
+        await js("(()=>{const s=document.querySelector('.stock-dropdown select[aria-label^=Select]');s.value='TEST B';s.dispatchEvent(new Event('change'));})()")
         await until("document.querySelector('.stock-identity h1')?.textContent.includes('TEST B')")
-        await js("(()=>{const s=document.querySelector('.stock-dropdown select');s.value='test-a';s.dispatchEvent(new Event('change'));})()")
+        await js("(()=>{const s=document.querySelector('.stock-dropdown select[aria-label^=Select]');s.value='TEST A';s.dispatchEvent(new Event('change'));})()")
         await until("document.querySelector('.stock-identity h1')?.textContent.includes('TEST A')")
         assert '/api/instruments' not in requests, 'Dropdown search should not need broker search'
         await js("Array.from(document.querySelectorAll('.primary-nav button')).find(b=>b.textContent.trim()==='Focused').click()")
-        await until("document.querySelector('.stock-picker select')?.options.length===3")
+        await until("document.querySelector('.stock-picker select[aria-label^=Select]')?.options.length===3")
         assert await js("!!document.querySelector('.empty-state')")
-        await js("(()=>{const s=document.querySelector('.stock-picker select');s.value='test-a';s.dispatchEvent(new Event('change'));})()")
+        await js("(()=>{const s=document.querySelector('.stock-picker select[aria-label^=Select]');s.value='TEST A';s.dispatchEvent(new Event('change'));})()")
         await until("document.querySelectorAll('.view-card').length===1")
         text = await js("document.querySelector('.focused-page').innerText")
         for label in ('12 Months', '3 Months', '1 Month', '1 Week', '1 Day', '1 Hour', 'What to watch next', 'Volume confirmation'):
@@ -290,12 +382,12 @@ async def run(base, debug_port):
             screenshot=await call('Page.captureScreenshot', dict(format='png', captureBeyondViewport=False))
             import base64
             (ROOT/'frontend/dist'/f'focused-ui-{width}.png').write_bytes(base64.b64decode(screenshot['data']))
-        await js("(()=>{const s=document.querySelector('.stock-picker select');s.value='test-b';s.dispatchEvent(new Event('change'));})()")
+        await js("(()=>{const s=document.querySelector('.stock-picker select[aria-label^=Select]');s.value='TEST B';s.dispatchEvent(new Event('change'));})()")
         await until("document.querySelector('.notice[role=alert]')?.textContent.includes('Synthetic history failure')")
         assert await js("document.querySelectorAll('.view-card').length===0"), 'Old stock analysis remained after error'
         assert not any('/jobs' in r for r in requests), 'Unexpected market-wide scan'
         assert not errors, errors
-        print('PASS: merged market workspace; full-width screener and top controls; migrated navigation; Stock Details dropdown/search/switching; compact Focused; desktop/mobile layout; no browser exceptions.')
+        print('PASS: eight research views under Strategies; chart pagination; filters; payoff inputs; index hourly/weekly requests; desktop/mobile layout; existing screener, Stock Details and Focused behavior; no browser exceptions.')
         receiver.cancel()
 
 

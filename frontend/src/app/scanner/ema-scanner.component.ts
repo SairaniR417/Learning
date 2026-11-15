@@ -1,3 +1,4 @@
+import { StockChoicesComponent } from '../shared/stock-choices.component';
 import { GoldenInputs,defaultGoldenSettings } from '../option-market/golden-cross.types';
 import { SuryavanshiInputs,defaultSuryavanshiSettings } from '../option-market/suryavanshi.types';
 import { backendUrl } from '../backend-url';
@@ -12,6 +13,8 @@ import { MarketApiService, MarketAssetQuote, ScannerStrategy, SelectedStock } fr
 import { OptionAnalysisComponent } from '../option-market/option-analysis.component';
 import { SutradharInputs } from '../option-market/sutradhar.types';
 import { GhostAssessment } from '../option-market/ghost-rider.types';
+import { ResearchDashboardComponent } from '../research/research-dashboard.component';
+import { RESEARCH_VIEWS } from '../research/research.types';
 
 type FactorField = 'changePct' | 'volume' | 'price';
 interface FactorRule { field: FactorField; min: string; max: string; importance: 'Important' | 'Optional'; }
@@ -70,7 +73,7 @@ const ORB_DEFAULT_COLUMNS = ['decision', 'sessionDate', 'dayOpen', 'fromOpenPct'
 const STORAGE_KEY = 'traders-gita-saved-screeners';
 ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnApiModule, TextFilterModule, NumberFilterModule, QuickFilterModule, PaginationModule, CellStyleModule, TooltipModule]);
 
-@Component({ selector: 'app-ema-scanner', standalone: true, imports: [CommonModule, AgGridAngular, OptionAnalysisComponent, OptionChainComponent], templateUrl: './ema-scanner.component.html', styleUrl: './ema-scanner.component.css' })
+@Component({ selector: 'app-ema-scanner', standalone: true, imports: [StockChoicesComponent, CommonModule, AgGridAngular, OptionAnalysisComponent, OptionChainComponent, ResearchDashboardComponent], templateUrl: './ema-scanner.component.html', styleUrl: './ema-scanner.component.css' })
 export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   @Input() active = true;
   ngOnChanges(): void { if (!this.active) { this.ghostStock = undefined; this.optionStock = undefined; } else if(!this.hasScanned&&!this.loading&&!this.loadingStrategies)this.scan(); }
@@ -100,6 +103,8 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   rules: FactorRule[] = [{ field: 'changePct', min: '', max: '', importance: 'Important' }];
   strategies: ScannerStrategy[] = [];
   selectedStrategy = 'ghost_rider';
+  readonly researchViews = RESEARCH_VIEWS;
+  get isResearch(): boolean { return this.researchViews.some(v => v.id === this.selectedStrategy); }
   timeframe = '1d';
   strategyParams: Record<string, number | boolean | string> = {};
   numericParam(name:string,fallback:number):number{return typeof this.strategyParams[name]==='number'?this.strategyParams[name] as number:fallback;}
@@ -261,6 +266,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   selectStrategy(value: string, autoScan = true): void {
     this.scanSubscription?.unsubscribe(); this.loading = false; this.totalScanned = 0;
     this.selectedStrategy = value; this.results = []; this.hasScanned = false; this.error = '';
+    if (this.isResearch) return;
     if (value === 'market_screener') this.timeframe = '1d';
     if (value === 'institution_transaction' && !['1d','1h'].includes(this.timeframe)) this.timeframe = '1d';
     for (const column of this.gridColumns.filter(c => CONTEXT_COLUMNS.some(([id]) => id === c.id))) {
@@ -324,6 +330,7 @@ export class EmaScannerComponent implements OnInit, OnDestroy, OnChanges {
   setRightFilter(key: keyof EmaScannerComponent['rightFilters'], value: string): void { this.rightFilters = { ...this.rightFilters, [key]: value }; }
 
   scan(): void {
+    if (this.isResearch) return;
     if (this.loading) return;
     this.loading = true; this.error = ''; this.coverageNote = '';  this.results = []; this.clearRightFilters(); this.hasScanned = true;
     if (this.isMarketScreener) {

@@ -15,14 +15,17 @@
         <optgroup label="Available strategies">
           <option *ngFor="let strategy of strategies" [value]="strategy.id" [selected]="strategy.id === selectedStrategy">{{ strategy.name }}</option>
         </optgroup>
+        <optgroup label="Research dashboards"><option *ngFor="let view of researchViews" [value]="view.id">{{ view.name }}</option></optgroup>
 
       </select></label>
-    <label class="frame-control"><span>Timeframe</span><select class="wide-control" [value]="timeframe" aria-label="Timeframe" [disabled]="isMarketScreener || selectedStrategy === 'opening_range_breakout'" (change)="selectTimeframe($any($event.target).value)">
+    <label *ngIf="!isResearch" class="frame-control"><span>Timeframe</span><select class="wide-control" [value]="timeframe" aria-label="Timeframe" [disabled]="isMarketScreener || selectedStrategy === 'opening_range_breakout'" (change)="selectTimeframe($any($event.target).value)">
         <option *ngIf="!['sutradhar','opening_range_breakout'].includes(selectedStrategy)" value="1d">Daily</option><option *ngIf="!['institution_transaction','ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross','opening_range_breakout'].includes(selectedStrategy)" value="1w">Weekly</option><option *ngIf="!['institution_transaction','ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross','opening_range_breakout'].includes(selectedStrategy)" value="1M">Monthly</option><option *ngIf="selectedStrategy !== 'opening_range_breakout'" value="1h">1 hour</option><option *ngIf="!['opening_range_breakout','institution_transaction'].includes(selectedStrategy)" value="15m">15 minutes</option><option *ngIf="['ghost_rider','rsi_divergence','sutradhar','suryavanshi','golden_death_cross','opening_range_breakout'].includes(selectedStrategy)" value="5m">5 minutes</option>
       </select></label>
-    <label class="sector-control"><span>Sector</span><select class="wide-control" aria-label="Sector" [value]="selectedSector" (change)="selectSector($any($event.target).value)"><option *ngFor="let sector of sectors" [value]="sector">{{ sector }}</option></select></label>
-    <button class="run-scan" type="button" [disabled]="loading || loadingStrategies" (click)="scan()">{{ loading ? 'Loading…' : 'Refresh' }}</button>
+    <label *ngIf="!isResearch" class="sector-control"><span>Sector</span><select class="wide-control" aria-label="Sector" [value]="selectedSector" (change)="selectSector($any($event.target).value)"><option *ngFor="let sector of sectors" [value]="sector">{{ sector }}</option></select></label>
+    <button *ngIf="!isResearch" class="run-scan" type="button" [disabled]="loading || loadingStrategies" (click)="scan()">{{ loading ? 'Loading…' : 'Refresh' }}</button>
   </div>
+  <app-research-dashboard *ngIf="isResearch && active" [view]="selectedStrategy" (viewChange)="selectStrategy($event)" />
+  <ng-container *ngIf="!isResearch">
   <details class="advanced-filters"><summary>Strategy settings &amp; factor filters</summary><div class="advanced-body"><section class="advanced-settings">
 
       <p class="strategy-description">{{ isMarketScreener ? 'Screen the saved F&O stocks using stored daily price, change and volume.' : activeStrategy?.description }}</p>
@@ -68,7 +71,7 @@
           <ng-container *ngIf="gridPanel === 'columns'; else filterPanel"><p class="panel-help">Choose which columns appear in the results grid.</p><label class="column-option" [title]="columnHelp[column.id] || column.label" *ngFor="let column of gridColumns"><input type="checkbox" [checked]="column.visible" (change)="setGridColumnVisible(column, $any($event.target).checked)"><span>{{ column.label }}</span></label></ng-container>
           <ng-template #filterPanel>
             <p class="panel-help">Filter the current scan results.</p>
-            <label class="side-filter">Symbol or company<input type="search" [value]="rightFilters.symbol" (input)="setRightFilter('symbol', $any($event.target).value)" placeholder="Search stocks"></label>
+            <label class="side-filter">Symbol or company<input type="search" [value]="rightFilters.symbol" (input)="setRightFilter('symbol', $any($event.target).value)" placeholder="Search stocks"><app-stock-choices [query]="rightFilters.symbol" (chosen)="setRightFilter('symbol', $event)" label="Choose screener stock" /></label>
             <label class="side-filter" *ngIf="selectedStrategy === 'rsi_divergence'">Divergence<select [value]="rightFilters.divergence" (change)="setRightFilter('divergence', $any($event.target).value)"><option value="">Both regular patterns</option><option value="REGULAR_BULLISH">Regular bullish</option><option value="REGULAR_BEARISH">Regular bearish</option></select></label>
             <label class="side-filter">Status<select [value]="rightFilters.status" (change)="setRightFilter('status', $any($event.target).value)"><option value="">Any status</option><option *ngFor="let status of statusOptions" [value]="status.value">{{ status.label }}</option></select></label>
             <label class="side-filter" *ngIf="decisionOptions.length">Entry assessment<select [value]="rightFilters.decision" (change)="setRightFilter('decision', $any($event.target).value)"><option value="">All assessments</option><option *ngFor="let decision of decisionOptions" [value]="decision">{{ decision }}</option></select></label>
@@ -85,4 +88,5 @@
       <details class="strategy-note" *ngIf="results.length && !isMarketScreener"><summary>Strategy scan details</summary><p>Technical strategy results come from the candles currently stored in your database. Run the daily candle sync to scan stocks with available history.</p></details>
     </main>
   </div>
+  </ng-container>
 </section>

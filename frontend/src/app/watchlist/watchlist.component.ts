@@ -1,10 +1,11 @@
+import { StockChoicesComponent } from '../shared/stock-choices.component';
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, EventEmitter, HostListener, OnDestroy, OnInit, Output, ViewChild, inject } from '@angular/core';
 import { EMPTY, Subscription, catchError, exhaustMap, map, timer } from 'rxjs';
 import { AlertNotificationsService } from '../alert-notifications.service';
 import { Instrument, MarketApiService, PriceAlert, SelectedStock, StockNews, WatchEntry, Watchlist, WatchQuote } from '../market-api.service';
 
-@Component({ selector: 'app-watchlist', standalone: true, imports: [CommonModule], templateUrl: './watchlist.component.html', styleUrl: './watchlist.component.css' })
+@Component({ selector: 'app-watchlist', standalone: true, imports: [StockChoicesComponent, CommonModule], templateUrl: './watchlist.component.html', styleUrl: './watchlist.component.css' })
 export class WatchlistComponent implements OnInit, OnDestroy {
   @Output() stockSelected = new EventEmitter<SelectedStock>();
   private api = inject(MarketApiService);

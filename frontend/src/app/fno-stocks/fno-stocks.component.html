@@ -8,7 +8,7 @@
     <div class="toolbar">
       <input type="search" aria-label="Search F&O stocks by symbol or company"
         placeholder="Search symbol or company" [value]="query"
-        (input)="query = $any($event.target).value">
+        (input)="query = $any($event.target).value"><app-stock-choices [stocks]="stocks" [query]="query" (chosen)="query=$event" label="Choose F&O stock" />
       <span *ngIf="!loading && !error" role="status">{{ filteredStocks.length }} of {{ stocks.length }} stocks</span>
     </div>
     <p class="message" *ngIf="loading" role="status">Loading F&O stocks…</p>
