@@ -104,7 +104,6 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   @ViewChild('settingsButton') settingsButton?: ElementRef<HTMLButtonElement>;
   expanded = false;
   private previousOverflow = '';
-  private hasChosenStrategy = false;
   toggleFullscreen(): void {
     this.expanded = !this.expanded;
     if (this.expanded) { this.previousOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden'; }
@@ -217,6 +216,17 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   get lastDataAt(): string | null { return this.data?.dataAsOf || this.data?.ghostRider?.candles?.at(-1)?.timestamp || this.data?.candles?.at(-1)?.timestamp || this.data?.asOf || null; }
   data?: OptionAnalysis;
   strategyId = 'ghost_rider';
+  get strategyOptions(): { id: string; name: string }[] {
+    const strategies = (this.data?.strategies ?? []).map(({ id, name }) => ({ id, name }));
+    if (!strategies.some(strategy => strategy.id === 'ghost_rider')) {
+      strategies.push({ id: 'ghost_rider', name: 'Ghost rider v.2' });
+    }
+    const options = strategies;
+    if (this.openBappu && !options.some(strategy => strategy.id === 'bappu_theory')) {
+      options.push({ id: 'bappu_theory', name: 'Bapu’s Theory' });
+    }
+    return options.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+  }
   readonly loginUrl = backendUrl('/auth/upstox');
   get selectedStrategy(): OptionStrategyResult | undefined { return this.data?.strategies.find(s => s.id === this.strategyId); }
   ngOnChanges(): void {
@@ -225,8 +235,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
     if(this.stockMode)this.suryavanshiSettings={...this.suryavanshiSettings,inputs:{...this.initialSuryavanshiInputs}};
     if(this.stockMode)this.sutradharSettings={...this.sutradharSettings,inputs:{...this.initialSutradharInputs}};
     if (this.expanded) this.toggleFullscreen();
-    this.hasChosenStrategy = false;
-    if(this.stockMode){this.strategyId=this.stockStrategy;this.hasChosenStrategy=true;}
+    this.strategyId = this.stockMode ? this.stockStrategy : 'ghost_rider';
     this.request?.unsubscribe(); this.polling?.unsubscribe(); this.loading=false;
     this.data = undefined; this.interval = this.stockMode ? ({'1d':1440,'1w':10080,'1h':60,'30m':30,'15m':15,'5m':5,'1m':1} as Record<string,number>)[this.stockTimeframe] ?? 1440 : 5; this.clearChart();
     if (!document.hidden) this.load();
@@ -270,8 +279,6 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
         if (!data) return;
         const first = !this.data || (!!this.data.storedPreview && !this.data.candles.length);
         this.refreshFailed = false; this.data = data; this.loading = previewFirst && !!data.storedPreview;
-        if (first && !this.hasChosenStrategy) this.strategyId = data.strategies.find(s => s.id === 'ghost_rider' && s.levels.length)?.id
-          ?? data.strategies.find(s => s.markers.length || s.levels.length)?.id ?? data.strategies[0]?.id ?? '';
         this.draw(first);
       },
       error: error => { this.refreshFailed = true; this.loading = false; this.needsConnection = error.status === 401; this.error = this.data?.storedPreview ? 'Current-session refresh failed. Stored history is still shown; retry Refresh.' : error.error?.detail || `Could not load ${this.stockMode ? 'stock' : 'option'} analysis. Please retry.`; }
@@ -279,7 +286,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   }
   showStrategy(id: string): void {
     if (id === 'bappu_theory') { this.openBappu?.(); return; }
-    this.strategyId=id;this.hasChosenStrategy=true;
+    this.strategyId=id;
     if(this.sutradharSelected&&!this.data?.sutradhar){this.request?.unsubscribe();this.loading=false;this.load();}
     this.drawEvidence();
     if(this.goldenSelected)this.fitChart();

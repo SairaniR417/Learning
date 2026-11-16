@@ -300,8 +300,8 @@ custom chart settings can still produce different results.
    For normal startup, activate the existing environment and run the API:
 
    ```powershell
-   .\.venv\Scripts\Activate.ps1
-   python -m uvicorn main:app --reload --port 8000
+  <!--  .\.venv\Scripts\Activate.ps1
+   python -m uvicorn main:app --reload --port 8000 -->
    ```
 
 3. In a second terminal, install and run Angular:

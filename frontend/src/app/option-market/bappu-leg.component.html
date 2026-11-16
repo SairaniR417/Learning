@@ -1,20 +1,25 @@
-<article class="leg-panel">
-  <header class="leg-heading"><h3>{{ underlyingLabel }} {{ strike | number:'1.0-2' }} {{ side }}</h3><span>{{ expiry }} · {{ timeframe }}m · IST</span><button type="button" (click)="refresh()" [disabled]="quoteLoading || historyLoading">Refresh</button></header>
+<article class="leg-panel" [class.buy]="signal === 'BUY'" [class.sell]="signal === 'SELL'">
+  <header class="leg-heading"><h3>{{ underlyingLabel }} {{ strike | number:'1.0-2' }} {{ side }}</h3><strong class="signal-badge" [class.buy-badge]="signal === 'BUY'" [class.sell-badge]="signal === 'SELL'" role="status" [attr.aria-label]="side + ' signal: ' + signal">{{ signal }}</strong><span>{{ expiry }} · {{ timeframe }}m · IST</span><button type="button" (click)="refresh()" [disabled]="quoteLoading || historyLoading">Refresh</button></header>
   <p *ngIf="quoteError" class="error" role="alert">{{ quote ? 'Old quote · ' : '' }}{{ quoteError }}</p>
   <p *ngIf="historyError" class="error" role="alert">{{ candles.length ? 'Old chart · ' : '' }}{{ historyError }}</p>
   <small *ngIf="quote">Quote received {{ quote.receivedAt | date:'dd MMM, HH:mm:ss':'+0530' }} IST · Refreshes every 15 seconds</small>
   <p *ngIf="quoteLoading && !quote" role="status">Loading contract quote…</p>
+  <p class="signal" role="status">{{ signal }} <span *ngIf="signal === 'BUY'">· Current &gt; ATP</span><span *ngIf="signal === 'SELL'">· Current &lt; ATP</span><span *ngIf="signal === 'AT ATP'">· Waiting for price to move above or below ATP</span></p>
+  <p class="note" *ngIf="calculation as levels">{{ levels.direction === 'SELL' ? 'Difference = day high − ATP · Target n× = ATP − n × difference' : 'Difference = ATP − day low · Target n× = ATP + n × difference' }}</p>
   <dl>
     <div><dt>OPEN</dt><dd>{{ quote?.dayOpen == null ? '—' : (quote?.dayOpen | number:'1.2-2') }}</dd></div>
     <div><dt>HIGH</dt><dd>{{ quote?.dayHigh == null ? '—' : (quote?.dayHigh | number:'1.2-2') }}</dd></div>
     <div><dt>LOW</dt><dd>{{ quote?.dayLow == null ? '—' : (quote?.dayLow | number:'1.2-2') }}</dd></div>
     <div><dt>CURRENT</dt><dd>{{ quote?.price == null ? '—' : (quote?.price | number:'1.2-2') }}</dd></div>
     <div title="Average traded price from the quote feed"><dt>ATP</dt><dd>{{ quote?.atp == null ? '—' : (quote?.atp | number:'1.2-2') }}</dd></div>
-    <div title="ATP minus the day's low"><dt>DIFFERENCE</dt><dd>{{ calculation === null ? '—' : (calculation.difference | number:'1.2-2') }}</dd></div>
-    <ng-container *ngIf="calculation as levels"><div *ngFor="let target of levels.targets" class="target"><dt>{{ target.multiple }}×</dt><dd>{{ target.price | number:'1.2-2' }}</dd></div></ng-container>
+    <div [title]="signal === 'SELL' ? 'Day high minus ATP' : 'ATP minus day low'"><dt>DIFFERENCE</dt><dd>{{ calculation === null ? '—' : (calculation.difference | number:'1.2-2') }}</dd></div>
+    <ng-container *ngIf="calculation as levels"><div *ngFor="let target of levels.targets" class="target"><dt>{{ target.multiple }}×</dt><dd>{{ target.price > 0 ? (target.price | number:'1.2-2') : 'Unreachable' }}</dd><small class="fib-caption">Fib {{ target.multiple * 100 }}% · {{ target.multiple }} × difference = {{ target.multiple * levels.difference | number:'1.2-2' }}</small></div></ng-container>
   </dl>
-  <p *ngIf="quote && !calculation" class="note">Levels unavailable: a valid ATP and day low are required, with ATP at or above the low.</p>
+  <p *ngIf="quote && !calculation && signal !== 'AT ATP'" class="note">Levels unavailable: valid current price, ATP and {{ signal === 'SELL' ? 'day high ≥ ATP' : 'day low ≤ ATP' }} are required.</p>
+  <div class="level-alerts" role="log" aria-live="polite" aria-label="CE or PE level notifications"><p *ngFor="let alert of alerts" [class.buy-alert]="alert.direction === 'BUY'" [class.sell-alert]="alert.direction === 'SELL'">{{ alert.message }} <small>{{ alert.time | date:'HH:mm:ss':'+0530' }} IST</small></p></div>
+  <p class="note">Level alerts check every 15 seconds while this view is open and visible. Each BUY/SELL multiple alerts once per contract per session; the first quote starts monitoring.</p>
   <p *ngIf="historyLoading && !candles.length" role="status">Loading candles…</p>
-  <div #chartHost class="bappu-chart" [attr.aria-label]="side + ' premium chart with ATP, day low and five calculated levels'"></div>
+  <p class="chart-legend"><span class="atp-label">ATP {{ quote?.atp == null ? '—' : (quote?.atp | number:'1.2-2') }}</span> · VWAP {{ latestVwap == null ? 'unavailable' : (latestVwap | number:'1.2-2') }} <span *ngIf="latestVwap != null && quote?.atp != null">· ATP {{ quote!.atp! > latestVwap! ? 'above' : quote!.atp! < latestVwap! ? 'below' : 'at' }} VWAP</span></p>
+  <div #chartHost class="bappu-chart" [attr.aria-label]="side + ' premium chart with ATP, VWAP, day high, day low and five BUY or SELL levels'"></div>
   <small *ngIf="candles.length">Last candle {{ candles.at(-1)?.timestamp | date:'dd MMM, HH:mm':'+0530' }} IST · Chart refreshes every minute</small>
 </article>

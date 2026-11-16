@@ -51,6 +51,37 @@ function setup() {
   return { component, calls, clock, document, finish };
 }
 
+test('Ghost Rider remains the default while loading and after a provider error', () => {
+  const s=setup();
+  Object.assign(s.component,{stockMode:true,stockWorkspace:true,underlyingWorkspace:true,stockTimeframe:'5m',openBappu:()=>{}});
+  s.component.ngOnChanges();
+  assert.equal(s.component.strategyId,'ghost_rider');
+  assert.ok(s.component.strategyOptions.some(option=>option.id==='ghost_rider'));
+  assert.equal(s.component.strategyOptions.find(option=>option.id==='ghost_rider').name,'Ghost rider v.2');
+  s.calls[0].stream.error({error:{detail:'Upstox returned HTTP 429.'}});
+  assert.equal(s.component.strategyId,'ghost_rider');
+  assert.ok(s.component.strategyOptions.some(option=>option.id==='ghost_rider'));
+  assert.equal(s.component.ghostSelected,true);
+  s.component.ngOnDestroy();
+});
+
+test('Ghost Rider needs no signals to remain default and manual choices survive refreshes', () => {
+  const s=setup();s.component.ngOnChanges();
+  const data={candles:[],strategies:[{id:'ema_alignment',name:'EMA Alignment',markers:[{}],levels:[{}]},{id:'ghost_rider',name:'Ghost rider v.2',markers:[],levels:[]}]};
+  s.calls[0].stream.next(data);s.calls[0].stream.complete();
+  assert.equal(s.component.strategyId,'ghost_rider');
+  assert.equal(s.component.strategyOptions.filter(option=>option.id==='ghost_rider').length,1);
+  s.component.showStrategy('ema_alignment');s.component.load();
+  s.calls[1].stream.next(data);s.calls[1].stream.complete();
+  assert.equal(s.component.strategyId,'ema_alignment');
+  s.component.underlyingKey='OTHER';s.component.ngOnChanges();
+  assert.equal(s.component.strategyId,'ghost_rider');
+  s.calls[2].stream.next({candles:[],strategies:[data.strategies[0]]});
+  assert.equal(s.component.strategyId,'ghost_rider');
+  assert.ok(s.component.strategyOptions.some(option=>option.id==='ghost_rider'));
+  s.component.ngOnDestroy();
+});
+
 test('day movement uses quote session prices and latest indicators independently of chart hover', () => {
   const {component} = setup();
   component.data = { candles: [], ghostRider: { assessment: {

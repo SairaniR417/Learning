@@ -51,7 +51,7 @@
   </ng-container>
   </div>
   <div class="strategy-column">
-    <label class="strategy-picker">Strategy <select [value]="strategyId" (change)="showStrategy($any($event.target).value)" [disabled]="!data?.strategies?.length"><option *ngFor="let strategy of data?.strategies" [value]="strategy.id" [selected]="strategy.id === strategyId">{{ strategy.name }}</option><option *ngIf="openBappu" value="bappu_theory">Bappu's Theory</option></select></label>
+    <label class="strategy-picker">Strategy <select [value]="strategyId" (change)="showStrategy($any($event.target).value)" [disabled]="!data?.strategies?.length"><option *ngFor="let strategy of strategyOptions" [value]="strategy.id" [selected]="strategy.id === strategyId">{{ strategy.name }}</option></select></label>
     <p *ngIf="!data">{{ loading ? 'Preparing strategy analysis…' : 'Load analysis to view strategy details.' }}</p>
     <div class="strategies">
       <article *ngIf="selectedStrategy as strategy" [attr.data-bias]="strategy.bias">

@@ -51,7 +51,7 @@ import { BappuTheoryComponent } from './bappu-theory.component';
 export class OptionMarketComponent implements OnInit, OnDestroy {
   private api = inject(MarketApiService);
   private request?: Subscription;
-  group = 'F&O stocks'; key = ''; loading = false; error = '';
+  group = 'Indices'; key = ''; loading = false; error = '';
   scannerStrategy = 'analysis';
   readonly openBappu = () => { this.scannerStrategy = 'bappu'; };
   readonly backToChart = () => { this.view = 'stock'; this.scannerStrategy = 'analysis'; };
@@ -105,7 +105,11 @@ export class OptionMarketComponent implements OnInit, OnDestroy {
   selectGroup(group: string): void {
     this.request?.unsubscribe(); this.group = group; this.key = ''; this.commodity = ''; this.search = ''; this.pickerOpen = false; this.error = ''; this.items = []; this.loading = true;
     this.request = this.api.optionUnderlyings(group === 'Commodities').subscribe({
-      next: data => { this.items = data.underlyings; this.loading = false; },
+      next: data => {
+        this.items = data.underlyings;
+        if (this.group === 'Indices') this.key = this.visible.find(item => item.key === 'NSE_INDEX|Nifty 50')?.key ?? '';
+        this.loading = false;
+      },
       error: error => { this.error = error.error?.detail || 'Underlyings unavailable. Please retry.'; this.loading = false; }
     });
   }
