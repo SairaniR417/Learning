@@ -7,6 +7,7 @@ export interface GhostLevel {
 }
 export interface GhostRiderOverlay {
   assessment?: GhostAssessment | null;
+  dashboardMetrics?: { adx?: number | null; rsi?: number | null };
   candles?: import('../market-api.service').HistoricalCandle[];
   developingBar?: boolean;
   points: GhostPoint[];
@@ -28,6 +29,7 @@ export interface GhostSettings {
 }
 export interface GhostAssessment {
   sessionDate: string | null; dayOpen: number | null; fromOpenPct: number | null;
+  dayHigh?: number | null; dayLow?: number | null;
   dayHighPct: number | null; dayLowPct: number | null; dayRangePosition: number | null;
   assessmentAsOf: string; assessmentPrice: number; strength: string; strengthScore: number;
   pullersPct: number; draggersPct: number; rsi14: number | null; adx: number | null;

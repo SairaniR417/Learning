@@ -4,9 +4,10 @@ import { Subscription } from 'rxjs';
 import { MarketApiService, OptionUnderlying } from '../market-api.service';
 import { OptionChainComponent } from '../stock-details/option-chain.component';
 import { OptionAnalysisComponent } from './option-analysis.component';
+import { BappuTheoryComponent } from './bappu-theory.component';
 
 @Component({
-  selector: 'app-option-market', standalone: true, imports: [CommonModule, OptionChainComponent, OptionAnalysisComponent],
+  selector: 'app-option-market', standalone: true, imports: [CommonModule, OptionChainComponent, OptionAnalysisComponent, BappuTheoryComponent],
   template: `
     <section class="page-shell option-market">
       <header class="market-toolbar">
@@ -28,8 +29,8 @@ import { OptionAnalysisComponent } from './option-analysis.component';
         </div>
       </div>
       <div class="view-switch" role="group" aria-label="Chart or options view">
-        <button type="button" (click)="view = 'stock'" [attr.aria-pressed]="view === 'stock'">Chart</button>
-        <button type="button" (click)="view = 'options'" [attr.aria-pressed]="view === 'options'">Options</button>
+        <button type="button" (click)="view = 'stock'; scannerStrategy = 'analysis'" [attr.aria-pressed]="scannerStrategy === 'analysis' && view === 'stock'">Chart</button>
+        <button type="button" (click)="view = 'options'; scannerStrategy = 'analysis'" [attr.aria-pressed]="scannerStrategy === 'analysis' && view === 'options'">Options</button>
       </div>
       </header>
       <div *ngIf="group === 'Commodities' && commodity" class="futures">
@@ -41,8 +42,9 @@ import { OptionAnalysisComponent } from './option-analysis.component';
       <p *ngIf="error" role="alert">{{ error }} <button (click)="selectGroup(group)">Retry</button></p>
       <p *ngIf="!loading && !error && !visible.length">No current option underlyings available.</p>
       <p class="selection-hint" *ngIf="!key && !loading && !error && visible.length">Choose an underlying above to view its chart or options.</p>
-      <app-option-analysis *ngIf="key && view === 'stock'" [stockMode]="true" [stockWorkspace]="true" [underlyingWorkspace]="group !== 'F&O stocks'" [underlyingKind]="group === 'Commodities' ? 'Futures' : 'Index'" [underlyingLabel]="selectedLabel" [stockTimeframe]="group === 'F&O stocks' ? '1d' : '5m'" [underlyingKey]="key" />
-      <app-option-chain *ngIf="key && view === 'options'" [stockKey]="key" />
+      <app-bappu-theory [backToChart]="backToChart" *ngIf="key && scannerStrategy === 'bappu'" [underlyingKey]="key" [underlyingLabel]="selectedLabel" />
+      <app-option-analysis *ngIf="key && scannerStrategy === 'analysis' && view === 'stock'" [openBappu]="openBappu" [stockMode]="true" [stockWorkspace]="true" [underlyingWorkspace]="group !== 'F&O stocks'" [underlyingKind]="group === 'Commodities' ? 'Futures' : 'Index'" [underlyingLabel]="selectedLabel" [stockTimeframe]="group === 'F&O stocks' ? '1d' : '5m'" [underlyingKey]="key" />
+      <app-option-chain *ngIf="key && scannerStrategy === 'analysis' && view === 'options'" [stockKey]="key" [openBappu]="openBappu" />
     </section>`,
   styleUrl: './option-market.component.css'
 })
@@ -50,6 +52,9 @@ export class OptionMarketComponent implements OnInit, OnDestroy {
   private api = inject(MarketApiService);
   private request?: Subscription;
   group = 'F&O stocks'; key = ''; loading = false; error = '';
+  scannerStrategy = 'analysis';
+  readonly openBappu = () => { this.scannerStrategy = 'bappu'; };
+  readonly backToChart = () => { this.view = 'stock'; this.scannerStrategy = 'analysis'; };
   view: 'stock' | 'options' = 'stock';
   get showStockChart(): boolean { return this.group === 'F&O stocks' && this.view === 'stock'; }
   search = ''; commodity = '';

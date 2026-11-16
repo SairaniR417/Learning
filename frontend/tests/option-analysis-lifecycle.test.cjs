@@ -51,6 +51,33 @@ function setup() {
   return { component, calls, clock, document, finish };
 }
 
+test('day movement uses quote session prices and latest indicators independently of chart hover', () => {
+  const {component} = setup();
+  component.data = { candles: [], ghostRider: { assessment: {
+    dayOpen: 200, dayHigh: 210, dayLow: 190, assessmentPrice: 195,
+    adx: 22, rsi14: 44.4, assessmentAsOf: '2026-11-16T05:45:00Z'
+  } } };
+  component.hoveredTimestamp = Date.parse('2026-11-13T05:45:00Z');
+  component.livePrice = { quote: { price: 80, dayOpen: 100, dayHigh: 110, dayLow: 75, atp: 85,
+    receivedAt: '2026-11-16T05:48:00Z' }, failed: false };
+  const movement = component.dayMovement;
+  assert.deepEqual([movement.open,movement.high,movement.low,movement.current,movement.atp,movement.adx,movement.rsi], [100,110,75,80,85,22,44.4]);
+  assert.ok(Math.abs(movement.changePct + 20) < 0.00001);
+  component.livePrice.failed = true;
+  assert.equal(component.dayMovement.old, true);
+  component.livePrice.quote = { price: 90 };
+  assert.equal(component.dayMovement.open, null);
+  assert.equal(component.dayMovement.changePct, null);
+  assert.equal(component.dayMovement.atp, null);
+  component.livePrice = undefined;
+  assert.equal(component.dayMovement.open, 200);
+  assert.equal(component.dayMovement.current, 195);
+  assert.equal(component.dayMovement.quoted, false);
+  component.data = undefined;
+  assert.equal(component.dayMovement.current, null);
+  assert.equal(component.dayMovement.adx, null);
+});
+
 test('requests exact option and timeframe; cancels previous request when timeframe changes', () => {
   const s = setup(); s.component.ngOnChanges();
   assert.deepEqual(Array.from(s.calls[0].args).slice(0,6), ['NSE_INDEX|Nifty 50', '2026-12-31', 25000, 'PE', 5, 1.5]);

@@ -16,14 +16,20 @@ async def latest(request, token, key, expiry=None, strike=None, side='CE'):
         else:
             await option_market.require_key(key)
         async def load():
-            payload = await request('https://api.upstox.com/v3/market-quote/ltp',
+            payload = await request('https://api.upstox.com/v3/market-quote/quotes',
                 headers={'Authorization': f'Bearer {token}'}, params={'instrument_key': key})
             rows = payload.get('data', {}) if isinstance(payload, dict) else {}
             row = next((r for r in rows.values() if isinstance(r, dict) and r.get('instrument_token') == key), None) if isinstance(rows, dict) else None
             price = row.get('last_price') if row else None
             if isinstance(price, bool) or not isinstance(price, (int,float)) or not math.isfinite(price) or price <= 0:
                 raise HTTPException(502, 'Latest price unavailable for this instrument.')
-            return dict(instrumentKey=key, price=price, receivedAt=datetime.now(timezone.utc).isoformat())
+            def positive(value):
+                return value if not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value) and value > 0 else None
+
+            ohlc = row.get('ohlc') if isinstance(row.get('ohlc'), dict) else {}
+            return dict(instrumentKey=key, price=price, receivedAt=datetime.now(timezone.utc).isoformat(),
+                        dayOpen=positive(ohlc.get('open')), dayHigh=positive(ohlc.get('high')),
+                        dayLow=positive(ohlc.get('low')), atp=positive(row.get('average_price')))
         # Match the polling interval without refetching when multiple chart views overlap.
         import hashlib
-        return await option_market.cache.get(('chart-ltp',hashlib.sha256(token.encode()).hexdigest(),key),10,load)
+        return await option_market.cache.get(('chart-quote',hashlib.sha256(token.encode()).hexdigest(),key),10,load)

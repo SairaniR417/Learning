@@ -1,4 +1,4 @@
-<app-option-analysis *ngIf="selectedContract as selected" [underlyingKey]="stockKey" [expiry]="selected.expiry" [strike]="selected.strike" [side]="selected.side" (back)="closeAnalysis()" />
+<app-option-analysis *ngIf="selectedContract as selected" [underlyingKey]="stockKey" [openBappu]="openBappu" [expiry]="selected.expiry" [strike]="selected.strike" [side]="selected.side" (back)="closeAnalysis()" />
 <section *ngIf="!selectedContract" aria-label="Selected stock option chain">
   <div class="toolbar">
     <label>Expiry <select [value]="expiry" (change)="selectExpiry($any($event.target).value)" [disabled]="loadingExpiries || !expiries.length">

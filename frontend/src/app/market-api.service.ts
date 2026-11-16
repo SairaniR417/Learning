@@ -148,7 +148,10 @@ export interface OptionStrategyResult {
   markers: { timestamp: string; label: string; bias: string }[]; levels: { label: string; price: number }[];
   scenario: string; signalAt: string | null;
 }
-export interface ChartQuote { instrumentKey: string; price: number; receivedAt: string; }
+export interface ChartQuote {
+  instrumentKey: string; price: number; receivedAt: string;
+  dayOpen?: number | null; dayHigh?: number | null; dayLow?: number | null; atp?: number | null;
+}
 export interface OptionAnalysis {
   chartCandles?: HistoricalCandle[];
   storedPreview?: boolean;

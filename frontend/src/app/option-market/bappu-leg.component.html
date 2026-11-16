@@ -1,0 +1,20 @@
+<article class="leg-panel">
+  <header class="leg-heading"><h3>{{ underlyingLabel }} {{ strike | number:'1.0-2' }} {{ side }}</h3><span>{{ expiry }} · {{ timeframe }}m · IST</span><button type="button" (click)="refresh()" [disabled]="quoteLoading || historyLoading">Refresh</button></header>
+  <p *ngIf="quoteError" class="error" role="alert">{{ quote ? 'Old quote · ' : '' }}{{ quoteError }}</p>
+  <p *ngIf="historyError" class="error" role="alert">{{ candles.length ? 'Old chart · ' : '' }}{{ historyError }}</p>
+  <small *ngIf="quote">Quote received {{ quote.receivedAt | date:'dd MMM, HH:mm:ss':'+0530' }} IST · Refreshes every 15 seconds</small>
+  <p *ngIf="quoteLoading && !quote" role="status">Loading contract quote…</p>
+  <dl>
+    <div><dt>OPEN</dt><dd>{{ quote?.dayOpen == null ? '—' : (quote?.dayOpen | number:'1.2-2') }}</dd></div>
+    <div><dt>HIGH</dt><dd>{{ quote?.dayHigh == null ? '—' : (quote?.dayHigh | number:'1.2-2') }}</dd></div>
+    <div><dt>LOW</dt><dd>{{ quote?.dayLow == null ? '—' : (quote?.dayLow | number:'1.2-2') }}</dd></div>
+    <div><dt>CURRENT</dt><dd>{{ quote?.price == null ? '—' : (quote?.price | number:'1.2-2') }}</dd></div>
+    <div title="Average traded price from the quote feed"><dt>ATP</dt><dd>{{ quote?.atp == null ? '—' : (quote?.atp | number:'1.2-2') }}</dd></div>
+    <div title="ATP minus the day's low"><dt>DIFFERENCE</dt><dd>{{ calculation === null ? '—' : (calculation.difference | number:'1.2-2') }}</dd></div>
+    <ng-container *ngIf="calculation as levels"><div *ngFor="let target of levels.targets" class="target"><dt>{{ target.multiple }}×</dt><dd>{{ target.price | number:'1.2-2' }}</dd></div></ng-container>
+  </dl>
+  <p *ngIf="quote && !calculation" class="note">Levels unavailable: a valid ATP and day low are required, with ATP at or above the low.</p>
+  <p *ngIf="historyLoading && !candles.length" role="status">Loading candles…</p>
+  <div #chartHost class="bappu-chart" [attr.aria-label]="side + ' premium chart with ATP, day low and five calculated levels'"></div>
+  <small *ngIf="candles.length">Last candle {{ candles.at(-1)?.timestamp | date:'dd MMM, HH:mm':'+0530' }} IST · Chart refreshes every minute</small>
+</article>

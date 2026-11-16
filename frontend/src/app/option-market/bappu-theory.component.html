@@ -1,0 +1,21 @@
+<section aria-label="Bappu's Theory">
+  <header class="theory-heading"><div class="theory-title"><button *ngIf="backToChart" type="button" (click)="backToChart()">← Back to chart</button><h2>Bappu’s Theory</h2></div><p>Difference = ATP − day low · Level n× = ATP + n × difference</p></header>
+  <div class="theory-controls">
+    <label>Expiry <select [value]="expiry" (change)="selectExpiry($any($event.target).value)" [disabled]="loading || !expiries.length"><option value="">Select expiry</option><option *ngFor="let date of expiries" [value]="date" [selected]="date === expiry">{{ date }}</option></select></label>
+    <label>CE <select aria-label="Bappu's Theory CE strike" [value]="ceStrike" (change)="selectStrike('CE', $any($event.target).value)" [disabled]="loading || !strikes.length"><option value="0">Select one CE</option><option *ngFor="let strike of strikes" [value]="strike" [selected]="strike === ceStrike">{{ strike }} CE</option></select></label>
+    <label>PE <select aria-label="Bappu's Theory PE strike" [value]="peStrike" (change)="selectStrike('PE', $any($event.target).value)" [disabled]="loading || !strikes.length"><option value="0">Select one PE</option><option *ngFor="let strike of strikes" [value]="strike" [selected]="strike === peStrike">{{ strike }} PE</option></select></label>
+    <label>Timeframe <select [value]="timeframe" (change)="timeframe = +$any($event.target).value"><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="60">1 hour</option></select></label>
+  </div>
+  <p *ngIf="loading" role="status">Loading available contracts…</p>
+  <p *ngIf="error" class="error" role="alert">{{ error }} <a *ngIf="needsConnection" [href]="loginUrl">Connect Upstox</a> <button type="button" (click)="loadExpiries()">Retry</button></p>
+  <p *ngIf="!loading && !error && !expiries.length">No current option expiries available for this underlying.</p>
+  <p *ngIf="chain?.warning" role="status">{{ chain?.warning }}</p>
+  <p *ngIf="chain && !strikes.length">No option strikes available for this expiry.</p>
+  <div class="leg-grid">
+    <app-bappu-leg *ngIf="ceStrike; else chooseCe" [underlyingKey]="underlyingKey" [underlyingLabel]="underlyingLabel" [expiry]="expiry" [strike]="ceStrike" side="CE" [timeframe]="timeframe" />
+    <ng-template #chooseCe><div class="empty-leg">Select one CE above to calculate its levels.</div></ng-template>
+    <app-bappu-leg *ngIf="peStrike; else choosePe" [underlyingKey]="underlyingKey" [underlyingLabel]="underlyingLabel" [expiry]="expiry" [strike]="peStrike" side="PE" [timeframe]="timeframe" />
+    <ng-template #choosePe><div class="empty-leg">Select one PE above to calculate its levels.</div></ng-template>
+  </div>
+  <p class="note">Levels recalculate with ATP and the day’s low. They are reference prices; no entry or stop-loss rule is defined.</p>
+</section>

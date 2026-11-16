@@ -51,7 +51,7 @@
   </ng-container>
   </div>
   <div class="strategy-column">
-    <label class="strategy-picker">Strategy <select [value]="strategyId" (change)="showStrategy($any($event.target).value)" [disabled]="!data?.strategies?.length"><option *ngFor="let strategy of data?.strategies" [value]="strategy.id" [selected]="strategy.id === strategyId">{{ strategy.name }}</option></select></label>
+    <label class="strategy-picker">Strategy <select [value]="strategyId" (change)="showStrategy($any($event.target).value)" [disabled]="!data?.strategies?.length"><option *ngFor="let strategy of data?.strategies" [value]="strategy.id" [selected]="strategy.id === strategyId">{{ strategy.name }}</option><option *ngIf="openBappu" value="bappu_theory">Bappu's Theory</option></select></label>
     <p *ngIf="!data">{{ loading ? 'Preparing strategy analysis…' : 'Load analysis to view strategy details.' }}</p>
     <div class="strategies">
       <article *ngIf="selectedStrategy as strategy" [attr.data-bias]="strategy.bias">
@@ -59,7 +59,20 @@
         <small>{{ strategy.availableCandles }} {{ sutradharSelected ? 'previous daily source candles' : 'usable candles' }} · minimum {{ strategy.minimumCandles }}</small>
         <p>{{ strategy.scenario }}</p>
         <time *ngIf="strategy.signalAt">Signal {{ strategy.signalAt | date:'dd MMM, HH:mm':'+0530' }} IST</time>
-        <dl *ngIf="strategy.metrics.length"><div *ngFor="let metric of strategy.metrics"><dt>{{ metric.label }}</dt><dd>{{ metric.value | number:'1.0-2' }}</dd></div></dl>
+        <dl *ngIf="strategy.metrics.length || ghostSelected" [class.three-columns]="ghostSelected">
+          <ng-container *ngIf="ghostSelected">
+            <ng-container *ngIf="dayMovement as movement">
+              <div><dt>OPEN</dt><dd>{{ movement.open === null ? '—' : (movement.open | number:'1.2-2') }}</dd></div>
+              <div><dt>HIGH</dt><dd>{{ movement.high === null ? '—' : (movement.high | number:'1.2-2') }}</dd></div>
+              <div><dt>LOW</dt><dd>{{ movement.low === null ? '—' : (movement.low | number:'1.2-2') }}</dd></div>
+              <div [title]="(movement.old ? 'Old data · ' : '') + (movement.quoted ? 'Quote received ' : 'Candle snapshot ') + movement.asOf"><dt>CURRENT</dt><dd>{{ movement.current === null ? '—' : (movement.current | number:'1.2-2') }}</dd></div>
+              <div title="Average traded price reported by the quote feed"><dt>ATP</dt><dd>{{ movement.atp === null ? '—' : (movement.atp | number:'1.2-2') }}</dd></div>
+              <div [title]="'Latest ' + displayedTimeframe + ' candle'"><dt>ADX (14)</dt><dd>{{ movement.adx === null ? '—' : (movement.adx | number:'1.2-2') }}</dd></div>
+              <div [title]="'Latest ' + displayedTimeframe + ' candle'"><dt>RSI (14)</dt><dd>{{ movement.rsi === null ? '—' : (movement.rsi | number:'1.2-2') }}</dd></div>
+            </ng-container>
+          </ng-container>
+          <div *ngFor="let metric of strategy.metrics"><dt>{{ metric.label }}</dt><dd>{{ metric.value | number:'1.0-2' }}</dd></div>
+        </dl>
         <ul *ngIf="strategy.checks.length"><li *ngFor="let check of strategy.checks" [class.passed]="check.passed">{{ check.passed ? '✓' : '○' }} {{ label(check.label) }}</li></ul>
         <small>{{ sutradharSelected ? 'Daily-open levels only. No entry, exit, target or stop-loss is defined by this script.' : rsiSelected ? 'Bull/Bear labels mark RSI pivots. Confirmation occurs five bars later.' : 'Signal markers and available levels are shown on the chart.' }}</small>
       </article>

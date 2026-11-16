@@ -21,6 +21,7 @@
 .assessment-details{border-top:1px solid var(--outlook-border);padding-top:12px;margin-top:14px}.assessment-details summary{cursor:pointer;font-size:12px;color:#bcc9c2;padding:4px 0}.assessment-details summary span{color:#83938a;font-size:10px;margin-left:8px}.ghost-assessment .assessment-details p{font-size:11px;line-height:1.7;color:#b9c6be;margin:10px 0}.assessment-details summary:focus-visible{outline:2px solid var(--outlook-color);outline-offset:3px}
 @media(max-width:1000px){.assessment-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.ghost-assessment{padding:15px}.movement-overview{gap:17px}.movement-lead,.entry-outlook{flex-basis:100%}.entry-outlook{max-width:none}.assessment-cards{grid-template-columns:1fr}.movement-lead h3{font-size:25px}.ghost-assessment header span{font-size:10px}}
 
+
 /* Shared layout for stock, underlying and option analysis. */
 :host{min-width:0;font-size:12px;line-height:1.5}
 .analysis{padding:12px 22px 24px;min-width:0}
@@ -57,3 +58,5 @@ dt{font-size:11px}dd{font-size:13px;margin:4px 0 0;overflow-wrap:anywhere}
 .strategies article[data-bias=bearish]{background:transparent;border-color:#85414f}
 @media(max-width:960px){.analysis-workspace{grid-template-columns:minmax(0,1fr)}.chart{height:400px}.strategy-column{width:100%}}
 @media(max-width:640px){.analysis{padding:10px 12px 20px}.analysis-identity{flex-wrap:wrap;gap:8px}.contract-title{flex-basis:100%}.controls{width:100%;margin:0;justify-content:flex-end}.analysis-header h2{font-size:15px}.chart-panel,.strategy-column{padding:10px}.chart-heading{flex-wrap:wrap}.chart-heading strong{flex:1 1 auto}.chart-heading button:last-child{margin-left:0}.chart{height:340px}.ghost-status{overflow-wrap:anywhere}.suryavanshi-score{font-size:10px;right:60px}}
+
+.strategies dl.three-columns{grid-template-columns:repeat(3,minmax(0,1fr))}

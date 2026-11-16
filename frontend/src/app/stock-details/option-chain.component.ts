@@ -27,6 +27,7 @@ export class OptionChainComponent implements OnChanges, OnDestroy, AfterViewChec
   }
   readonly loginUrl = backendUrl('/auth/upstox');
   @Input({ required: true }) stockKey = '';
+  @Input() openBappu?: () => void;
   private readonly api = inject(MarketApiService);
   private expiryRequest?: Subscription;
   private chainRequest?: Subscription;

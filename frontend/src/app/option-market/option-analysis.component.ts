@@ -30,6 +30,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   @Input() strike = 0;
   @Input() side: 'CE' | 'PE' = 'CE';
   @Input() stockMode = false;
+  @Input() openBappu?: () => void;
   @Input() stockWorkspace = false;
   @Input() showBack = false;
   @Input() underlyingWorkspace = false;
@@ -98,6 +99,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   }
   @Output() back = new EventEmitter<void>();
   @ViewChild('chartHost') chartHost?: ElementRef<HTMLElement>;
+  @ViewChild(LivePriceComponent) livePrice?: LivePriceComponent;
   @ViewChild('fullscreenButton') fullscreenButton?: ElementRef<HTMLButtonElement>;
   @ViewChild('settingsButton') settingsButton?: ElementRef<HTMLButtonElement>;
   expanded = false;
@@ -143,6 +145,23 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
   get activeCandles() { return this.data?.chartCandles ?? this.data?.ghostRider?.candles ?? (this.goldenSelected ? this.data?.goldenCross?.candles : this.suryavanshiSelected ? this.data?.suryavanshi?.candles : this.ghostSelected ? this.data?.ghostRider?.candles : this.sutradharSelected ? this.data?.sutradhar?.candles : undefined) ?? this.data?.candles ?? []; }
   get lastCandle() { return this.activeCandles.find(c=>Date.parse(c.timestamp)===this.hoveredTimestamp) ?? this.activeCandles.at(-1); }
   get ghostPoint() { return this.data?.ghostRider?.points.find(p=>Date.parse(p.timestamp)===this.hoveredTimestamp) ?? this.data?.ghostRider?.points.at(-1); }
+  get dayMovement() {
+    const quote = this.livePrice?.quote;
+    const context = this.data?.ghostRider?.assessment;
+    const indicators = this.data?.ghostRider?.dashboardMetrics;
+    const open = (quote ? quote.dayOpen : context?.dayOpen) ?? null;
+    const current = (quote ? quote.price : context?.assessmentPrice ?? this.activeCandles.at(-1)?.close) ?? null;
+    return {
+      open, current,
+      high: (quote ? quote.dayHigh : context?.dayHigh) ?? null,
+      low: (quote ? quote.dayLow : context?.dayLow) ?? null,
+      atp: quote?.atp ?? null,
+      adx: indicators?.adx ?? context?.adx ?? null, rsi: indicators?.rsi ?? context?.rsi14 ?? null,
+      changePct: open !== null && open > 0 && current !== null ? (current / open - 1) * 100 : null,
+      asOf: quote?.receivedAt ?? context?.assessmentAsOf ?? this.activeCandles.at(-1)?.timestamp,
+      quoted: !!quote, old: quote ? !!this.livePrice?.failed : this.staleData || !!context?.stale
+    };
+  }
   ghostNumber(value: number | undefined): string { return value == null ? 'n/a' : value.toFixed(this.ghostSettings.precision < 0 ? 2 : this.ghostSettings.precision); }
   moveHeadline(value: number | null): string {
     if (value === null) return 'Day’s move unavailable';
@@ -259,6 +278,7 @@ export class OptionAnalysisComponent implements OnChanges, AfterViewInit, OnDest
     });
   }
   showStrategy(id: string): void {
+    if (id === 'bappu_theory') { this.openBappu?.(); return; }
     this.strategyId=id;this.hasChosenStrategy=true;
     if(this.sutradharSelected&&!this.data?.sutradhar){this.request?.unsubscribe();this.loading=false;this.load();}
     this.drawEvidence();
